@@ -1,7 +1,7 @@
 
 pub mod model;
 
-use model::{MaybeOrPromise,get_data_maybe_or_resolve_promise,get_meta_data_maybe_or_resolve_promise,get_data_maybe_or_meta_data_maybe};  
+use model::{MaybeOrPromise,get_data_maybe_or_meta_data_maybe,get_data_maybe_or_await_task,get_meta_data_maybe_or_await_task};  
 
 use std::collections::HashMap;
 
@@ -13,6 +13,10 @@ use rust_decimal::prelude::ToPrimitive;
 use num_format::{Locale, ToFormattedString}; 
  
 use chrono::{DateTime, TimeZone, NaiveDateTime, Utc};
+
+
+use std::sync::Arc; 
+use tokio::sync::RwLock; 
 
 fn duration_to_string(duration: chrono::Duration) -> String {
 
@@ -30,13 +34,13 @@ pub fn timestamp_now_to_string() -> String {
     return now.to_string();              
 }
 
-pub async fn estimate_anchor_protocol_next_claim_and_stake_tx(data: &mut HashMap<String, MaybeOrPromise>, field_amount: &str, field: &str, digits_rounded_to: u32) -> String {
+pub async fn estimate_anchor_protocol_next_claim_and_stake_tx(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, field_amount: &str, field: &str, digits_rounded_to: u32) -> String {
   
 
             let mut collateral_value = Decimal::from_str("0").unwrap();  
             let mut borrower_rewards_in_ust = Decimal::from_str("0").unwrap();  
  
-            match borrower_rewards_in_ust_to_string(data,10).await.as_ref() {
+            match borrower_rewards_in_ust_to_string(tasks, 10).await.as_ref() {
                 "--" => {
                     return "--".to_string();
                 },
@@ -49,7 +53,7 @@ pub async fn estimate_anchor_protocol_next_claim_and_stake_tx(data: &mut HashMap
 
             let mut borrow_limit = Decimal::from_str("0").unwrap(); 
 
-            match borrow_limit_to_string(data,10).await.as_ref() {
+            match borrow_limit_to_string(tasks, 10).await.as_ref() {
                 "--" => {
                     return "--".to_string();
                 },
@@ -62,7 +66,7 @@ pub async fn estimate_anchor_protocol_next_claim_and_stake_tx(data: &mut HashMap
 
             if "loan_amount"==field_amount {
  
-                match borrower_loan_amount_to_string(data,10).await.as_ref() {
+                match borrower_loan_amount_to_string(tasks, 10).await.as_ref() {
                     "--" => {
                         return "--".to_string();
                     },
@@ -72,7 +76,7 @@ pub async fn estimate_anchor_protocol_next_claim_and_stake_tx(data: &mut HashMap
                 } 
             }else if "target_ltv"==field_amount {
 
-                match get_meta_data_maybe_or_resolve_promise(data,"trigger_percentage").await {
+                match get_meta_data_maybe_or_await_task(tasks,"trigger_percentage").await {
                     Ok(response_result) => { 
                         loan_amount = borrow_limit.checked_mul(Decimal::from_str(response_result.as_str()).unwrap()).unwrap();             
                     },
@@ -83,7 +87,7 @@ pub async fn estimate_anchor_protocol_next_claim_and_stake_tx(data: &mut HashMap
             }
             let mut distribution_apr = Decimal::from_str("0").unwrap(); 
         
-            match distribution_apr_to_string(data,10).await.as_ref() {
+            match distribution_apr_to_string(tasks, 10).await.as_ref() {
                 "--" => {
                     return "--".to_string();
                 },
@@ -97,7 +101,7 @@ pub async fn estimate_anchor_protocol_next_claim_and_stake_tx(data: &mut HashMap
 
             let mut staking_apy = Decimal::from_str("0").unwrap(); 
         
-            match staking_apy_to_string(data,10).await.as_ref() {
+            match staking_apy_to_string(tasks, 10).await.as_ref() {
                 "--" => {
                     return "--".to_string();
                 },
@@ -111,7 +115,7 @@ pub async fn estimate_anchor_protocol_next_claim_and_stake_tx(data: &mut HashMap
 
             let mut transaction_fee = Decimal::from_str("0").unwrap(); 
         
-            match estimate_anchor_protocol_tx_fee_claim_and_stake(data,10).await.as_ref() {
+            match estimate_anchor_protocol_tx_fee_claim_and_stake(tasks, 10).await.as_ref() {
                 "--" => {
                     return "--".to_string();
                 },
@@ -215,9 +219,9 @@ pub async fn estimate_anchor_protocol_next_claim_and_stake_tx(data: &mut HashMap
  
 
 
-pub async fn estimate_anchor_protocol_tx_fee_claim_and_stake(data: &mut HashMap<String, MaybeOrPromise>, digits_rounded_to: u32) -> String { 
-  let tx_fee_claim_rewards = estimate_anchor_protocol_tx_fee(data,"anchor_protocol_txs_claim_rewards","fee_amount_adjusted".to_owned(),false,10).await;   
-  let tx_fee_stake_rewards = estimate_anchor_protocol_tx_fee(data,"anchor_protocol_txs_staking","fee_amount_adjusted".to_owned(),false,10).await;   
+pub async fn estimate_anchor_protocol_tx_fee_claim_and_stake(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
+  let tx_fee_claim_rewards = estimate_anchor_protocol_tx_fee(tasks, "anchor_protocol_txs_claim_rewards","fee_amount_adjusted".to_owned(),false,10).await;   
+  let tx_fee_stake_rewards = estimate_anchor_protocol_tx_fee(tasks, "anchor_protocol_txs_staking","fee_amount_adjusted".to_owned(),false,10).await;   
 
   if tx_fee_claim_rewards.as_str() == "--" || tx_fee_stake_rewards.as_str() == "--" {
     return "--".to_string();
@@ -231,9 +235,9 @@ pub async fn estimate_anchor_protocol_tx_fee_claim_and_stake(data: &mut HashMap<
                              .to_string();
 }
 
-pub async fn estimate_anchor_protocol_tx_fee(data: &mut HashMap<String, MaybeOrPromise>, tx_key: &str, key: String, as_micro: bool, digits_rounded_to: u32) -> String { 
+pub async fn estimate_anchor_protocol_tx_fee(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, tx_key: &str, key: String, as_micro: bool, digits_rounded_to: u32) -> String { 
 
-    match get_data_maybe_or_resolve_promise(data,tx_key).await {
+    match get_data_maybe_or_await_task(tasks,tx_key).await {
         Ok(response_result) => { 
             let result = &response_result.as_transactions().unwrap().result;
             let mut avg_fee_amount = Decimal::from_str("0").unwrap();
@@ -249,7 +253,7 @@ pub async fn estimate_anchor_protocol_tx_fee(data: &mut HashMap<String, MaybeOrP
                 avg_gas_wanted = avg_gas_wanted.checked_add(entry.gas_wanted).unwrap(); 
                 //println!("gas_wanted: {}, gas_used: {}, fee_denom: {}, fee_amount: {}, claim_amount: {}",entry.gas_wanted, entry.gas_used, entry.fee_denom, entry.fee_amount, entry.claim_amount);
             }
-             match get_meta_data_maybe_or_resolve_promise(data,"gas_fees_uusd").await {
+             match get_meta_data_maybe_or_await_task(tasks,"gas_fees_uusd").await {
                 Ok(response_result) => { 
                     let gas_fees_uusd = Decimal::from_str(response_result.as_str()).unwrap();    
                     avg_fee_amount = avg_fee_amount.checked_div(Decimal::from_str(result.len().to_string().as_str()).unwrap()).unwrap();
@@ -310,12 +314,12 @@ pub async fn estimate_anchor_protocol_tx_fee(data: &mut HashMap<String, MaybeOrP
 }
 
 
-pub async fn apy_on_collateral_by(data: &mut HashMap<String, MaybeOrPromise>,amount_field: &str, apr_field: &str, digits_rounded_to: u32) -> String { 
+pub async fn apy_on_collateral_by(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, amount_field: &str, apr_field: &str, digits_rounded_to: u32) -> String { 
 
     let mut collateral_value = Decimal::from_str("0").unwrap();  
     let mut borrow_limit = Decimal::from_str("0").unwrap(); 
 
-    match borrow_limit_to_string(data,10).await.as_ref() {
+    match borrow_limit_to_string(tasks, 10).await.as_ref() {
         "--" => {
             return "--".to_string();
         },
@@ -329,7 +333,7 @@ pub async fn apy_on_collateral_by(data: &mut HashMap<String, MaybeOrPromise>,amo
     let mut loan_amount = Decimal::from_str("0").unwrap();  
 
     if amount_field == "loan_amount" {
-        match borrower_loan_amount_to_string(data,10).await.as_ref() {
+        match borrower_loan_amount_to_string(tasks, 10).await.as_ref() {
             "--" => {
                 return "--".to_string();
             },
@@ -338,7 +342,7 @@ pub async fn apy_on_collateral_by(data: &mut HashMap<String, MaybeOrPromise>,amo
             }
         }
     }else if amount_field == "deposit_amount" {
-        match borrower_ust_deposited_to_string(data,10).await.as_ref() {
+        match borrower_ust_deposited_to_string(tasks, 10).await.as_ref() {
             "--" => {
                 return "--".to_string();
             }, 
@@ -347,7 +351,7 @@ pub async fn apy_on_collateral_by(data: &mut HashMap<String, MaybeOrPromise>,amo
             }
         }
     }else if amount_field == "target_ltv" { 
-        match get_meta_data_maybe_or_resolve_promise(data,"trigger_percentage").await {
+        match get_meta_data_maybe_or_await_task(tasks,"trigger_percentage").await {
             Ok(response_result) => { 
                 loan_amount = borrow_limit.checked_mul(Decimal::from_str(response_result.as_str()).unwrap()).unwrap();             
             },
@@ -363,7 +367,7 @@ pub async fn apy_on_collateral_by(data: &mut HashMap<String, MaybeOrPromise>,amo
 
         let mut net_apr = Decimal::from_str("0").unwrap(); 
         
-        match net_apr_to_string(data,10).await.as_ref() {
+        match net_apr_to_string(tasks, 10).await.as_ref() {
             "--" => {
                 return "--".to_string();
             },
@@ -377,7 +381,7 @@ pub async fn apy_on_collateral_by(data: &mut HashMap<String, MaybeOrPromise>,amo
 
         let mut earn_apr = Decimal::from_str("0").unwrap(); 
         
-        match earn_apr_to_string(data,10).await.as_ref() {
+        match earn_apr_to_string(tasks, 10).await.as_ref() {
             "--" => {
                 return "--".to_string();
             },
@@ -392,7 +396,7 @@ pub async fn apy_on_collateral_by(data: &mut HashMap<String, MaybeOrPromise>,amo
     }else if "earn_apr" == apr_field {
         let mut earn_apr = Decimal::from_str("0").unwrap(); 
         
-        match earn_apr_to_string(data,10).await.as_ref() {
+        match earn_apr_to_string(tasks, 10).await.as_ref() {
             "--" => {
                 return "--".to_string();
             },
@@ -407,7 +411,7 @@ pub async fn apy_on_collateral_by(data: &mut HashMap<String, MaybeOrPromise>,amo
     }else if "borrow_apr"== apr_field {
         let mut borrow_apr = Decimal::from_str("0").unwrap(); 
         
-        match borrow_apr_to_string(data,10).await.as_ref() {
+        match borrow_apr_to_string(tasks, 10).await.as_ref() {
             "--" => {
                 return "--".to_string();
             },
@@ -422,7 +426,7 @@ pub async fn apy_on_collateral_by(data: &mut HashMap<String, MaybeOrPromise>,amo
     }else if "distribution_apr" == apr_field {
         let mut distribution_apr = Decimal::from_str("0").unwrap(); 
         
-        match distribution_apr_to_string(data,10).await.as_ref() {
+        match distribution_apr_to_string(tasks, 10).await.as_ref() {
             "--" => {
                 return "--".to_string();
             },
@@ -446,10 +450,10 @@ pub async fn apy_on_collateral_by(data: &mut HashMap<String, MaybeOrPromise>,amo
 
 
 
-pub async fn anc_staked_balance_in_ust_to_string(data: &mut HashMap<String, MaybeOrPromise>, digits_rounded_to: u32) -> String { 
+pub async fn anc_staked_balance_in_ust_to_string(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
     let mut exchange_rate = Decimal::from_str("0").unwrap();
 
-    match get_data_maybe_or_resolve_promise(data,"simulation_cw20 anchorprotocol ANC terraswapAncUstPair").await {
+    match get_data_maybe_or_await_task(tasks,"simulation_cw20 anchorprotocol ANC terraswapAncUstPair").await {
             Ok(response_result) => {
                 let amount: cosmwasm_std::Decimal = cosmwasm_std::Decimal::from_str(response_result.as_simulation().unwrap().result.return_amount.to_string().as_str()).unwrap(); 
                 let micro: cosmwasm_std::Uint128 = cosmwasm_std::Uint128::from_str("1000000").unwrap();
@@ -460,7 +464,7 @@ pub async fn anc_staked_balance_in_ust_to_string(data: &mut HashMap<String, Mayb
             }
         }
 
-    match get_data_maybe_or_resolve_promise(data,"staker").await {
+    match get_data_maybe_or_await_task(tasks,"staker").await {
         Ok(response_result) => {
             let balance = response_result.as_staker().unwrap().result.balance; 
             let balance = Decimal::from_str(balance.to_string().as_str()).unwrap();
@@ -476,8 +480,8 @@ pub async fn anc_staked_balance_in_ust_to_string(data: &mut HashMap<String, Mayb
     }
 }
 
-pub async fn min_ust_balance_to_string(data: &mut HashMap<String, MaybeOrPromise>, digits_rounded_to: u32) -> String { 
-    match get_meta_data_maybe_or_resolve_promise(data,"min_ust_balance").await {
+pub async fn min_ust_balance_to_string(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
+    match get_meta_data_maybe_or_await_task(tasks,"min_ust_balance").await {
         Ok(response_result) => { 
             return Decimal::from_str(response_result.as_str()).unwrap()
                     .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
@@ -489,8 +493,8 @@ pub async fn min_ust_balance_to_string(data: &mut HashMap<String, MaybeOrPromise
     }
 }
 
-pub async fn anc_staked_balance_to_string(data: &mut HashMap<String, MaybeOrPromise>, digits_rounded_to: u32) -> String { 
-    match get_data_maybe_or_resolve_promise(data,"staker").await {
+pub async fn anc_staked_balance_to_string(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
+    match get_data_maybe_or_await_task(tasks,"staker").await {
         Ok(response_result) => {
             let balance = response_result.as_staker().unwrap().result.balance; 
             let balance = Decimal::from_str(balance.to_string().as_str()).unwrap();
@@ -506,9 +510,9 @@ pub async fn anc_staked_balance_to_string(data: &mut HashMap<String, MaybeOrProm
     }
 }
 
-pub async fn anchor_claim_and_stake_transaction_gas_fees_ratio_to_string(data: &mut HashMap<String, MaybeOrPromise>, digits_rounded_to: u32) -> String { 
+pub async fn anchor_claim_and_stake_transaction_gas_fees_ratio_to_string(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
     let mut pending_rewards = Decimal::from_str("0").unwrap();
-    match get_data_maybe_or_resolve_promise(data,"borrow_info").await {
+    match get_data_maybe_or_await_task(tasks,"borrow_info").await {
         Ok(response_result) => { 
             pending_rewards = Decimal::from_str(response_result.as_borrow_info().unwrap().result.pending_rewards.to_string().as_str()).unwrap();
             let micro = Decimal::from_str("1000000").unwrap();
@@ -522,7 +526,7 @@ pub async fn anchor_claim_and_stake_transaction_gas_fees_ratio_to_string(data: &
 
     let mut exchange_rate = Decimal::from_str("0").unwrap();
 
-    match get_data_maybe_or_resolve_promise(data,"simulation_cw20 anchorprotocol ANC terraswapAncUstPair").await {
+    match get_data_maybe_or_await_task(tasks,"simulation_cw20 anchorprotocol ANC terraswapAncUstPair").await {
             Ok(response_result) => {
                 let amount: cosmwasm_std::Decimal = cosmwasm_std::Decimal::from_str(response_result.as_simulation().unwrap().result.return_amount.to_string().as_str()).unwrap(); 
                 let micro: cosmwasm_std::Uint128 = cosmwasm_std::Uint128::from_str("1000000").unwrap();
@@ -535,7 +539,7 @@ pub async fn anchor_claim_and_stake_transaction_gas_fees_ratio_to_string(data: &
 
     pending_rewards = pending_rewards.checked_mul(exchange_rate).unwrap();
 
-    let anchor_protocol_tx_fee = estimate_anchor_protocol_tx_fee_claim_and_stake(data,10).await;
+    let anchor_protocol_tx_fee = estimate_anchor_protocol_tx_fee_claim_and_stake(tasks, 10).await;
 
     if anchor_protocol_tx_fee.as_str() == "--" {
         return "--".to_string();
@@ -549,8 +553,8 @@ pub async fn anchor_claim_and_stake_transaction_gas_fees_ratio_to_string(data: &
                               .to_string());
 }
 
-pub async fn borrower_rewards_to_string(data: &mut HashMap<String, MaybeOrPromise>,as_micro: bool, digits_rounded_to: u32) -> String { 
-    match get_data_maybe_or_resolve_promise(data,"borrow_info").await {
+pub async fn borrower_rewards_to_string(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, as_micro: bool, digits_rounded_to: u32) -> String { 
+    match get_data_maybe_or_await_task(tasks,"borrow_info").await {
         Ok(response_result) => {
             let pending_rewards = response_result.as_borrow_info().unwrap().result.pending_rewards; 
             let pending_rewards = Decimal::from_str(pending_rewards.to_string().as_str()).unwrap();
@@ -571,9 +575,9 @@ pub async fn borrower_rewards_to_string(data: &mut HashMap<String, MaybeOrPromis
     }
 }
 
-pub async fn borrower_rewards_in_ust_to_string(data: &mut HashMap<String, MaybeOrPromise>, digits_rounded_to: u32) -> String { 
+pub async fn borrower_rewards_in_ust_to_string(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
     let mut pending_rewards = Decimal::from_str("0").unwrap();
-    match get_data_maybe_or_resolve_promise(data,"borrow_info").await {
+    match get_data_maybe_or_await_task(tasks,"borrow_info").await {
         Ok(response_result) => { 
             pending_rewards = Decimal::from_str(response_result.as_borrow_info().unwrap().result.pending_rewards.to_string().as_str()).unwrap();
             let micro = Decimal::from_str("1000000").unwrap();
@@ -587,7 +591,7 @@ pub async fn borrower_rewards_in_ust_to_string(data: &mut HashMap<String, MaybeO
 
     let mut exchange_rate = Decimal::from_str("0").unwrap();
 
-    match get_data_maybe_or_resolve_promise(data,"simulation_cw20 anchorprotocol ANC terraswapAncUstPair").await {
+    match get_data_maybe_or_await_task(tasks,"simulation_cw20 anchorprotocol ANC terraswapAncUstPair").await {
             Ok(response_result) => {
                 let amount: cosmwasm_std::Decimal = cosmwasm_std::Decimal::from_str(response_result.as_simulation().unwrap().result.return_amount.to_string().as_str()).unwrap(); 
                 let micro: cosmwasm_std::Uint128 = cosmwasm_std::Uint128::from_str("1000000").unwrap();
@@ -603,10 +607,10 @@ pub async fn borrower_rewards_in_ust_to_string(data: &mut HashMap<String, MaybeO
                    .to_string();
 }
 
-pub async fn borrower_deposit_liquidity_to_string(data: &mut HashMap<String, MaybeOrPromise>, digits_rounded_to: u32) -> String { 
+pub async fn borrower_deposit_liquidity_to_string(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
     
     let mut balance = Decimal::from_str("0").unwrap();
-    match get_data_maybe_or_resolve_promise(data,"balance").await {
+    match get_data_maybe_or_await_task(tasks,"balance").await {
         Ok(response_result) => { 
             balance = Decimal::from_str(response_result.as_balance().unwrap().result.balance.to_string().as_str()).unwrap();
             let micro = Decimal::from_str("1000000").unwrap();
@@ -620,7 +624,7 @@ pub async fn borrower_deposit_liquidity_to_string(data: &mut HashMap<String, May
 
     let mut exchange_rate = Decimal::from_str("0").unwrap();
 
-    match get_data_maybe_or_resolve_promise(data,"epoch_state anchorprotocol mmMarket").await {
+    match get_data_maybe_or_await_task(tasks,"epoch_state anchorprotocol mmMarket").await {
             Ok(response_result) => {
                 let result: cosmwasm_std::Decimal256 = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.exchange_rate; 
                 exchange_rate = Decimal::from_str(result.to_string().as_str()).unwrap();
@@ -634,7 +638,7 @@ pub async fn borrower_deposit_liquidity_to_string(data: &mut HashMap<String, May
 
     let mut borrow_limit =  Decimal::from_str("0").unwrap();
 
-    match get_data_maybe_or_resolve_promise(data,"borrow_limit").await {
+    match get_data_maybe_or_await_task(tasks,"borrow_limit").await {
         Ok(response_result) => { 
             borrow_limit = Decimal::from_str(response_result.as_borrow_limit().unwrap().result.borrow_limit.to_string().as_str()).unwrap();
             let micro = Decimal::from_str("1000000").unwrap();
@@ -651,12 +655,12 @@ pub async fn borrower_deposit_liquidity_to_string(data: &mut HashMap<String, May
            .to_string());
 }
 
-pub async fn borrower_ltv_to_string(data: &mut HashMap<String, MaybeOrPromise>, digits_rounded_to: u32) -> String { 
+pub async fn borrower_ltv_to_string(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
      
     let mut borrow_limit =  Decimal::from_str("0").unwrap();
     let ltv_max =  Decimal::from_str("0.6").unwrap();
 
-    match get_data_maybe_or_resolve_promise(data,"borrow_limit").await {
+    match get_data_maybe_or_await_task(tasks,"borrow_limit").await {
         Ok(response_result) => { 
             borrow_limit = Decimal::from_str(response_result.as_borrow_limit().unwrap().result.borrow_limit.to_string().as_str()).unwrap();
             let micro = Decimal::from_str("1000000").unwrap();
@@ -671,7 +675,7 @@ pub async fn borrower_ltv_to_string(data: &mut HashMap<String, MaybeOrPromise>, 
 
     let mut loan_amount = Decimal::from_str("0").unwrap();
 
-    match get_data_maybe_or_resolve_promise(data,"borrow_info").await {
+    match get_data_maybe_or_await_task(tasks,"borrow_info").await {
         Ok(response_result) => { 
             loan_amount = Decimal::from_str(response_result.as_borrow_info().unwrap().result.loan_amount.to_string().as_str()).unwrap();
             let micro = Decimal::from_str("1000000").unwrap();
@@ -690,9 +694,9 @@ pub async fn borrower_ltv_to_string(data: &mut HashMap<String, MaybeOrPromise>, 
 }
 
 
-pub async fn borrower_anc_deposited_to_string(data: &mut HashMap<String, MaybeOrPromise>, as_micro: bool, digits_rounded_to: u32) -> String { 
+pub async fn borrower_anc_deposited_to_string(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, as_micro: bool, digits_rounded_to: u32) -> String { 
     let mut balance = Decimal::from_str("0").unwrap();
-    match get_data_maybe_or_resolve_promise(data,"anc_balance").await {
+    match get_data_maybe_or_await_task(tasks,"anc_balance").await {
         Ok(response_result) => { 
             balance = Decimal::from_str(response_result.as_balance().unwrap().result.balance.to_string().as_str()).unwrap();
             let mut micro = Decimal::from_str("1").unwrap();
@@ -710,9 +714,9 @@ pub async fn borrower_anc_deposited_to_string(data: &mut HashMap<String, MaybeOr
     }
 }
 
-pub async fn borrower_ust_deposited_to_string(data: &mut HashMap<String, MaybeOrPromise>, digits_rounded_to: u32) -> String { 
+pub async fn borrower_ust_deposited_to_string(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
     let mut balance = Decimal::from_str("0").unwrap();
-    match get_data_maybe_or_resolve_promise(data,"balance").await {
+    match get_data_maybe_or_await_task(tasks,"balance").await {
         Ok(response_result) => { 
             balance = Decimal::from_str(response_result.as_balance().unwrap().result.balance.to_string().as_str()).unwrap();
             let micro = Decimal::from_str("1000000").unwrap();
@@ -726,7 +730,7 @@ pub async fn borrower_ust_deposited_to_string(data: &mut HashMap<String, MaybeOr
 
     let mut exchange_rate = Decimal::from_str("0").unwrap();
 
-    match get_data_maybe_or_resolve_promise(data,"epoch_state anchorprotocol mmMarket").await {
+    match get_data_maybe_or_await_task(tasks,"epoch_state anchorprotocol mmMarket").await {
             Ok(response_result) => {
                 let result: cosmwasm_std::Decimal256 = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.exchange_rate; 
                 exchange_rate = Decimal::from_str(result.to_string().as_str()).unwrap();
@@ -740,8 +744,8 @@ pub async fn borrower_ust_deposited_to_string(data: &mut HashMap<String, MaybeOr
            .to_string();
 }
 
-pub async fn borrower_balance_to_string(data: &mut HashMap<String, MaybeOrPromise>, key: &str, digits_rounded_to: u32) -> String { 
-    match get_data_maybe_or_resolve_promise(data,key).await {
+pub async fn borrower_balance_to_string(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: &str, digits_rounded_to: u32) -> String { 
+    match get_data_maybe_or_await_task(tasks,key).await {
         Ok(response_result) => {
             let balance = response_result.as_balance().unwrap().result.balance; 
             let balance = Decimal::from_str(balance.to_string().as_str()).unwrap();
@@ -757,8 +761,8 @@ pub async fn borrower_balance_to_string(data: &mut HashMap<String, MaybeOrPromis
     }
 }
 
-pub async fn terra_balance_to_string(data: &mut HashMap<String, MaybeOrPromise>, denom: &str, as_micro: bool, digits_rounded_to: u32) -> String { 
-    match get_data_maybe_or_resolve_promise(data,"terra_balances").await {
+pub async fn terra_balance_to_string(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, denom: &str, as_micro: bool, digits_rounded_to: u32) -> String { 
+    match get_data_maybe_or_await_task(tasks,"terra_balances").await {
         Ok(response_result) => {
             let vector_balances = &response_result.as_balances().unwrap().result; 
             for balance in vector_balances {
@@ -782,8 +786,8 @@ pub async fn terra_balance_to_string(data: &mut HashMap<String, MaybeOrPromise>,
     return "0".to_string();
 }
 
-pub async fn borrower_loan_amount_to_string(data: &mut HashMap<String, MaybeOrPromise>, digits_rounded_to: u32) -> String { 
-    match get_data_maybe_or_resolve_promise(data,"borrow_info").await {
+pub async fn borrower_loan_amount_to_string(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
+    match get_data_maybe_or_await_task(tasks,"borrow_info").await {
         Ok(response_result) => {
             let loan_amount = response_result.as_borrow_info().unwrap().result.loan_amount; 
             let loan_amount = Decimal::from_str(loan_amount.to_string().as_str()).unwrap();
@@ -799,8 +803,8 @@ pub async fn borrower_loan_amount_to_string(data: &mut HashMap<String, MaybeOrPr
     }
 }
 
-pub async fn borrow_limit_to_string(data: &mut HashMap<String, MaybeOrPromise>, digits_rounded_to: u32) -> String { 
-    match get_data_maybe_or_resolve_promise(data,"borrow_limit").await {
+pub async fn borrow_limit_to_string(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
+    match get_data_maybe_or_await_task(tasks,"borrow_limit").await {
         Ok(response_result) => {
             let borrow_limit = response_result.as_borrow_limit().unwrap().result.borrow_limit; 
             let borrow_limit = Decimal::from_str(borrow_limit.to_string().as_str()).unwrap();
@@ -817,7 +821,7 @@ pub async fn borrow_limit_to_string(data: &mut HashMap<String, MaybeOrPromise>, 
 }
 
 
-pub async fn borrow_apr_to_string(data: &mut HashMap<String, MaybeOrPromise>, digits_rounded_to: u32) -> String { 
+pub async fn borrow_apr_to_string(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
         // utilisationRatio = stablecoinsLent / stablecoinsDeposited
         // borrowRate = utilisationRatio * interestMultiplier + baseRate
         // borrow_apr = blocksPerYear * borrowRate
@@ -827,7 +831,7 @@ pub async fn borrow_apr_to_string(data: &mut HashMap<String, MaybeOrPromise>, di
         let mut a_terra_exchange_rate: cosmwasm_std::Decimal256 = cosmwasm_std::Decimal256::zero();
         let mut a_terra_supply: cosmwasm_std::Uint256 = cosmwasm_std::Uint256::zero();
                 
-        match get_data_maybe_or_resolve_promise(data,"state anchorprotocol mmMarket").await {
+        match get_data_maybe_or_await_task(tasks,"state anchorprotocol mmMarket").await {
             Ok(response_result) => {
                 total_liabilities = response_result.as_state().unwrap().as_mm_market().unwrap().result.total_liabilities; 
             },
@@ -836,7 +840,7 @@ pub async fn borrow_apr_to_string(data: &mut HashMap<String, MaybeOrPromise>, di
             }
         }
 
-        match get_data_maybe_or_resolve_promise(data,"epoch_state anchorprotocol mmMarket").await {
+        match get_data_maybe_or_await_task(tasks,"epoch_state anchorprotocol mmMarket").await {
             Ok(response_result) => {
                 a_terra_exchange_rate = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.exchange_rate; 
                 a_terra_supply = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.aterra_supply; 
@@ -859,7 +863,7 @@ pub async fn borrow_apr_to_string(data: &mut HashMap<String, MaybeOrPromise>, di
         let mut interest_multiplier: cosmwasm_std::Decimal256 = cosmwasm_std::Decimal256::zero();
         let mut base_rate: cosmwasm_std::Decimal256 = cosmwasm_std::Decimal256::zero();
 
-        match get_data_maybe_or_resolve_promise(data,"config anchorprotocol mmInterestModel").await {
+        match get_data_maybe_or_await_task(tasks,"config anchorprotocol mmInterestModel").await {
             Ok(response_result) => {
                 base_rate  = response_result.as_config().unwrap().as_mm_interest_model().unwrap().result.base_rate; 
                 interest_multiplier = response_result.as_config().unwrap().as_mm_interest_model().unwrap().result.interest_multiplier; 
@@ -876,7 +880,7 @@ pub async fn borrow_apr_to_string(data: &mut HashMap<String, MaybeOrPromise>, di
                           .checked_add(Decimal::from_str(base_rate.to_string().as_str()).unwrap())
                           .unwrap();
        
-        match get_data_maybe_or_resolve_promise(data,"blocks_per_year").await {
+        match get_data_maybe_or_await_task(tasks,"blocks_per_year").await {
             Ok(response_result) => {
                 let blocks_per_year = Decimal::from_str(response_result.as_blocks().unwrap().result.blocks_per_year.to_string().as_str()).unwrap();
                
@@ -894,9 +898,9 @@ pub async fn borrow_apr_to_string(data: &mut HashMap<String, MaybeOrPromise>, di
 }
 
 
-pub fn anything_to_err(data: &HashMap<String, MaybeOrPromise>, key: &str) -> String { 
+pub async fn anything_to_err(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: &str) -> String { 
      
-        match get_data_maybe_or_meta_data_maybe(data,key) {
+        match get_data_maybe_or_meta_data_maybe(tasks,key).await {
             Ok(response_result) => {
                return "--".to_string();
             },
@@ -906,9 +910,9 @@ pub fn anything_to_err(data: &HashMap<String, MaybeOrPromise>, key: &str) -> Str
         } 
 }
 
-pub async fn earn_apr_to_string(data: &mut HashMap<String, MaybeOrPromise>, digits_rounded_to: u32) -> String { 
+pub async fn earn_apr_to_string(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
      
-        match get_data_maybe_or_resolve_promise(data,"earn_apy").await {
+        match get_data_maybe_or_await_task(tasks,"earn_apy").await {
             Ok(response_result) => {
                 let apy: rust_decimal::Decimal = response_result.as_earn_apy().unwrap().result.apy; 
                 return format!("{}%",
@@ -923,7 +927,7 @@ pub async fn earn_apr_to_string(data: &mut HashMap<String, MaybeOrPromise>, digi
         } 
 }
 
-pub async fn net_apr_to_string(data: &mut HashMap<String, MaybeOrPromise>, digits_rounded_to: u32) -> String { 
+pub async fn net_apr_to_string(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
         // utilisationRatio = stablecoinsLent / stablecoinsDeposited
         // borrowRate = utilisationRatio * interestMultiplier + baseRate
         // borrow_apr = blocksPerYear * borrowRate
@@ -933,7 +937,7 @@ pub async fn net_apr_to_string(data: &mut HashMap<String, MaybeOrPromise>, digit
         let mut a_terra_exchange_rate: cosmwasm_std::Decimal256 = cosmwasm_std::Decimal256::zero();
         let mut a_terra_supply: cosmwasm_std::Uint256 = cosmwasm_std::Uint256::zero();
                 
-        match get_data_maybe_or_resolve_promise(data,"state anchorprotocol mmMarket").await {
+        match get_data_maybe_or_await_task(tasks,"state anchorprotocol mmMarket").await {
             Ok(response_result) => {
                 total_liabilities = response_result.as_state().unwrap().as_mm_market().unwrap().result.total_liabilities; 
             },
@@ -942,7 +946,7 @@ pub async fn net_apr_to_string(data: &mut HashMap<String, MaybeOrPromise>, digit
             }
         }
 
-        match get_data_maybe_or_resolve_promise(data,"epoch_state anchorprotocol mmMarket").await {
+        match get_data_maybe_or_await_task(tasks,"epoch_state anchorprotocol mmMarket").await {
             Ok(response_result) => {
                 a_terra_exchange_rate = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.exchange_rate; 
                 a_terra_supply = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.aterra_supply; 
@@ -965,7 +969,7 @@ pub async fn net_apr_to_string(data: &mut HashMap<String, MaybeOrPromise>, digit
         let mut interest_multiplier: cosmwasm_std::Decimal256 = cosmwasm_std::Decimal256::zero();
         let mut base_rate: cosmwasm_std::Decimal256 = cosmwasm_std::Decimal256::zero();
 
-        match get_data_maybe_or_resolve_promise(data,"config anchorprotocol mmInterestModel").await {
+        match get_data_maybe_or_await_task(tasks,"config anchorprotocol mmInterestModel").await {
             Ok(response_result) => {
                 base_rate  = response_result.as_config().unwrap().as_mm_interest_model().unwrap().result.base_rate; 
                 interest_multiplier = response_result.as_config().unwrap().as_mm_interest_model().unwrap().result.interest_multiplier; 
@@ -982,13 +986,19 @@ pub async fn net_apr_to_string(data: &mut HashMap<String, MaybeOrPromise>, digit
                           .checked_add(Decimal::from_str(base_rate.to_string().as_str()).unwrap())
                           .unwrap();
        
-        let blocks_per_year = Decimal::from_str(get_data_maybe_or_resolve_promise(data,"blocks_per_year").await.unwrap().as_blocks().unwrap().result.blocks_per_year.to_string().as_str()).unwrap();
-    
-
+       let mut blocks_per_year = Decimal::from_str("0").unwrap(); // 4656810
+       match get_data_maybe_or_await_task(tasks,"blocks_per_year").await {
+            Ok(response_result) => {
+                blocks_per_year = Decimal::from_str(response_result.as_blocks().unwrap().result.blocks_per_year.to_string().as_str()).unwrap();
+              },
+            Err(err) => {
+                return "--".to_string();
+            }
+        }       
         let borrow_apr = blocks_per_year
                          .checked_mul(borrow_rate).unwrap();
 
-        match get_data_maybe_or_resolve_promise(data,"api/v2/distribution-apy").await {
+        match get_data_maybe_or_await_task(tasks,"api/v2/distribution-apy").await {
             Ok(response_result) => {
                 let distribution_apr: cosmwasm_std::Decimal = response_result.as_distribution_apy().unwrap().distribution_apy; 
                 return format!("{}%",
@@ -1005,12 +1015,12 @@ pub async fn net_apr_to_string(data: &mut HashMap<String, MaybeOrPromise>, digit
 }
 
 
-pub async fn borrow_rate_to_string(data: &mut HashMap<String, MaybeOrPromise>, key: &str, key_1: &str, key_2: &str, digits_rounded_to: u32) -> String { 
+pub async fn borrow_rate_to_string(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: &str, key_1: &str, key_2: &str, digits_rounded_to: u32) -> String { 
         
         let mut interest_multiplier: cosmwasm_std::Decimal256 = cosmwasm_std::Decimal256::zero();
         let mut base_rate: cosmwasm_std::Decimal256 = cosmwasm_std::Decimal256::zero();
 
-        match get_data_maybe_or_resolve_promise(data,key).await {
+        match get_data_maybe_or_await_task(tasks,key).await {
             Ok(response_result) => {
                 base_rate  = response_result.as_config().unwrap().as_mm_interest_model().unwrap().result.base_rate; 
                 interest_multiplier = response_result.as_config().unwrap().as_mm_interest_model().unwrap().result.interest_multiplier; 
@@ -1025,7 +1035,7 @@ pub async fn borrow_rate_to_string(data: &mut HashMap<String, MaybeOrPromise>, k
         let mut a_terra_exchange_rate: cosmwasm_std::Decimal256 = cosmwasm_std::Decimal256::zero();
         let mut a_terra_supply: cosmwasm_std::Uint256 = cosmwasm_std::Uint256::zero();
                 
-        match get_data_maybe_or_resolve_promise(data,key_1).await {
+        match get_data_maybe_or_await_task(tasks,key_1).await {
             Ok(response_result) => {
                 total_liabilities = response_result.as_state().unwrap().as_mm_market().unwrap().result.total_liabilities; 
             },
@@ -1034,7 +1044,7 @@ pub async fn borrow_rate_to_string(data: &mut HashMap<String, MaybeOrPromise>, k
             }
         }
 
-        match get_data_maybe_or_resolve_promise(data,key_2).await {
+        match get_data_maybe_or_await_task(tasks,key_2).await {
             Ok(response_result) => {
                 a_terra_exchange_rate = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.exchange_rate; 
                 a_terra_supply = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.aterra_supply; 
@@ -1050,8 +1060,8 @@ pub async fn borrow_rate_to_string(data: &mut HashMap<String, MaybeOrPromise>, k
 }
 
 
-pub async fn distribution_apr_to_string(data: &mut HashMap<String, MaybeOrPromise>, digits_rounded_to: u32) -> String { 
-        match get_data_maybe_or_resolve_promise(data,"api/v2/distribution-apy").await {
+pub async fn distribution_apr_to_string(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
+        match get_data_maybe_or_await_task(tasks,"api/v2/distribution-apy").await {
             Ok(response_result) => {
                 let distribution_apr: cosmwasm_std::Decimal = response_result.as_distribution_apy().unwrap().distribution_apy; 
                 return format!("{}%",Decimal::from_str(distribution_apr.to_string().as_str()).unwrap().checked_mul(Decimal::from_str("100").unwrap()).unwrap().round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero).to_string());
@@ -1062,8 +1072,8 @@ pub async fn distribution_apr_to_string(data: &mut HashMap<String, MaybeOrPromis
         }
 }
 
-pub async fn staking_apy_to_string(data: &mut HashMap<String, MaybeOrPromise>,digits_rounded_to: u32) -> String { 
-        match get_data_maybe_or_resolve_promise(data,"api/v2/gov-reward").await {
+pub async fn staking_apy_to_string(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
+        match get_data_maybe_or_await_task(tasks,"api/v2/gov-reward").await {
             Ok(response_result) => {
                 let current_apy: cosmwasm_std::Decimal = response_result.as_gov_reward().unwrap().current_apy; 
                 return format!("{}%",Decimal::from_str(current_apy.to_string().as_str()).unwrap().checked_mul(Decimal::from_str("100").unwrap()).unwrap().round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero).to_string());
@@ -1074,8 +1084,8 @@ pub async fn staking_apy_to_string(data: &mut HashMap<String, MaybeOrPromise>,di
         }
 }
 
-pub async fn interest_multiplier_to_string(data: &mut HashMap<String, MaybeOrPromise>, key: &str, digits_rounded_to: u32) -> String { 
-        match get_data_maybe_or_resolve_promise(data,key).await {
+pub async fn interest_multiplier_to_string(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: &str, digits_rounded_to: u32) -> String { 
+        match get_data_maybe_or_await_task(tasks,key).await {
             Ok(response_result) => {
                 let interest_multiplier: cosmwasm_std::Decimal256 = response_result.as_config().unwrap().as_mm_interest_model().unwrap().result.interest_multiplier; 
                 return Decimal::from_str(interest_multiplier.to_string().as_str()).unwrap().round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero).to_string();
@@ -1086,8 +1096,8 @@ pub async fn interest_multiplier_to_string(data: &mut HashMap<String, MaybeOrPro
         }
 }
 
-pub async fn blocks_per_year_to_string(data: &mut HashMap<String, MaybeOrPromise>, key: &str, digits_rounded_to: u32) -> String { 
-        match get_data_maybe_or_resolve_promise(data,key).await {
+pub async fn blocks_per_year_to_string(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: &str, digits_rounded_to: u32) -> String { 
+        match get_data_maybe_or_await_task(tasks,key).await {
             Ok(response_result) => {
                 let blocks_per_year = Decimal::from_str(response_result.as_blocks().unwrap().result.blocks_per_year.to_string().as_str()).unwrap();
                 return blocks_per_year.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero).to_string();
@@ -1098,8 +1108,8 @@ pub async fn blocks_per_year_to_string(data: &mut HashMap<String, MaybeOrPromise
         }
 }    
 
-pub async fn base_rate_to_string(data: &mut HashMap<String, MaybeOrPromise>, key: &str, digits_rounded_to: u32) -> String { 
-        match get_data_maybe_or_resolve_promise(data,key).await {
+pub async fn base_rate_to_string(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: &str, digits_rounded_to: u32) -> String { 
+        match get_data_maybe_or_await_task(tasks,key).await {
             Ok(response_result) => {
                 let base_rate: cosmwasm_std::Decimal256 = response_result.as_config().unwrap().as_mm_interest_model().unwrap().result.base_rate; 
                 return Decimal::from_str(base_rate.to_string().as_str()).unwrap().round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero).to_string();
@@ -1111,8 +1121,8 @@ pub async fn base_rate_to_string(data: &mut HashMap<String, MaybeOrPromise>, key
 }
 
 
-pub async fn a_terra_supply_to_string(data: &mut HashMap<String, MaybeOrPromise>, key: &str, digits_rounded_to: u32) -> String { 
-        match get_data_maybe_or_resolve_promise(data,key).await {
+pub async fn a_terra_supply_to_string(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: &str, digits_rounded_to: u32) -> String { 
+        match get_data_maybe_or_await_task(tasks,key).await {
             Ok(response_result) => {
                 let exchange_rate: cosmwasm_std::Decimal256 = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.exchange_rate; 
                 let supply: cosmwasm_std::Uint256 = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.aterra_supply; 
@@ -1126,8 +1136,8 @@ pub async fn a_terra_supply_to_string(data: &mut HashMap<String, MaybeOrPromise>
         }
 }
 
-pub async fn a_terra_exchange_rate_to_string(data: &mut HashMap<String, MaybeOrPromise>, key: &str, digits_rounded_to: u32) -> String { 
-        match get_data_maybe_or_resolve_promise(data,key).await {
+pub async fn a_terra_exchange_rate_to_string(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: &str, digits_rounded_to: u32) -> String { 
+        match get_data_maybe_or_await_task(tasks,key).await {
             Ok(response_result) => {
                 let exchange_rate: cosmwasm_std::Decimal256 = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.exchange_rate; 
                 return Decimal::from_str(exchange_rate.to_string().as_str()).unwrap().round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero).to_string();
@@ -1138,8 +1148,8 @@ pub async fn a_terra_exchange_rate_to_string(data: &mut HashMap<String, MaybeOrP
         }
 }
 
-pub async fn b_luna_exchange_rate_to_string(data: &mut HashMap<String, MaybeOrPromise>, key: &str, digits_rounded_to: u32) -> String { 
-        match get_data_maybe_or_resolve_promise(data,key).await {
+pub async fn b_luna_exchange_rate_to_string(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: &str, digits_rounded_to: u32) -> String { 
+        match get_data_maybe_or_await_task(tasks,key).await {
             Ok(response_result) => {
                 let exchange_rate: cosmwasm_std::Decimal = response_result.as_state().unwrap().as_b_luna_hub().unwrap().result.bluna_exchange_rate; 
                 return Decimal::from_str(exchange_rate.to_string().as_str()).unwrap().round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero).to_string();
@@ -1150,14 +1160,14 @@ pub async fn b_luna_exchange_rate_to_string(data: &mut HashMap<String, MaybeOrPr
         }
 }
 
-pub async fn utilization_ratio_to_string(data: &mut HashMap<String, MaybeOrPromise>, key_1: &str,key_2: &str, digits_rounded_to: u32) -> String { 
+pub async fn utilization_ratio_to_string(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key_1: &str,key_2: &str, digits_rounded_to: u32) -> String { 
         
         let mut total_liabilities: cosmwasm_std::Decimal256 = cosmwasm_std::Decimal256::zero(); 
 
         let mut a_terra_exchange_rate: cosmwasm_std::Decimal256 = cosmwasm_std::Decimal256::zero();
         let mut a_terra_supply: cosmwasm_std::Uint256 = cosmwasm_std::Uint256::zero();
                 
-        match get_data_maybe_or_resolve_promise(data,key_1).await {
+        match get_data_maybe_or_await_task(tasks,key_1).await {
             Ok(response_result) => {
                 total_liabilities = response_result.as_state().unwrap().as_mm_market().unwrap().result.total_liabilities; 
             },
@@ -1166,7 +1176,7 @@ pub async fn utilization_ratio_to_string(data: &mut HashMap<String, MaybeOrPromi
             }
         }
 
-        match get_data_maybe_or_resolve_promise(data,key_2).await {
+        match get_data_maybe_or_await_task(tasks,key_2).await {
             Ok(response_result) => {
                 a_terra_exchange_rate = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.exchange_rate; 
                 a_terra_supply = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.aterra_supply; 
@@ -1183,8 +1193,8 @@ pub async fn utilization_ratio_to_string(data: &mut HashMap<String, MaybeOrPromi
 
 }
 
-pub async fn total_liabilities_to_string(data: &mut HashMap<String, MaybeOrPromise>, key: &str, digits_rounded_to: u32) -> String { 
-        match get_data_maybe_or_resolve_promise(data,key).await {
+pub async fn total_liabilities_to_string(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: &str, digits_rounded_to: u32) -> String { 
+        match get_data_maybe_or_await_task(tasks,key).await {
             Ok(response_result) => {
                 let total_liabilities: Decimal = Decimal::from_str(response_result.as_state().unwrap().as_mm_market().unwrap().result.total_liabilities.to_string().as_str()).unwrap(); 
                 let micro: Decimal = Decimal::from_str("1000000").unwrap();
@@ -1198,8 +1208,8 @@ pub async fn total_liabilities_to_string(data: &mut HashMap<String, MaybeOrPromi
 }
 
 
-pub async fn simulation_swap_return_amount_to_string(data: &mut HashMap<String, MaybeOrPromise>, key: &str, digits_rounded_to: u32) -> String { 
-        match get_data_maybe_or_resolve_promise(data,key).await {
+pub async fn simulation_swap_return_amount_to_string(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: &str, digits_rounded_to: u32) -> String { 
+        match get_data_maybe_or_await_task(tasks,key).await {
             Ok(response_result) => {
                 let amount: cosmwasm_std::Decimal = cosmwasm_std::Decimal::from_str(response_result.as_simulation().unwrap().result.return_amount.to_string().as_str()).unwrap(); 
                 let micro: cosmwasm_std::Uint128 = cosmwasm_std::Uint128::from_str("1000000").unwrap();
@@ -1211,8 +1221,8 @@ pub async fn simulation_swap_return_amount_to_string(data: &mut HashMap<String, 
         }
 }
 
-pub async fn core_swap_amount_to_string(data: &mut HashMap<String, MaybeOrPromise>, key: &str, digits_rounded_to: u32) -> String { 
-        match get_data_maybe_or_resolve_promise(data,key).await {
+pub async fn core_swap_amount_to_string(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: &str, digits_rounded_to: u32) -> String { 
+        match get_data_maybe_or_await_task(tasks,key).await {
             Ok(response_result) => {
                 let amount: cosmwasm_std::Decimal = cosmwasm_std::Decimal::from_str(response_result.as_core_swap().unwrap().result.amount.to_string().as_str()).unwrap(); 
                 let micro: cosmwasm_std::Uint128 = cosmwasm_std::Uint128::from_str("1000000").unwrap();

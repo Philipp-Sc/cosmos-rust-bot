@@ -11,7 +11,7 @@ use smart_contracts::{ResponseResult};
 use smart_contracts::meta::api::{fetch_gas_price, QueryResponse};
 use smart_contracts::meta::api::data::{GasPrices};
 use smart_contracts::meta::api::data::endpoints::get_terra_fcd;
-
+ 
 use smart_contracts::{
     state_query_msg,
     epoch_state_query_msg,
@@ -39,6 +39,12 @@ use core::future::Future;
 use anyhow::anyhow;
 use enum_as_inner::EnumAsInner;
 
+use tokio::task::JoinHandle;
+
+use std::sync::Arc; 
+use tokio::sync::RwLock; 
+ 
+
  
 pub enum MaybeOrPromise { 
     Data(QueryData),
@@ -47,15 +53,15 @@ pub enum MaybeOrPromise {
 
 pub enum QueryData { 
     Maybe(anyhow::Result<ResponseResult>),
-    Promise(Pin<Box<dyn Future<Output = anyhow::Result<ResponseResult>>>>),
+    Task(JoinHandle<anyhow::Result<ResponseResult>>), 
 }
 
 pub enum MetaData { 
     Maybe(anyhow::Result<String>),
-    Promise(Pin<Box<dyn Future<Output = anyhow::Result<String>>>>),
+    Task(JoinHandle<anyhow::Result<String>>), 
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct UserSettings {
     pub wallet_acc_address: String,  
     pub trigger_percentage: Decimal, 
@@ -63,27 +69,7 @@ pub struct UserSettings {
     pub min_ust_balance: Decimal, 
     pub gas_adjustment_preference: Decimal, 
 } 
-
-/*
- * returns all futures (MaybeOrPromise) specified, if they are not yet resolved.
- *
- */
- /*
-pub async fn get_data_promise_or_meta_data_promise(data: &HashMap<String, MaybeOrPromise>,req: Vec<String>) -> String { 
-          for key in req {
-            let entry = data.get_mut(&key).unwrap();
-            if let MaybeOrPromise::Data(QueryData::Promise(p)) = entry { 
-                 tokio::spawn(async move { 
-                    p.await
-                });
-            }/*else if let MaybeOrPromise::MetaData(MetaData::Promise(p)) = entry { 
-                 req_promises.push(entry);
-            }*/
-        }
-        return "".to_string()
-        // instead of getting them, join and resolve them.
-        //return tokio::join!(req_promises);
-} */
+ 
 
 /*
  * returns the value for the given key, if the enum is of the type Maybe.
@@ -91,9 +77,12 @@ pub async fn get_data_promise_or_meta_data_promise(data: &HashMap<String, MaybeO
  * in that case it returns an error.
  *
  */
-pub fn get_data_maybe_or_meta_data_maybe(data: &HashMap<String, MaybeOrPromise>,key: &str) -> anyhow::Result<ResponseResult> { 
-    let entry = data.get(key).unwrap();
-    if let MaybeOrPromise::Data(QueryData::Maybe(m)) = entry {
+pub async fn get_data_maybe_or_meta_data_maybe(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>,key: &str) -> anyhow::Result<ResponseResult> { 
+    
+    let mut map = tasks.write().await; 
+    let mut res = map.get_mut(key).unwrap();
+
+    if let MaybeOrPromise::Data(QueryData::Maybe(m)) = res {
         match m {
             Ok(n) => {
                 return Ok(n.clone());
@@ -103,7 +92,7 @@ pub fn get_data_maybe_or_meta_data_maybe(data: &HashMap<String, MaybeOrPromise>,
             }
         } 
     }
-    if let MaybeOrPromise::MetaData(MetaData::Maybe(m)) = entry {
+    if let MaybeOrPromise::MetaData(MetaData::Maybe(m)) = res {
         match m {
             Ok(n) => {
                 return Ok(ResponseResult::Text(n.clone()));
@@ -115,6 +104,8 @@ pub fn get_data_maybe_or_meta_data_maybe(data: &HashMap<String, MaybeOrPromise>,
     }
     return Err(anyhow!("Info: Key '{}' is not yet resolved. ",key));
 }
+
+
 /*
  * await promise and save result, then return result
  * or access saved result and return result.
@@ -122,49 +113,24 @@ pub fn get_data_maybe_or_meta_data_maybe(data: &HashMap<String, MaybeOrPromise>,
  * always returns a copy (clone)
  */
  // will panic when no value for key exists!
-pub async fn get_data_maybe_or_resolve_promise(data: &mut HashMap<String, MaybeOrPromise>,key: &str) -> anyhow::Result<ResponseResult> { 
-        let entry = data.get_mut(key).unwrap();
-            /* &mut is needed to get the Future, see:
-             *   = help: the trait `Future` is not implemented for `&Pin<Box<dyn Future<Output = Result<ResponseResult, anyhow::Error>>>>`
-             *   = note: `Future` is implemented for `&mut std::pin::Pin<std::boxed::Box<dyn std::future::Future<Output = std::result::Result<control::view::model::smart_contracts::ResponseResult, anyhow::Error>>>>`, but not for `&std::pin::Pin<std::boxed::Box<dyn std::future::Future<Output = std:
-             */
-        if let MaybeOrPromise::Data(QueryData::Promise(p)) = entry { 
-            let res = p.await;
-            data.insert(key.to_owned(), MaybeOrPromise::Data(QueryData::Maybe(res))); 
+pub async fn get_data_maybe_or_await_task(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>,key: &str) -> anyhow::Result<ResponseResult> { 
+ 
 
-            let entry = data.get(key).unwrap();
-            if let MaybeOrPromise::Data(QueryData::Maybe(m)) = entry {
-                match m {
-                    Ok(n) => {
-                        return Ok(n.clone());
-                    },
-                    Err(e) => {
-                        return Err(anyhow!("Error: {:?}",e));
-                    }
-                } 
-            }
-        }else{ 
-            if let MaybeOrPromise::Data(QueryData::Maybe(m)) = entry {
-                match m {
-                    Ok(n) => {
-                        return Ok(n.clone());
-                    },
-                    Err(e) => {
-                        return Err(anyhow!("Error: {:?}",e));
-                    }
-                } 
-            }
-        } 
-        return Err(anyhow!("Unexpected Error: "));
-} 
-pub async fn get_meta_data_maybe_or_resolve_promise(data: &mut HashMap<String, MaybeOrPromise>,key: &str) -> anyhow::Result<String> { 
-        let entry = data.get_mut(key).unwrap();
-        if let MaybeOrPromise::MetaData(MetaData::Promise(p)) = entry { 
-            let res = p.await;
-            data.insert(key.to_owned(), MaybeOrPromise::MetaData(MetaData::Maybe(res))); 
+        let mut map = tasks.write().await; 
+        let mut res = map.get_mut(key).unwrap();
+        
+        if let MaybeOrPromise::Data(QueryData::Task(task)) = res { 
+ 
+            let maybe: Result<ResponseResult, anyhow::Error>  = match task.await {
+                Ok(n) => { n },
+                Err(e) => { Err(anyhow!("Error: {:?}",e)) } // JoinError
+            };
 
-            let entry = data.get(key).unwrap();
-            if let MaybeOrPromise::MetaData(MetaData::Maybe(m)) = entry {
+            *map.get_mut(key).unwrap() = MaybeOrPromise::Data(QueryData::Maybe(maybe));  
+ 
+            let res = map.get(key).unwrap();
+
+            if let MaybeOrPromise::Data(QueryData::Maybe(m)) = res {
                 match m {
                     Ok(n) => {
                         return Ok(n.clone());
@@ -173,21 +139,69 @@ pub async fn get_meta_data_maybe_or_resolve_promise(data: &mut HashMap<String, M
                         return Err(anyhow!("Error: {:?}",e));
                     }
                 } 
-            }
-        }else{ 
-            if let MaybeOrPromise::MetaData(MetaData::Maybe(m)) = entry {
-                match m {
-                    Ok(n) => {
-                        return Ok(n.clone());
-                    },
-                    Err(e) => {
-                        return Err(anyhow!("Error: {:?}",e));
-                    }
-                } 
-            }
+            } 
+        } else if let MaybeOrPromise::Data(QueryData::Maybe(maybe)) = res {
+            match maybe {
+                Ok(n) => {
+                    return Ok(n.clone());
+                },
+                Err(e) => {
+                    return Err(anyhow!("Error: {:?}",e));
+                }
+            } 
         } 
-        return Err(anyhow!("Unexpected Error: "));
-} 
+        return Err(anyhow!("Unexpected Error: Unreachable point reached."));
+        
+ }
+
+
+/*
+ * await promise and save result, then return result
+ * or access saved result and return result.
+ *
+ * always returns a copy (clone)
+ */
+ // will panic when no value for key exists!
+pub async fn get_meta_data_maybe_or_await_task(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>,key: &str) -> anyhow::Result<String> { 
+ 
+
+        let mut map = tasks.write().await; 
+        let mut res = map.get_mut(key).unwrap();
+        
+        if let MaybeOrPromise::MetaData(MetaData::Task(task)) = res { 
+ 
+            let maybe: Result<String, anyhow::Error>  = match task.await {
+                Ok(n) => { n },
+                Err(e) => { Err(anyhow!("Error: {:?}",e)) } // JoinError
+            };
+
+            *map.get_mut(key).unwrap() = MaybeOrPromise::MetaData(MetaData::Maybe(maybe));  
+ 
+            let res = map.get(key).unwrap();
+
+            if let MaybeOrPromise::MetaData(MetaData::Maybe(m)) = res {
+                match m {
+                    Ok(n) => {
+                        return Ok(n.clone());
+                    },
+                    Err(e) => {
+                        return Err(anyhow!("Error: {:?}",e));
+                    }
+                } 
+            } 
+        } else if let MaybeOrPromise::MetaData(MetaData::Maybe(maybe)) = res {
+            match maybe {
+                Ok(n) => {
+                    return Ok(n.clone());
+                },
+                Err(e) => {
+                    return Err(anyhow!("Error: {:?}",e));
+                }
+            } 
+        } 
+        return Err(anyhow!("Unexpected Error: Unreachable point reached."));
+        
+ }
 
   /*
   * all required queries are triggered here in async fashion
@@ -196,15 +210,13 @@ pub async fn get_meta_data_maybe_or_resolve_promise(data: &mut HashMap<String, M
   * use try_join!, join! or select! macros to optimise retrieval of multiple values.
   */
  
- pub async fn requirements(data: &mut HashMap<String, MaybeOrPromise>, user_settings: &UserSettings, req: &Vec<&str>) { 
-         
-
+ pub async fn requirements(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, user_settings: &UserSettings, req: &Vec<&str>) { 
+          
          let gas_prices = fetch_gas_price().await; 
 
          if !gas_prices.response_status.unwrap().is_ok {
             println!("WARNING: Using static gas_prices.");
-         }
-         //println!("{:?}\n",&gas_prices); 
+         } 
 
          for cmd in req {
             let vec: Vec<&str> = cmd.split(" ").collect();
@@ -215,61 +227,171 @@ pub async fn get_meta_data_maybe_or_resolve_promise(data: &mut HashMap<String, M
                 let first: String = into_iter.next().unwrap().to_string();
                 match first.as_ref() {
                     "earn_apy" => {
-                        data.insert("earn_apy".to_string(), MaybeOrPromise::Data(QueryData::Promise(Box::pin(get_block_txs_deposit_stable_apy()))));
+                        let handle = tokio::spawn(async move { 
+                            {    
+                                return get_block_txs_deposit_stable_apy().await;   
+                            }
+                        });
+                        {
+                            let mut map = tasks.write().await;
+                            map.insert("earn_apy".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
+                        }
+                        
                     }
                     "blocks_per_year" => {
-                        data.insert("blocks_per_year".to_string(), MaybeOrPromise::Data(QueryData::Promise(Box::pin(blocks_per_year_query()))));
+                        let handle = tokio::spawn(async move { 
+                            {    
+                                return blocks_per_year_query().await;   
+                            }
+                        });
+                        {
+                            let mut map = tasks.write().await;
+                            map.insert("blocks_per_year".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
+                        }
                     }
-                    "borrow_limit" => {
-                        data.insert("borrow_limit".to_string(), MaybeOrPromise::Data(QueryData::Promise(Box::pin(anchor_protocol_borrower_limit(user_settings.wallet_acc_address.to_owned(),gas_prices.response.as_ref().unwrap().to_owned())))));
-                        //.unwrap().as_borrow_limit().unwrap()))); 
+                    "borrow_limit" => {  
+                        let wallet = user_settings.wallet_acc_address.to_owned();
+                        let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
+                        let handle = tokio::spawn(async move { 
+                            {    
+                                return anchor_protocol_borrower_limit(wallet,gas_prices_copy).await;   
+                            }
+                        });
+                        {
+                            let mut map = tasks.write().await;
+                            map.insert("borrow_limit".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
+                        }
+ 
                     },
                     "borrow_info" => {
-                        data.insert("borrow_info".to_string(), MaybeOrPromise::Data(QueryData::Promise(Box::pin(anchor_protocol_borrower_info(user_settings.wallet_acc_address.to_owned(),gas_prices.response.as_ref().unwrap().to_owned())))));
-                        //.unwrap().as_borrow_info().unwrap()))); 
+                        let wallet = user_settings.wallet_acc_address.to_owned();
+                        let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
+                        let handle = tokio::spawn(async move { 
+                            {    
+                                return anchor_protocol_borrower_info(wallet,gas_prices_copy).await;   
+                            }
+                        });
+                        {
+                            let mut map = tasks.write().await;
+                            map.insert("borrow_info".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
+                        } 
                     },
                     "balance" => {
-                        data.insert("balance".to_string(), MaybeOrPromise::Data(QueryData::Promise(Box::pin(anchor_protocol_balance(user_settings.wallet_acc_address.to_owned(),gas_prices.response.as_ref().unwrap().to_owned())))));
-                        //.unwrap().as_balance().unwrap()))); 
+                        let wallet = user_settings.wallet_acc_address.to_owned();
+                        let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
+                        let handle = tokio::spawn(async move { 
+                            {    
+                                return anchor_protocol_balance(wallet,gas_prices_copy).await;   
+                            }
+                        });
+                        {
+                            let mut map = tasks.write().await;
+                            map.insert("balance".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
+                        } 
                     },
                     "terra_balances" => {
-                        data.insert("terra_balances".to_string(), MaybeOrPromise::Data(QueryData::Promise(Box::pin(terra_balances(user_settings.wallet_acc_address.to_owned())))));
-                        //.unwrap().as_balance().unwrap()))); 
+                        let wallet = user_settings.wallet_acc_address.to_owned(); 
+                        let handle = tokio::spawn(async move { 
+                            {    
+                                return terra_balances(wallet).await;   
+                            }
+                        });
+                        {
+                            let mut map = tasks.write().await;
+                            map.insert("terra_balances".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
+                        } 
                     },
                     "anc_balance" => {
-                        data.insert("anc_balance".to_string(), MaybeOrPromise::Data(QueryData::Promise(Box::pin(anchor_protocol_anc_balance(user_settings.wallet_acc_address.to_owned(),gas_prices.response.as_ref().unwrap().to_owned())))));
-                        //.unwrap().as_balance().unwrap()))); 
+                        let wallet = user_settings.wallet_acc_address.to_owned();
+                        let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
+                        let handle = tokio::spawn(async move { 
+                            {    
+                                return anchor_protocol_anc_balance(wallet,gas_prices_copy).await;   
+                            }
+                        });
+                        {
+                            let mut map = tasks.write().await;
+                            map.insert("anc_balance".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
+                        } 
                     },
                     "staker" => {
-                        data.insert("staker".to_string(), MaybeOrPromise::Data(QueryData::Promise(Box::pin(anchor_protocol_staker(user_settings.wallet_acc_address.to_owned(),gas_prices.response.as_ref().unwrap().to_owned())))));
-                        //.unwrap().as_staker().unwrap())));
+                        let wallet = user_settings.wallet_acc_address.to_owned();
+                        let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
+                        let handle = tokio::spawn(async move { 
+                            {    
+                                return anchor_protocol_staker(wallet,gas_prices_copy).await;   
+                            }
+                        });
+                        {
+                            let mut map = tasks.write().await;
+                            map.insert("staker".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
+                        } 
                     },
-                    "api/v2/distribution-apy" => {
-                        data.insert("api/v2/distribution-apy".to_string(), MaybeOrPromise::Data(QueryData::Promise(Box::pin(query_api_distribution_apy()))));
+                    "api/v2/distribution-apy" => { 
+                        let handle = tokio::spawn(async move { 
+                            {    
+                                return query_api_distribution_apy().await;   
+                            }
+                        });
+                        {
+                            let mut map = tasks.write().await;
+                            map.insert("api/v2/distribution-apy".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
+                        }
                     },
-                    "api/v2/gov-reward" => {
-                        data.insert("api/v2/gov-reward".to_string(), MaybeOrPromise::Data(QueryData::Promise(Box::pin(query_api_gov_reward()))));
+                    "api/v2/gov-reward" => { 
+                        let handle = tokio::spawn(async move { 
+                            {    
+                                return query_api_gov_reward().await;   
+                            }
+                        });
+                        {
+                            let mut map = tasks.write().await;
+                            map.insert("api/v2/gov-reward".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
+                        }
+                         
                     },
-                    "anchor_protocol_txs_claim_rewards" => { 
-                        data.insert("anchor_protocol_txs_claim_rewards".to_string(), MaybeOrPromise::Data(QueryData::Promise(Box::pin(get_block_txs_fee_data("claim_rewards")))));
+                    "anchor_protocol_txs_claim_rewards" => {  
+                        let handle = tokio::spawn(async move { 
+                            {    
+                                return get_block_txs_fee_data("claim_rewards").await;   
+                            }
+                        });
+                        {
+                            let mut map = tasks.write().await;
+                            map.insert("anchor_protocol_txs_claim_rewards".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
+                        }
+                         
                     }, 
-                    "anchor_protocol_txs_staking" => { 
-                        data.insert("anchor_protocol_txs_staking".to_string(), MaybeOrPromise::Data(QueryData::Promise(Box::pin(get_block_txs_fee_data("staking")))));
+                    "anchor_protocol_txs_staking" => {  
+                        let handle = tokio::spawn(async move { 
+                            {    
+                                return get_block_txs_fee_data("staking").await;   
+                            }
+                        });
+                        {
+                            let mut map = tasks.write().await;
+                            map.insert("anchor_protocol_txs_staking".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
+                        }
                     }, 
-                    "gas_fees_uusd" => {
-                        data.insert("gas_fees_uusd".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Ok(gas_prices.response.as_ref().unwrap().uusd.to_string().to_owned()))));
+                    "gas_fees_uusd" => {    
+                        let mut map = tasks.write().await;                     
+                        map.insert("gas_fees_uusd".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Ok(gas_prices.response.as_ref().unwrap().uusd.to_string().to_owned()))));
                     }, 
-                    "trigger_percentage" => {
-                        data.insert("trigger_percentage".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Ok(user_settings.trigger_percentage.to_string().to_owned()))));
+                    "trigger_percentage" => {    
+                        let mut map = tasks.write().await;   
+                        map.insert("trigger_percentage".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Ok(user_settings.trigger_percentage.to_string().to_owned()))));
                     },  
-                    "max_gas_adjustment" => {
-                        data.insert("max_gas_adjustment".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Ok(user_settings.max_gas_adjustment.to_string().to_owned()))));
+                    "max_gas_adjustment" => {    
+                        let mut map = tasks.write().await;   
+                        map.insert("max_gas_adjustment".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Ok(user_settings.max_gas_adjustment.to_string().to_owned()))));
                     },    
-                    "gas_adjustment_preference" => {
-                        data.insert("gas_adjustment_preference".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Ok(user_settings.gas_adjustment_preference.to_string().to_owned()))));
+                    "gas_adjustment_preference" => {    
+                        let mut map = tasks.write().await;   
+                        map.insert("gas_adjustment_preference".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Ok(user_settings.gas_adjustment_preference.to_string().to_owned()))));
                     },    
-                    "min_ust_balance" => {
-                        data.insert("min_ust_balance".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Ok(user_settings.min_ust_balance.to_string().to_owned()))));
+                    "min_ust_balance" => {    
+                        let mut map = tasks.write().await;   
+                        map.insert("min_ust_balance".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Ok(user_settings.min_ust_balance.to_string().to_owned()))));
                     },     
                     &_ => {
 
@@ -285,26 +407,74 @@ pub async fn get_meta_data_maybe_or_resolve_promise(data: &mut HashMap<String, M
                     "state" => { 
                         // "state anchorprotocol bLunaHub"
                         // "state anchorprotocol mmMarket"
-                        data.insert(format!("state {} {}",second, third).to_string(), MaybeOrPromise::Data(QueryData::Promise(Box::pin(state_query_msg(second.to_owned(),third.to_owned(),gas_prices.response.as_ref().unwrap().to_owned())))));
+                        let second_copy = second.to_owned();
+                        let third_copy = third.to_owned();
+                        let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
+                        let handle = tokio::spawn(async move { 
+                            {    
+                                return state_query_msg(second_copy,third_copy,gas_prices_copy).await;   
+                            }
+                        });
+                        {
+                            let mut map = tasks.write().await;
+                            map.insert(format!("state {} {}",second, third).to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
+                        }
                     },
                      "epoch_state" => {
                         // "epoch_state anchorprotocol mmMarket"
-                        data.insert(format!("epoch_state {} {}",second, third).to_string(), MaybeOrPromise::Data(QueryData::Promise(Box::pin(epoch_state_query_msg(second.to_owned(),third.to_owned(),gas_prices.response.as_ref().unwrap().to_owned()))))); 
+                        let second_copy = second.to_owned();
+                        let third_copy = third.to_owned();
+                        let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
+                        let handle = tokio::spawn(async move { 
+                            {    
+                                return epoch_state_query_msg(second_copy,third_copy,gas_prices_copy).await;   
+                            }
+                        });
+                        {
+                            let mut map = tasks.write().await;
+                            map.insert(format!("epoch_state {} {}",second, third).to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
+                        }
                     },
                      "config" => {
-                        data.insert(format!("config {} {}",second, third).to_string(), MaybeOrPromise::Data(QueryData::Promise(Box::pin(config_query_msg(second.to_owned(),third.to_owned(),gas_prices.response.as_ref().unwrap().to_owned())))));
-                        //.unwrap().as_config().unwrap().as_mm_interest_model().unwrap()); 
-                        //.unwrap().as_config().unwrap().as_collector().unwrap()); 
+                        let second_copy = second.to_owned();
+                        let third_copy = third.to_owned();
+                        let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
+                        let handle = tokio::spawn(async move { 
+                            {    
+                                return config_query_msg(second_copy,third_copy,gas_prices_copy).await;   
+                            }
+                        });
+                        {
+                            let mut map = tasks.write().await;
+                            map.insert(format!("config {} {}",second, third).to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
+                        } 
                     },
                     "simulation_cw20" => {
-                        data.insert(format!("simulation_cw20 {} {}",second, third), MaybeOrPromise::Data(QueryData::Promise(Box::pin(masset_to_ust(third.to_owned(),gas_prices.response.as_ref().unwrap().to_owned())))));
-                     //.unwrap().as_simulation().unwrap()))); 
+                        let third_copy = third.to_owned();
+                        let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
+                        let handle = tokio::spawn(async move { 
+                            {    
+                                return masset_to_ust(third_copy,gas_prices_copy).await;   
+                            }
+                        });
+                        {
+                            let mut map = tasks.write().await;
+                            map.insert(format!("simulation_cw20 {} {}",second, third).to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
+                        } 
                     },
                     "core_swap" => { 
-                        data.insert(format!("core_swap {} {}",second, third), MaybeOrPromise::Data(QueryData::Promise(Box::pin(native_token_core_swap(second.to_owned(),third.to_owned(),gas_prices.response.as_ref().unwrap().to_owned())))));
-                        //.unwrap().as_simulation().unwrap()))); 
-                        
-                    
+                        let second_copy = second.to_owned();
+                        let third_copy = third.to_owned();
+                        let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
+                        let handle = tokio::spawn(async move { 
+                            {    
+                                return native_token_core_swap(second_copy,third_copy,gas_prices_copy).await;   
+                            }
+                        });
+                        {
+                            let mut map = tasks.write().await;
+                            map.insert(format!("core_swap {} {}",second, third).to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
+                        } 
                     },
                     &_ => {
 
@@ -324,12 +494,34 @@ pub async fn get_meta_data_maybe_or_resolve_promise(data: &mut HashMap<String, M
                     // ust_to_psi: simulation uusd nexusprotocol Psi-UST pair
                     // ust_to_anc: simulation uusd anchorprotocol terraswapAncUstPair
                     "simulation" => {
-                        data.insert(format!("simulation {} {} {}",second, third, fourth).to_string(), MaybeOrPromise::Data(QueryData::Promise(Box::pin(native_token_to_swap_pair(second.to_owned(), third.to_owned(), fourth.to_owned(),gas_prices.response.as_ref().unwrap().to_owned())))));
-                        //.unwrap().as_simulation().unwrap()); 
+                        let second_copy = second.to_owned();
+                        let third_copy = third.to_owned();
+                        let fourth_copy = fourth.to_owned();
+                        let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
+                        let handle = tokio::spawn(async move { 
+                            {    
+                                return native_token_to_swap_pair(second_copy,third_copy,fourth_copy,gas_prices_copy).await;   
+                            }
+                        });
+                        {
+                            let mut map = tasks.write().await;
+                            map.insert(format!("simulation {} {} {}",second, third, fourth).to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
+                        } 
                     },
                     "simulation_cw20" => {
-                        data.insert(format!("simulation_cw20 {} {} {}",second, third, fourth).to_string(), MaybeOrPromise::Data(QueryData::Promise(Box::pin(cw20_to_swap_pair(second.to_owned(), third.to_owned(), fourth.to_owned(),gas_prices.response.as_ref().unwrap().to_owned())))));
-                        
+                        let second_copy = second.to_owned();
+                        let third_copy = third.to_owned();
+                        let fourth_copy = fourth.to_owned();
+                        let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
+                        let handle = tokio::spawn(async move { 
+                            {    
+                                return cw20_to_swap_pair(second_copy,third_copy,fourth_copy,gas_prices_copy).await;   
+                            }
+                        });
+                        {
+                            let mut map = tasks.write().await;
+                            map.insert(format!("simulation_cw20 {} {} {}",second, third, fourth).to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
+                        } 
                     }
                     &_ => {
 

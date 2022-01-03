@@ -6,19 +6,23 @@ use rust_decimal::Decimal;
 use core::str::FromStr;
 
 use view::model::smart_contracts::meta::api::{anchor_claim_rewards,anchor_governance_stake,anchor_governance_claim_and_stake};
-use view::model::{MaybeOrPromise,get_meta_data_maybe_or_resolve_promise};
+use view::model::{MaybeOrPromise,get_meta_data_maybe_or_await_task};
 
 use view::*;
 
 use std::collections::HashMap; 
 
 
-pub async fn anchor_borrow_claim_and_stake_rewards(data: &mut HashMap<String, MaybeOrPromise>, wallet_seed_phrase: &SecUtf8, only_estimate: bool) -> String {
+use std::sync::Arc; 
+use tokio::sync::RwLock; 
+
+
+pub async fn anchor_borrow_claim_and_stake_rewards(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_seed_phrase: &SecUtf8, only_estimate: bool) -> String {
  
 
 		let mut max_gas_adjustment = Decimal::from_str("1.67").unwrap();
 
-		match get_meta_data_maybe_or_resolve_promise(data,"max_gas_adjustment").await {
+		match get_meta_data_maybe_or_await_task(tasks,"max_gas_adjustment").await {
 	        Ok(response_result) => { 
 	            max_gas_adjustment = Decimal::from_str(response_result.as_str()).unwrap();             
 	        },
@@ -28,7 +32,7 @@ pub async fn anchor_borrow_claim_and_stake_rewards(data: &mut HashMap<String, Ma
 
 		let mut avg_gas_adjustment = Decimal::from_str("0").unwrap();
 
-		match estimate_anchor_protocol_tx_fee(data,"anchor_protocol_txs_claim_rewards","avg_gas_adjustment".to_owned(),false,4).await.as_ref() {
+		match estimate_anchor_protocol_tx_fee(tasks, "anchor_protocol_txs_claim_rewards","avg_gas_adjustment".to_owned(),false,4).await.as_ref() {
 			"--" => {
 			},
 			e => {
@@ -38,7 +42,7 @@ pub async fn anchor_borrow_claim_and_stake_rewards(data: &mut HashMap<String, Ma
 
 		let mut avg_tx_fee = Decimal::from_str("250657").unwrap();
 
-		match estimate_anchor_protocol_tx_fee(data,"anchor_protocol_txs_claim_rewards","avg_fee_amount".to_owned(),true,0).await.as_ref() {
+		match estimate_anchor_protocol_tx_fee(tasks, "anchor_protocol_txs_claim_rewards","avg_fee_amount".to_owned(),true,0).await.as_ref() {
 			"--" => { 
 			},
 			e => {
@@ -46,7 +50,7 @@ pub async fn anchor_borrow_claim_and_stake_rewards(data: &mut HashMap<String, Ma
 			}
 		};
 
-		match estimate_anchor_protocol_tx_fee(data,"anchor_protocol_txs_staking","avg_gas_adjustment".to_owned(),false,4).await.as_ref() {
+		match estimate_anchor_protocol_tx_fee(tasks, "anchor_protocol_txs_staking","avg_gas_adjustment".to_owned(),false,4).await.as_ref() {
 			"--" => {
 				avg_gas_adjustment = max_gas_adjustment
 									 .checked_add(avg_gas_adjustment).unwrap();
@@ -64,7 +68,7 @@ pub async fn anchor_borrow_claim_and_stake_rewards(data: &mut HashMap<String, Ma
 			max_gas_adjustment = avg_gas_adjustment;
 		}
 
-		match get_meta_data_maybe_or_resolve_promise(data,"gas_adjustment_preference").await {
+		match get_meta_data_maybe_or_await_task(tasks,"gas_adjustment_preference").await {
 	        Ok(response_result) => { 
 	            let gas_adjustment_preference = Decimal::from_str(response_result.as_str()).unwrap();       
 	            max_gas_adjustment = max_gas_adjustment
@@ -75,7 +79,7 @@ pub async fn anchor_borrow_claim_and_stake_rewards(data: &mut HashMap<String, Ma
         	}
 		}
  
-		match estimate_anchor_protocol_tx_fee(data,"anchor_protocol_txs_staking","avg_fee_amount".to_owned(),true,0).await.as_ref() {
+		match estimate_anchor_protocol_tx_fee(tasks, "anchor_protocol_txs_staking","avg_fee_amount".to_owned(),true,0).await.as_ref() {
 			"--" => {
 				avg_tx_fee = avg_tx_fee
 							.checked_add(Decimal::from_str("250657").unwrap()).unwrap();
@@ -88,7 +92,7 @@ pub async fn anchor_borrow_claim_and_stake_rewards(data: &mut HashMap<String, Ma
 
 		let mut anc_to_claim = Decimal::from_str("0").unwrap();
 
-		match borrower_rewards_to_string(data,true,0).await.as_ref() {
+		match borrower_rewards_to_string(tasks, true,0).await.as_ref() {
 			"--" => {
 				return "Could not get pending ANC rewards: Likely no ANC available.".to_string();
 			},
@@ -98,7 +102,7 @@ pub async fn anchor_borrow_claim_and_stake_rewards(data: &mut HashMap<String, Ma
 		};
 
 	   //println!("{:?}",(anc_to_claim, avg_tx_fee, max_gas_adjustment) ); 
-	   match get_meta_data_maybe_or_resolve_promise(data,"gas_fees_uusd").await {
+	   match get_meta_data_maybe_or_await_task(tasks,"gas_fees_uusd").await {
             Ok(response_result) => { 
                 let gas_fees_uusd = Decimal::from_str(response_result.as_str()).unwrap();   
 
@@ -119,11 +123,11 @@ pub async fn anchor_borrow_claim_and_stake_rewards(data: &mut HashMap<String, Ma
 }
 
 
-pub async fn anchor_borrow_claim_rewards(data: &mut HashMap<String, MaybeOrPromise>, wallet_seed_phrase: &SecUtf8, only_estimate: bool) -> String {
+pub async fn anchor_borrow_claim_rewards(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>,  wallet_seed_phrase: &SecUtf8, only_estimate: bool) -> String {
 
 		let mut max_gas_adjustment = Decimal::from_str("1.67").unwrap();
 		
-		match get_meta_data_maybe_or_resolve_promise(data,"max_gas_adjustment").await {
+		match get_meta_data_maybe_or_await_task(tasks,"max_gas_adjustment").await {
 	        Ok(response_result) => { 
 	            max_gas_adjustment = Decimal::from_str(response_result.as_str()).unwrap();             
 	        },
@@ -131,7 +135,7 @@ pub async fn anchor_borrow_claim_rewards(data: &mut HashMap<String, MaybeOrPromi
         	}
 		}
 
-		match estimate_anchor_protocol_tx_fee(data,"anchor_protocol_txs_claim_rewards","avg_gas_adjustment".to_owned(),false,4).await.as_ref() {
+		match estimate_anchor_protocol_tx_fee(tasks, "anchor_protocol_txs_claim_rewards","avg_gas_adjustment".to_owned(),false,4).await.as_ref() {
 			"--" => {
 			},
 			e => {
@@ -142,7 +146,7 @@ pub async fn anchor_borrow_claim_rewards(data: &mut HashMap<String, MaybeOrPromi
 			}
 		};
 
-		match get_meta_data_maybe_or_resolve_promise(data,"gas_adjustment_preference").await {
+		match get_meta_data_maybe_or_await_task(tasks,"gas_adjustment_preference").await {
 	        Ok(response_result) => { 
 	            let gas_adjustment_preference = Decimal::from_str(response_result.as_str()).unwrap();       
 	            max_gas_adjustment = max_gas_adjustment
@@ -153,7 +157,7 @@ pub async fn anchor_borrow_claim_rewards(data: &mut HashMap<String, MaybeOrPromi
         	}
 		}
 		  
-		let avg_tx_fee = match estimate_anchor_protocol_tx_fee(data,"anchor_protocol_txs_claim_rewards","avg_fee_amount".to_owned(),true,0).await.as_ref() {
+		let avg_tx_fee = match estimate_anchor_protocol_tx_fee(tasks, "anchor_protocol_txs_claim_rewards","avg_fee_amount".to_owned(),true,0).await.as_ref() {
 			"--" => {
 				Decimal::from_str("250657").unwrap() // 0.25 UST 
 			},
@@ -162,7 +166,7 @@ pub async fn anchor_borrow_claim_rewards(data: &mut HashMap<String, MaybeOrPromi
 			}
 		};
   
-	   match get_meta_data_maybe_or_resolve_promise(data,"gas_fees_uusd").await {
+	   match get_meta_data_maybe_or_await_task(tasks,"gas_fees_uusd").await {
             Ok(response_result) => { 
                 let gas_fees_uusd = Decimal::from_str(response_result.as_str()).unwrap();   
 
@@ -183,11 +187,11 @@ pub async fn anchor_borrow_claim_rewards(data: &mut HashMap<String, MaybeOrPromi
 }
 
 
-pub async fn anchor_governance_stake_balance(data: &mut HashMap<String, MaybeOrPromise>, wallet_seed_phrase: &SecUtf8, only_estimate: bool) -> String {
+pub async fn anchor_governance_stake_balance(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>,  wallet_seed_phrase: &SecUtf8, only_estimate: bool) -> String {
 
 		let mut max_gas_adjustment = Decimal::from_str("1.67").unwrap();
 		
-		match get_meta_data_maybe_or_resolve_promise(data,"max_gas_adjustment").await {
+		match get_meta_data_maybe_or_await_task(tasks,"max_gas_adjustment").await {
 	        Ok(response_result) => { 
 	            max_gas_adjustment = Decimal::from_str(response_result.as_str()).unwrap();             
 	        },
@@ -195,7 +199,7 @@ pub async fn anchor_governance_stake_balance(data: &mut HashMap<String, MaybeOrP
         	}
 		}
 
-		match estimate_anchor_protocol_tx_fee(data,"anchor_protocol_txs_staking","avg_gas_adjustment".to_owned(),false,4).await.as_ref() {
+		match estimate_anchor_protocol_tx_fee(tasks, "anchor_protocol_txs_staking","avg_gas_adjustment".to_owned(),false,4).await.as_ref() {
 			"--" => {
 			},
 			e => {
@@ -206,7 +210,7 @@ pub async fn anchor_governance_stake_balance(data: &mut HashMap<String, MaybeOrP
 			}
 		};
 
-		match get_meta_data_maybe_or_resolve_promise(data,"gas_adjustment_preference").await {
+		match get_meta_data_maybe_or_await_task(tasks,"gas_adjustment_preference").await {
 	        Ok(response_result) => { 
 	            let gas_adjustment_preference = Decimal::from_str(response_result.as_str()).unwrap();       
 	            max_gas_adjustment = max_gas_adjustment
@@ -217,7 +221,7 @@ pub async fn anchor_governance_stake_balance(data: &mut HashMap<String, MaybeOrP
         	}
 		}
  
-		let avg_tx_fee = match estimate_anchor_protocol_tx_fee(data,"anchor_protocol_txs_staking","avg_fee_amount".to_owned(),true,0).await.as_ref() {
+		let avg_tx_fee = match estimate_anchor_protocol_tx_fee(tasks, "anchor_protocol_txs_staking","avg_fee_amount".to_owned(),true,0).await.as_ref() {
 			"--" => {
 				Decimal::from_str("250657").unwrap() // 0.25 UST 
 			},
@@ -229,7 +233,7 @@ pub async fn anchor_governance_stake_balance(data: &mut HashMap<String, MaybeOrP
 
 		let mut anc_balance = Decimal::from_str("0").unwrap();
 
-		match borrower_anc_deposited_to_string(data,true,0).await.as_ref() {
+		match borrower_anc_deposited_to_string(tasks, true,0).await.as_ref() {
 			"--" => {
 				return "Could not get ANC balance: Likely no ANC available.".to_string();
 			},
@@ -238,7 +242,7 @@ pub async fn anchor_governance_stake_balance(data: &mut HashMap<String, MaybeOrP
 			}
 		};
   
-	    match get_meta_data_maybe_or_resolve_promise(data,"gas_fees_uusd").await {
+	    match get_meta_data_maybe_or_await_task(tasks,"gas_fees_uusd").await {
             Ok(response_result) => { 
                 let gas_fees_uusd = Decimal::from_str(response_result.as_str()).unwrap();   
  
