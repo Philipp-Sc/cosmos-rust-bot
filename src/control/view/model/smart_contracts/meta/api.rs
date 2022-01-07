@@ -38,6 +38,7 @@ use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use rust_decimal::prelude::FromPrimitive;
 use rust_decimal::prelude::ToPrimitive;
+use core::str::FromStr;
 
 use data::terra_contracts::get_contract;
 
@@ -52,9 +53,7 @@ pub struct QueryResponse<T> {
     pub response_status: Option<ResponseStatus>,
     pub response: Option<T> 
 }  
-
-// TODO: estimate for claim & stake
-
+ 
 pub async fn anchor_governance_claim_and_stake(mnemonics: &str, coin_amount: Decimal, gas_price_uusd: Decimal, max_tx_fee: Decimal, gas_adjustment: Decimal, only_estimate: bool) -> anyhow::Result<String>{
 	 	let contract_addr_anc = get_contract("anchorprotocol","ANC"); 
 	 	let contract_addr_gov = get_contract("anchorprotocol","gov"); 
@@ -103,7 +102,8 @@ pub async fn anchor_governance_claim_and_stake(mnemonics: &str, coin_amount: Dec
             &[&gas_coin],
         ).await?;
 
-        let estimate_json = serde_json::to_string(&res.result);
+        //let estimate_json = serde_json::to_string(&res.result); 
+		//{"fee":{"amount":[{"amount":"90462","denom":"uusd"}],"gas":"603080"}}
 
         let fees: Vec<Coin> = res.result.fee.amount; 
  
@@ -111,8 +111,13 @@ pub async fn anchor_governance_claim_and_stake(mnemonics: &str, coin_amount: Dec
         	return Err(anyhow!("Unexpected Fee Estimate. fees.len() = {:?}",fees.len()));
         }
 
+		let tx_fee = Decimal::from_str(fees[0].amount.to_string().as_str())?;
+		let micro = Decimal::from_str("1000000").unwrap();
+		let tx_fee = tx_fee.checked_div(micro).unwrap();
+		let gas_limit = res.result.fee.gas;
+
         if only_estimate {
-        	return Ok(format!("{}",estimate_json?));
+			return Ok(format!("tx fee: {} UST (gas limit: {})",tx_fee,gas_limit));
         }
  
         if fees[0].amount > max_tx_fee {
@@ -158,7 +163,7 @@ pub async fn anchor_governance_claim_and_stake(mnemonics: &str, coin_amount: Dec
                  return Err(anyhow!("Unexpected Fee Denom: {:?}",format!("{}\n\n{}",t1,t2)));  
 		     }
 		     None => {
-		         return Ok(format!("{}", resp.txhash));
+				 return Ok(format!("tx hash: {}, tx fee: {} UST (gas limit: {})",resp.txhash,tx_fee,gas_limit)); 
 		     }
 		 }
 

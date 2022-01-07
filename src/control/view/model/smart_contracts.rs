@@ -525,108 +525,113 @@ pub async fn get_block_txs_staking() -> anyhow::Result<ResponseResult> {
 }
 */
 
+fn get_tx_log(entry: &Value, account: &str, query_msg: &str, amount_field: &str) -> anyhow::Result<TXLog> {
+
+    let msg = entry.get("tx").ok_or(anyhow!("no tx"))?.get("value").ok_or(anyhow!("no value"))?.get("msg").ok_or(anyhow!("no msg"))?.as_array().ok_or(anyhow!("no array"))?; 
+               
+    if  msg.len() == 1 &&
+        (   (query_msg=="staking" && 
+            msg[0].get("value").ok_or(anyhow!("no value"))?.get("execute_msg").ok_or(anyhow!("no execute_msg"))?.get("send").ok_or(anyhow!("no send"))?.get("msg").ok_or(anyhow!("no msg"))?.to_string().contains("eyJzdGFrZV92b3RpbmdfdG9rZW5zIjp7fX0=")
+            ) 
+        || (query_msg=="claim_rewards" &&
+            msg[0].get("value").ok_or(anyhow!("no value"))?.get("execute_msg").ok_or(anyhow!("no execute_msg"))?.get("claim_rewards") != None
+            )
+        ) && msg[0].get("value").ok_or(anyhow!("no value"))?.get("contract").ok_or(anyhow!("no contract"))? == account
+    {
+            let gas_wanted = entry.get("gas_wanted").ok_or(anyhow!("no gas_wanted"))?;  // gas_limit // gas requested
+            let gas_used = entry.get("gas_used").ok_or(anyhow!("no gas_used"))?;        // used
+
+
+            let events = entry.get("logs").ok_or(anyhow!("no logs"))?.as_array().ok_or(anyhow!("no array"))?;
+            if events.len() > 0 {
+
+                let events = events[0].get("events").ok_or(anyhow!("no events"))?.as_array().ok_or(anyhow!("no array"))?;
+
+
+                let mut amount = "0".to_string();
+                for i in 0..events.len() {
+                    if events[i].get("type").ok_or(anyhow!("no type"))? == "wasm" {
+                        for ii in 0..events[i].get("attributes").ok_or(anyhow!("no attributes"))?.as_array().ok_or(anyhow!("no array"))?.len() {
+                            if events[i].get("attributes").unwrap().as_array().unwrap()[ii].get("key").ok_or(anyhow!("no key"))?.to_string().contains(amount_field) {
+                                amount = events[i].get("attributes").unwrap().as_array().unwrap()[ii].get("value").ok_or(anyhow!("no value"))?.to_string();
+                            } 
+                        }
+                    }
+                }
+
+
+                let fee = entry.get("tx").unwrap().get("value").unwrap().get("fee").ok_or(anyhow!("no fee"))?;
+                let gas_limit = fee.get("gas").ok_or(anyhow!("no gas"))?;
+                
+                let fee = fee.get("amount").ok_or(anyhow!("no amount"))?.as_array().ok_or(anyhow!("no array"))?;
+
+                if fee.len() == 1 {
+
+                    if fee[0].get("denom").ok_or(anyhow!("no denom"))?.to_string().contains("uusd") {
+
+                       
+                        let re = Regex::new(r"[^0-9]").unwrap();
+
+                        let transaction_fee = re.replace_all(fee[0].get("amount").ok_or(anyhow!("no amount"))?.to_string().as_str(), "").to_string();
+                        let tx_height = re.replace_all(entry.get("height").ok_or(anyhow!("no height"))?.to_string().as_str(), "").to_string();
+
+                        let gas_used = re.replace_all(gas_used.to_string().as_str(), "").to_string();
+                        let gas_wanted =  re.replace_all(gas_wanted.to_string().as_str(), "").to_string();
+
+                        let amount = re.replace_all(amount.as_str(), "").to_string();
+
+
+                        return Ok(TXLog { 
+                            height: tx_height.parse::<u64>()?, 
+                            timestamp: DateTime::parse_from_rfc3339(entry.get("timestamp").ok_or(anyhow!("no timestamp"))?.to_string().replace(r#"""#, "").as_str())?.timestamp(), 
+                            gas_wanted: rust_decimal::Decimal::from_str(gas_wanted.as_str())?, 
+                            gas_used: rust_decimal::Decimal::from_str(gas_used.as_str())?, 
+                            amount: rust_decimal::Decimal::from_str(amount.as_str())?, 
+                            fee_denom: "uusd".to_string(),
+                            fee_amount: rust_decimal::Decimal::from_str(transaction_fee.as_str())?,
+                            // gas_adjustment = fee_amount / (gas_wanted * gas_price)
+                            raw_log: entry.get("raw_log").ok_or(anyhow!("no raw_log"))?.to_string()
+                        });
+                    }
+                }
+            }
+    }
+    Err(anyhow!("Error: Invalid format."))
+}
+
+
 pub async fn get_txs_fee_data(offset: &str, tx_data: &mut Vec<TXLog>,account: &str, query_msg: &str, amount_field: &str) -> anyhow::Result<String> {
 
         let query = format!("https://fcd.terra.dev/v1/txs?offset={}&limit=100&account={}",offset, account); 
         let res: String = query_api(query.as_str()).await?;
         let res: Value = serde_json::from_str(&res)?;
 
-        let entries = res.get("txs").unwrap().as_array();
-
-        let re = Regex::new(r"[^0-9]").unwrap();
-
-        if let Some(e) = entries {
-
-            for entry in e {
-                let msg = entry.get("tx").unwrap().get("value").unwrap().get("msg").unwrap().as_array().unwrap(); 
-                if msg.len() == 1 { 
-
-                    let mut condition: bool = false;
-                    if query_msg == "claim_rewards" {
-                        condition = msg[0].get("value") != None;
-                        condition = condition && msg[0].get("value").unwrap().get("execute_msg") != None;
-                        condition = condition && msg[0].get("value").unwrap().get("execute_msg").unwrap().get("claim_rewards") != None;
-                    } else if query_msg == "staking" {
-                        if let Some(send) = msg[0].get("value").unwrap().get("execute_msg").unwrap().get("send") {
-                            condition = send.get("msg") != None;
-                            condition = condition && send.get("msg").unwrap().to_string().contains("eyJzdGFrZV92b3RpbmdfdG9rZW5zIjp7fX0=");
-                        }
-                    }
-                    condition = condition && msg[0].get("value") != None;
-                    condition = condition && msg[0].get("value").unwrap().get("contract") != None;
-                    if condition && msg[0].get("value").unwrap().get("contract").unwrap() == account
-                         {
-
-                            let gas_wanted = entry.get("gas_wanted").unwrap();  // gas_limit // gas requested
-                            let gas_used = entry.get("gas_used").unwrap();      // used
-
-
-                            let events = entry.get("logs").unwrap().as_array().unwrap()[0].get("events").unwrap().as_array().unwrap();
-     
-
-                            let mut amount = "0".to_string();
-                            for i in 0..events.len() {
-                                if events[i].get("type").unwrap() == "wasm" {
-                                    for ii in 0..events[i].get("attributes").unwrap().as_array().unwrap().len() {
-                                        if events[i].get("attributes").unwrap().as_array().unwrap()[ii].get("key").unwrap().to_string().contains(amount_field) {
-                                            amount = events[i].get("attributes").unwrap().as_array().unwrap()[ii].get("value").unwrap().to_string();
-                                        } 
-                                    }
-                                }
-                            }
-
-
-                            let fee = entry.get("tx").unwrap().get("value").unwrap().get("fee").unwrap();
-                            let gas_limit = fee.get("gas").unwrap();
-                            
-                            let fee = fee.get("amount").unwrap().as_array().unwrap();
-
-                            if fee.len() == 1 {
-
-                                if fee[0].get("denom").unwrap().to_string().contains("uusd") {
-
-                                   
-                                    let transaction_fee = re.replace_all(fee[0].get("amount").unwrap().to_string().as_str(), "").to_string();
-                                    let tx_height = re.replace_all(entry.get("height").unwrap().to_string().as_str(), "").to_string();
-
-                                    let gas_used = re.replace_all(gas_used.to_string().as_str(), "").to_string();
-                                    let gas_wanted =  re.replace_all(gas_wanted.to_string().as_str(), "").to_string();
-
-                                    let amount = re.replace_all(amount.as_str(), "").to_string();
+        let entries = res.get("txs").ok_or(anyhow!("no txs"))?.as_array().ok_or(anyhow!("no array"))?;
  
-
-                                    tx_data.push( TXLog { 
-                                        height: tx_height.parse::<u64>().unwrap(), 
-                                        timestamp: DateTime::parse_from_rfc3339(entry.get("timestamp").unwrap().to_string().replace(r#"""#, "").as_str()).unwrap().timestamp(), 
-                                        gas_wanted: rust_decimal::Decimal::from_str(gas_wanted.as_str()).unwrap(), 
-                                        gas_used: rust_decimal::Decimal::from_str(gas_used.as_str()).unwrap(), 
-                                        amount: rust_decimal::Decimal::from_str(amount.as_str()).unwrap(), 
-                                        fee_denom: "uusd".to_string(),
-                                        fee_amount: rust_decimal::Decimal::from_str(transaction_fee.as_str()).unwrap(),
-                                        // gas_adjustment = fee_amount / (gas_wanted * gas_price)
-                                        raw_log: entry.get("raw_log").unwrap().to_string()
-                                    });
-                                }
-                            }
-                    }
+        for entry in entries {
+             match get_tx_log(entry, account, query_msg, amount_field) {
+                Ok(txlog) => {
+                    tx_data.push(txlog);
+                },
+                Err(_) => {
                 }
-            }
-    }
-
-    Ok(re.replace_all(res.get("next").unwrap().to_string().as_str(),"").to_string())
-
+             };
+        } 
+        let re = Regex::new(r"[^0-9]").unwrap();
+        Ok(re.replace_all(res.get("next").ok_or(anyhow!("no next"))?.to_string().as_str(),"").to_string())
 }
 
 
 pub async fn get_block_txs_fee_data(key: &str) -> anyhow::Result<ResponseResult> { 
  
-
     let start = Instant::now();  
 
     let mut tx_data: Vec<TXLog> = Vec::new();
     let mut temp_offset = "0".to_string(); 
 
-    while tx_data.len()<10 && start.elapsed().as_secs() < 60*3 {
+    let mut err_count = 0;
+
+    while tx_data.len()<10 && start.elapsed().as_secs() < 60*3 && err_count < 2 {
         let mut next: anyhow::Result<String> = Ok("0".to_string());
         if key == "claim_rewards" {
             next = get_txs_fee_data(temp_offset.as_str(),&mut tx_data,"terra1sepfj7s0aeg5967uxnfk4thzlerrsktkpelm5s","claim_rewards","claim_amount").await;
@@ -636,13 +641,15 @@ pub async fn get_block_txs_fee_data(key: &str) -> anyhow::Result<ResponseResult>
         }
         if next.is_ok() {
             temp_offset = next.unwrap();
-        }  
+            err_count = 0;
+        }else{
+            err_count = err_count + 1;
+        }
     }
 
     if tx_data.len()<10 && start.elapsed().as_secs() >= 60*3 {
         return Err(anyhow!("Unexpected Error: Timeout!"));
     }
-
 
     Ok(ResponseResult::Transactions(Response{
         height: tx_data[0].height.to_string(),

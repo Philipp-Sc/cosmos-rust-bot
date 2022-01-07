@@ -20,7 +20,7 @@
 
 ## What 
 
-* Market Dashboard
+* Market Dashboard (todo: user provides json with token information -> app generates dashboard)
 * Anchor Dashboard
 * Anchor Auto Stake Rewards
 * Anchor Auto Exchange Rewards (not yet implemented)

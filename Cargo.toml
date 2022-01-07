@@ -25,4 +25,7 @@ schemars = { version = "0.8"}
 cosmwasm-std = "0.16"
 num-format = "0.4.0"
 secstr = "0.4.0"
-regex = "1.5.4" 
+regex = "1.5.4"
+colored = "2"
+rand = "0.8.4"
+num_cpus = "1.13.1"

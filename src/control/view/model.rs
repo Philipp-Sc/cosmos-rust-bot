@@ -45,21 +45,38 @@ use std::sync::Arc;
 use tokio::sync::RwLock; 
  
 
+use std::{thread, time};
  
+use std::time::{Duration, Instant};
+
+use tokio::time::timeout;
+use tokio::time::Timeout;
+
+use tokio::time::sleep;
+
+
+use chrono::{DateTime, TimeZone, NaiveDateTime, Utc};
+
+
 pub enum MaybeOrPromise { 
     Data(QueryData),
     MetaData(MetaData),
 }
 
 pub enum QueryData { 
-    Maybe(anyhow::Result<ResponseResult>),
+    Maybe(Maybe), // add timestamp here.
     Task(JoinHandle<anyhow::Result<ResponseResult>>), 
 }
 
 pub enum MetaData { 
     Maybe(anyhow::Result<String>),
-    Task(JoinHandle<anyhow::Result<String>>), 
+    Task(JoinHandle<anyhow::Result<String>>), // not used
 }
+
+pub struct Maybe {
+    pub data: anyhow::Result<ResponseResult>,   
+    pub timestamp: i64,
+} 
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct UserSettings {
@@ -79,11 +96,11 @@ pub struct UserSettings {
  */
 pub async fn get_data_maybe_or_meta_data_maybe(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>,key: &str) -> anyhow::Result<ResponseResult> { 
     
-    let mut map = tasks.write().await; 
-    let mut res = map.get_mut(key).unwrap();
+    let map = tasks.read().await; 
+    let res = map.get(key).ok_or(anyhow!("Error: key does not exist"))?;
 
     if let MaybeOrPromise::Data(QueryData::Maybe(m)) = res {
-        match m {
+        match &m.data {
             Ok(n) => {
                 return Ok(n.clone());
             },
@@ -113,11 +130,21 @@ pub async fn get_data_maybe_or_meta_data_maybe(tasks: &Arc<RwLock<HashMap<String
  * always returns a copy (clone)
  */
  // will panic when no value for key exists!
+
+ // specifiy a max timeout //timeout(Duration::from_millis(10), rx) // use tokio::time::timeout;
+ // if reached return err.
+
+ // task.await is blocking. // current behaviour leads to one run being as fast as the slowest task.
 pub async fn get_data_maybe_or_await_task(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>,key: &str) -> anyhow::Result<ResponseResult> { 
- 
+        
+        /* this is only efficient with low refresh rates. Otherwise this adds a second delay to this function.
+        let maybe = get_data_maybe_or_meta_data_maybe(tasks,key).await;
+        if maybe.is_ok() {
+            return maybe;
+        }*/
 
         let mut map = tasks.write().await; 
-        let mut res = map.get_mut(key).unwrap();
+        let mut res = map.get_mut(key).ok_or(anyhow!("Error: key does not exist"))?;
         
         if let MaybeOrPromise::Data(QueryData::Task(task)) = res { 
  
@@ -125,13 +152,12 @@ pub async fn get_data_maybe_or_await_task(tasks: &Arc<RwLock<HashMap<String, May
                 Ok(n) => { n },
                 Err(e) => { Err(anyhow!("Error: {:?}",e)) } // JoinError
             };
+            let maybe: Maybe = Maybe {data: maybe, timestamp: Utc::now().timestamp()};
 
-            *map.get_mut(key).unwrap() = MaybeOrPromise::Data(QueryData::Maybe(maybe));  
- 
-            let res = map.get(key).unwrap();
+            *res = MaybeOrPromise::Data(QueryData::Maybe(maybe));  
 
             if let MaybeOrPromise::Data(QueryData::Maybe(m)) = res {
-                match m {
+                match &m.data {
                     Ok(n) => {
                         return Ok(n.clone());
                     },
@@ -141,7 +167,7 @@ pub async fn get_data_maybe_or_await_task(tasks: &Arc<RwLock<HashMap<String, May
                 } 
             } 
         } else if let MaybeOrPromise::Data(QueryData::Maybe(maybe)) = res {
-            match maybe {
+            match &maybe.data {
                 Ok(n) => {
                     return Ok(n.clone());
                 },
@@ -154,6 +180,36 @@ pub async fn get_data_maybe_or_await_task(tasks: &Arc<RwLock<HashMap<String, May
         
  }
 
+pub async fn get_timestamp_or_await_task(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>,key: &str) -> anyhow::Result<i64> { 
+        
+        /* this is only efficient with low refresh rates. Otherwise this adds a second delay to this function.
+        let maybe = get_data_maybe_or_meta_data_maybe(tasks,key).await;
+        if maybe.is_ok() {
+            return maybe; 
+        }*/
+
+        let mut map = tasks.write().await; 
+        let mut res = map.get_mut(key).ok_or(anyhow!("Error: key does not exist"))?;
+        
+        if let MaybeOrPromise::Data(QueryData::Task(task)) = res { 
+ 
+            let maybe: Result<ResponseResult, anyhow::Error>  = match task.await {
+                Ok(n) => { n },
+                Err(e) => { Err(anyhow!("Error: {:?}",e)) } // JoinError
+            };
+            let maybe: Maybe = Maybe {data: maybe, timestamp: Utc::now().timestamp()};
+
+            *res = MaybeOrPromise::Data(QueryData::Maybe(maybe));  
+
+            if let MaybeOrPromise::Data(QueryData::Maybe(m)) = res {
+                return Ok(m.timestamp);
+            } 
+        } else if let MaybeOrPromise::Data(QueryData::Maybe(maybe)) = res {
+            return Ok(maybe.timestamp);
+        } 
+        return Err(anyhow!("Unexpected Error: Unreachable point reached."));
+        
+ }
 
 /*
  * await promise and save result, then return result
@@ -165,9 +221,9 @@ pub async fn get_data_maybe_or_await_task(tasks: &Arc<RwLock<HashMap<String, May
 pub async fn get_meta_data_maybe_or_await_task(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>,key: &str) -> anyhow::Result<String> { 
  
 
-        let mut map = tasks.write().await; 
-        let mut res = map.get_mut(key).unwrap();
-        
+        let map = tasks.read().await; 
+        let res = map.get(key).ok_or(anyhow!("Error: key does not exist"))?;
+        /*
         if let MaybeOrPromise::MetaData(MetaData::Task(task)) = res { 
  
             let maybe: Result<String, anyhow::Error>  = match task.await {
@@ -175,9 +231,9 @@ pub async fn get_meta_data_maybe_or_await_task(tasks: &Arc<RwLock<HashMap<String
                 Err(e) => { Err(anyhow!("Error: {:?}",e)) } // JoinError
             };
 
-            *map.get_mut(key).unwrap() = MaybeOrPromise::MetaData(MetaData::Maybe(maybe));  
+            *map.get_mut(key).ok_or(anyhow!("Error: key does not exist"))? = MaybeOrPromise::MetaData(MetaData::Maybe(maybe));  
  
-            let res = map.get(key).unwrap();
+            let res = map.get(key).ok_or(anyhow!("Error: key does not exist"))?;
 
             if let MaybeOrPromise::MetaData(MetaData::Maybe(m)) = res {
                 match m {
@@ -189,7 +245,8 @@ pub async fn get_meta_data_maybe_or_await_task(tasks: &Arc<RwLock<HashMap<String
                     }
                 } 
             } 
-        } else if let MaybeOrPromise::MetaData(MetaData::Maybe(maybe)) = res {
+        } else*/
+        if let MaybeOrPromise::MetaData(MetaData::Maybe(maybe)) = res {
             match maybe {
                 Ok(n) => {
                     return Ok(n.clone());
@@ -203,13 +260,58 @@ pub async fn get_meta_data_maybe_or_await_task(tasks: &Arc<RwLock<HashMap<String
         
  }
 
+  pub async fn get_timestamps_of_resolved_tasks(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, req: &[&str]) -> Vec<i64> {
+
+    let mut keys: Vec<i64> = Vec::new(); 
+        
+    for k in req {
+         // if the functions returns a value in the given time it is considered resolved.
+         match timeout(Duration::from_millis(100), get_timestamp_or_await_task(tasks,k)).await {
+            Ok(Ok(timestamp)) => { 
+                keys.push(timestamp);
+            },
+            Ok(Err(_)) => {
+                keys.push(0i64);
+            },
+            Err(_) => { 
+                keys.push(0i64);
+            }
+         }
+    }
+    return keys;
+  } 
+
+  pub async fn get_keys_of_running_tasks<'a>(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, req: &'a [&str]) -> Vec<&'a str> {
+
+    let mut keys: Vec<&str> = Vec::new(); 
+        
+    for k in req {
+         // if the functions returns a value in the given time it is considered resolved.
+         match timeout(Duration::from_millis(100), get_data_maybe_or_await_task(tasks,k)).await {
+            Err(_) => { 
+                keys.push(k);
+            },
+            Ok(_) => { 
+            }
+         }
+    }
+    return keys;
+  } 
+
+pub async fn await_running_tasks(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, req: &[&str]) -> anyhow::Result<String> {
+
+    for k in req { 
+         get_data_maybe_or_await_task(tasks,k).await;
+    }
+    Ok("finished".to_string())
+} 
+  
   /*
   * all required queries are triggered here in async fashion
   *
   * retrieve the value when it is needed: "data.get_mut(String).unwrap().await"
   * use try_join!, join! or select! macros to optimise retrieval of multiple values.
   */
- 
  pub async fn requirements(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, user_settings: &UserSettings, req: &Vec<&str>) { 
           
          let gas_prices = fetch_gas_price().await; 
@@ -217,6 +319,8 @@ pub async fn get_meta_data_maybe_or_await_task(tasks: &Arc<RwLock<HashMap<String
          if !gas_prices.response_status.unwrap().is_ok {
             println!("WARNING: Using static gas_prices.");
          } 
+
+         let mut map = tasks.write().await;
 
          for cmd in req {
             let vec: Vec<&str> = cmd.split(" ").collect();
@@ -229,38 +333,33 @@ pub async fn get_meta_data_maybe_or_await_task(tasks: &Arc<RwLock<HashMap<String
                     "earn_apy" => {
                         let handle = tokio::spawn(async move { 
                             {    
+                                
                                 return get_block_txs_deposit_stable_apy().await;   
                             }
-                        });
-                        {
-                            let mut map = tasks.write().await;
-                            map.insert("earn_apy".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
-                        }
+                        }); 
+                        map.insert("earn_apy".to_string(), MaybeOrPromise::Data(QueryData::Task(handle))); 
                         
                     }
                     "blocks_per_year" => {
                         let handle = tokio::spawn(async move { 
                             {    
+                                
                                 return blocks_per_year_query().await;   
                             }
-                        });
-                        {
-                            let mut map = tasks.write().await;
-                            map.insert("blocks_per_year".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
-                        }
+                        }); 
+                        map.insert("blocks_per_year".to_string(), MaybeOrPromise::Data(QueryData::Task(handle))); 
                     }
                     "borrow_limit" => {  
                         let wallet = user_settings.wallet_acc_address.to_owned();
                         let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
                         let handle = tokio::spawn(async move { 
                             {    
+                                
                                 return anchor_protocol_borrower_limit(wallet,gas_prices_copy).await;   
                             }
                         });
-                        {
-                            let mut map = tasks.write().await;
+                       
                             map.insert("borrow_limit".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
-                        }
  
                     },
                     "borrow_info" => {
@@ -268,129 +367,120 @@ pub async fn get_meta_data_maybe_or_await_task(tasks: &Arc<RwLock<HashMap<String
                         let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
                         let handle = tokio::spawn(async move { 
                             {    
+                                
                                 return anchor_protocol_borrower_info(wallet,gas_prices_copy).await;   
                             }
                         });
-                        {
-                            let mut map = tasks.write().await;
+                       
                             map.insert("borrow_info".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
-                        } 
+                        
                     },
                     "balance" => {
                         let wallet = user_settings.wallet_acc_address.to_owned();
                         let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
                         let handle = tokio::spawn(async move { 
                             {    
+                                
                                 return anchor_protocol_balance(wallet,gas_prices_copy).await;   
                             }
                         });
-                        {
-                            let mut map = tasks.write().await;
+                       
                             map.insert("balance".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
-                        } 
+                        
                     },
                     "terra_balances" => {
                         let wallet = user_settings.wallet_acc_address.to_owned(); 
                         let handle = tokio::spawn(async move { 
                             {    
+                                
                                 return terra_balances(wallet).await;   
                             }
                         });
-                        {
-                            let mut map = tasks.write().await;
+                       
                             map.insert("terra_balances".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
-                        } 
+                        
                     },
                     "anc_balance" => {
                         let wallet = user_settings.wallet_acc_address.to_owned();
                         let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
                         let handle = tokio::spawn(async move { 
                             {    
+                                
                                 return anchor_protocol_anc_balance(wallet,gas_prices_copy).await;   
                             }
                         });
-                        {
-                            let mut map = tasks.write().await;
+                       
                             map.insert("anc_balance".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
-                        } 
+                         
                     },
                     "staker" => {
                         let wallet = user_settings.wallet_acc_address.to_owned();
                         let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
                         let handle = tokio::spawn(async move { 
                             {    
+                                
                                 return anchor_protocol_staker(wallet,gas_prices_copy).await;   
                             }
                         });
-                        {
-                            let mut map = tasks.write().await;
+                       
                             map.insert("staker".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
-                        } 
+                        
                     },
                     "api/v2/distribution-apy" => { 
                         let handle = tokio::spawn(async move { 
                             {    
+                                
                                 return query_api_distribution_apy().await;   
                             }
                         });
-                        {
-                            let mut map = tasks.write().await;
+                       
                             map.insert("api/v2/distribution-apy".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
-                        }
                     },
                     "api/v2/gov-reward" => { 
                         let handle = tokio::spawn(async move { 
                             {    
+                                
                                 return query_api_gov_reward().await;   
                             }
                         });
-                        {
-                            let mut map = tasks.write().await;
+                       
                             map.insert("api/v2/gov-reward".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
-                        }
                          
                     },
                     "anchor_protocol_txs_claim_rewards" => {  
                         let handle = tokio::spawn(async move { 
                             {    
+                                
                                 return get_block_txs_fee_data("claim_rewards").await;   
                             }
                         });
-                        {
-                            let mut map = tasks.write().await;
+                       
                             map.insert("anchor_protocol_txs_claim_rewards".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
-                        }
                          
                     }, 
                     "anchor_protocol_txs_staking" => {  
                         let handle = tokio::spawn(async move { 
                             {    
+                                
                                 return get_block_txs_fee_data("staking").await;   
                             }
                         });
-                        {
-                            let mut map = tasks.write().await;
+                       
                             map.insert("anchor_protocol_txs_staking".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
-                        }
                     }, 
-                    "gas_fees_uusd" => {    
-                        let mut map = tasks.write().await;                     
+                    "gas_fees_uusd" => {                      
                         map.insert("gas_fees_uusd".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Ok(gas_prices.response.as_ref().unwrap().uusd.to_string().to_owned()))));
                     }, 
-                    "trigger_percentage" => {    
-                        let mut map = tasks.write().await;   
+                    "trigger_percentage" => {     
                         map.insert("trigger_percentage".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Ok(user_settings.trigger_percentage.to_string().to_owned()))));
                     },  
-                    "max_gas_adjustment" => {    
-                        let mut map = tasks.write().await;   
+                    "max_gas_adjustment" => {      
                         map.insert("max_gas_adjustment".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Ok(user_settings.max_gas_adjustment.to_string().to_owned()))));
                     },    
-                    "gas_adjustment_preference" => {    
-                        let mut map = tasks.write().await;   
+                    "gas_adjustment_preference" => {      
                         map.insert("gas_adjustment_preference".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Ok(user_settings.gas_adjustment_preference.to_string().to_owned()))));
                     },    
-                    "min_ust_balance" => {    
-                        let mut map = tasks.write().await;   
+                    "min_ust_balance" => {       
                         map.insert("min_ust_balance".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Ok(user_settings.min_ust_balance.to_string().to_owned()))));
                     },     
                     &_ => {
@@ -412,13 +502,12 @@ pub async fn get_meta_data_maybe_or_await_task(tasks: &Arc<RwLock<HashMap<String
                         let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
                         let handle = tokio::spawn(async move { 
                             {    
+                                
                                 return state_query_msg(second_copy,third_copy,gas_prices_copy).await;   
                             }
                         });
-                        {
-                            let mut map = tasks.write().await;
+                       
                             map.insert(format!("state {} {}",second, third).to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
-                        }
                     },
                      "epoch_state" => {
                         // "epoch_state anchorprotocol mmMarket"
@@ -427,13 +516,12 @@ pub async fn get_meta_data_maybe_or_await_task(tasks: &Arc<RwLock<HashMap<String
                         let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
                         let handle = tokio::spawn(async move { 
                             {    
+                                
                                 return epoch_state_query_msg(second_copy,third_copy,gas_prices_copy).await;   
                             }
                         });
-                        {
-                            let mut map = tasks.write().await;
+                       
                             map.insert(format!("epoch_state {} {}",second, third).to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
-                        }
                     },
                      "config" => {
                         let second_copy = second.to_owned();
@@ -441,26 +529,25 @@ pub async fn get_meta_data_maybe_or_await_task(tasks: &Arc<RwLock<HashMap<String
                         let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
                         let handle = tokio::spawn(async move { 
                             {    
+                                
                                 return config_query_msg(second_copy,third_copy,gas_prices_copy).await;   
                             }
                         });
-                        {
-                            let mut map = tasks.write().await;
+                       
                             map.insert(format!("config {} {}",second, third).to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
-                        } 
                     },
                     "simulation_cw20" => {
                         let third_copy = third.to_owned();
                         let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
                         let handle = tokio::spawn(async move { 
                             {    
+                                
                                 return masset_to_ust(third_copy,gas_prices_copy).await;   
                             }
                         });
-                        {
-                            let mut map = tasks.write().await;
+                       
                             map.insert(format!("simulation_cw20 {} {}",second, third).to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
-                        } 
+                         
                     },
                     "core_swap" => { 
                         let second_copy = second.to_owned();
@@ -468,13 +555,13 @@ pub async fn get_meta_data_maybe_or_await_task(tasks: &Arc<RwLock<HashMap<String
                         let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
                         let handle = tokio::spawn(async move { 
                             {    
+                                
                                 return native_token_core_swap(second_copy,third_copy,gas_prices_copy).await;   
                             }
                         });
-                        {
-                            let mut map = tasks.write().await;
+                       
                             map.insert(format!("core_swap {} {}",second, third).to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
-                        } 
+                         
                     },
                     &_ => {
 
@@ -500,13 +587,13 @@ pub async fn get_meta_data_maybe_or_await_task(tasks: &Arc<RwLock<HashMap<String
                         let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
                         let handle = tokio::spawn(async move { 
                             {    
+                                
                                 return native_token_to_swap_pair(second_copy,third_copy,fourth_copy,gas_prices_copy).await;   
                             }
                         });
-                        {
-                            let mut map = tasks.write().await;
+                       
                             map.insert(format!("simulation {} {} {}",second, third, fourth).to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
-                        } 
+                       
                     },
                     "simulation_cw20" => {
                         let second_copy = second.to_owned();
@@ -515,20 +602,20 @@ pub async fn get_meta_data_maybe_or_await_task(tasks: &Arc<RwLock<HashMap<String
                         let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
                         let handle = tokio::spawn(async move { 
                             {    
+                                
                                 return cw20_to_swap_pair(second_copy,third_copy,fourth_copy,gas_prices_copy).await;   
                             }
                         });
-                        {
-                            let mut map = tasks.write().await;
+                       
                             map.insert(format!("simulation_cw20 {} {} {}",second, third, fourth).to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
-                        } 
+                     
                     }
                     &_ => {
 
                     }
                 }
-
             }
-         }        
+        
+        }        
 }
  
