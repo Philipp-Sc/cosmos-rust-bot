@@ -5,9 +5,7 @@ pub mod meta;
 use serde::Deserialize;
 use serde::Serialize;
 
-use serde_json::Value;
-use serde_json::json;
- 
+use serde_json::Value; 
 
 //use rust_decimal::Decimal;
 use core::str::FromStr;
@@ -17,14 +15,14 @@ use cosmwasm_std::{Uint128,Uint256,Decimal256,Decimal};
 
 use meta::api::data::{GasPrices};
 
-use meta::api::data::terra_contracts::{get_contract,get_query_msg,get_mirrorprotocol_assets};
+use meta::api::data::terra_contracts::{get_contract,get_mirrorprotocol_assets};
 
 use meta::api::{
     get_fcd_or_lcd_query,
-    get_fcd_else_lcd_query,
+   /* get_fcd_else_lcd_query,
     get_lcd_else_fcd_query,
     get_fcd_query,
-    get_lcd_query,
+    get_lcd_query,*/
     query_core_market_swap_rate,
     query_core_bank_balances,
     query_api,
@@ -37,11 +35,11 @@ use anyhow::anyhow;
 use enum_as_inner::EnumAsInner;
 
 
-use terra_rust_api::client::tx_types::V1TXSResult;
+//use terra_rust_api::client::tx_types::V1TXSResult;
 
 use regex::Regex;
 
-use chrono::{DateTime, FixedOffset, TimeZone};
+use chrono::{DateTime};
 
 
 use std::time::{Instant};
@@ -129,7 +127,9 @@ pub struct MarketStateResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize, EnumAsInner)]  
 pub enum StateResponse {
+    #[allow(non_camel_case_types)]
     bLunaHub(Response<BLunaStateResponse>),
+    #[allow(non_camel_case_types)]
     mmMarket(Response<MarketStateResponse>), 
 }
 
@@ -141,6 +141,7 @@ pub struct MarketEpochStateResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize, EnumAsInner)] 
 pub enum EpochStateResponse { 
+    #[allow(non_camel_case_types)]
     mmMarket(Response<MarketEpochStateResponse>),
 }
 
@@ -162,6 +163,7 @@ pub struct CollectorConfigResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize, EnumAsInner)] 
 pub enum ConfigResponse { 
+    #[allow(non_camel_case_types)]
     mmInterestModel(Response<InterestModelConfigResponse>),
     Collector(Response<CollectorConfigResponse>),
 }
@@ -561,7 +563,7 @@ fn get_tx_log(entry: &Value, account: &str, query_msg: &str, amount_field: &str)
 
 
                 let fee = entry.get("tx").unwrap().get("value").unwrap().get("fee").ok_or(anyhow!("no fee"))?;
-                let gas_limit = fee.get("gas").ok_or(anyhow!("no gas"))?;
+                //let gas_limit = fee.get("gas").ok_or(anyhow!("no gas"))?; // same as gas_wanted
                 
                 let fee = fee.get("amount").ok_or(anyhow!("no amount"))?.as_array().ok_or(anyhow!("no array"))?;
 
@@ -1013,7 +1015,6 @@ pub async fn anchor_protocol_balance(wallet_acc_address: String, gas_prices: Gas
 } 
 
 pub async fn terra_balances(wallet_acc_address: String) ->  anyhow::Result<ResponseResult> { 
-    let query = r#"{"balance": {"address": "wallet_acc_address"}}"#.replace("wallet_acc_address", &wallet_acc_address);  
     let res: String = query_core_bank_balances(&wallet_acc_address).await?;
     let res: Response<Vec<Coin>> = serde_json::from_str(&res)?;
     Ok(ResponseResult::Balances(res))

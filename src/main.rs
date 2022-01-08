@@ -5,20 +5,12 @@ use std::env;
 
 use rust_decimal::Decimal;
 use core::str::FromStr;
-use std::convert::TryFrom;
-
- 
-use serde::Deserialize;
-use serde::Serialize;
+//use std::convert::TryFrom;
 
 mod control;
 
 use control::view::model::{UserSettings,MaybeOrPromise,requirements,get_keys_of_running_tasks,await_running_tasks,get_timestamps_of_resolved_tasks};
-
-use control::view::model::smart_contracts::{ResponseResult,get_block_txs_deposit_stable,get_block_txs_deposit_stable_apy,get_block_txs_fee_data};
-use control::view::model::smart_contracts::meta::api::{fetch_gas_price, QueryResponse,query_core_block_at_height,query_core_latest_block};
-use control::view::model::smart_contracts::meta::api::data::{GasPrices};
-use control::view::model::smart_contracts::meta::api::data::endpoints::get_terra_fcd;
+ 
 
 use control::view::*;
 use control::*;
@@ -27,13 +19,12 @@ use std::collections::HashMap;
 use core::pin::Pin;
 use core::future::Future;
 
-use anyhow::anyhow;
-use enum_as_inner::EnumAsInner;
-   
-use num_format::{Locale, ToFormattedString}; 
+//use anyhow::anyhow;
+//use enum_as_inner::EnumAsInner; 
+//use num_format::{Locale, ToFormattedString}; 
 
 use std::{thread, time};
-use std::time::{Duration, Instant};
+use std::time::{Duration/*, Instant*/};
 
 
 
@@ -41,17 +32,17 @@ use std::sync::Arc;
 use tokio::sync::RwLock; 
 use tokio::task::JoinHandle;
 use tokio::time::timeout;
-use tokio::time::Timeout;
+//use tokio::time::Timeout;
 
 
 use colored::*;
  
 use simple_user_input::get_input; 
 
-use rand::Rng;
+//use rand::Rng;
 
 
-use chrono::{DateTime, TimeZone, NaiveDateTime, Utc};
+use chrono::{Utc};
 
 extern crate num_cpus;
 
@@ -171,12 +162,11 @@ async fn main() -> anyhow::Result<()> {
 
         let fast: i32 = 10;    // for requests short lived information
         let medium: i32 = 60;    // for requests short lived information
-        let slow: i32 = 60*10; // for requests that have relative constant results.
-        let instant: i32 = 0;  // for settings, where there is no downside/delay of updating the values.
+        let slow: i32 = 60*10; // for requests that have relative constant results. 
 
         // (key, target_refresh_time, dependency_tag)
 
-        let mut req = vec![
+        let req = vec![
         ("terra_balances", every_block, vec!["anchor_auto_stake"]),
         /* <market_info> */
         /* core_tokens */
@@ -225,8 +215,7 @@ async fn main() -> anyhow::Result<()> {
         /* <from gas_prices>*/
         ("gas_fees_uusd", medium, vec!["market","anchor","anchor_account","anchor_auto_stake"]),
         ]; 
-
-        let req_clone = req.clone();
+ 
 
         let mut req_keys: Vec<&str> = Vec::new();
         for i in 0..req.len() {
@@ -246,9 +235,9 @@ async fn main() -> anyhow::Result<()> {
             }
         }
 
-        add_string_to_display(&new_display, 0, format!("{esc}c", esc = 27 as char)).await;
+        add_string_to_display(&new_display, 0, format!("{esc}c", esc = 27 as char)).await.ok();
 
-        let display_loop = print_to_terminal(&new_display,false); 
+        let _display_loop = print_to_terminal(&new_display,false); 
 
         let mut timestamps_display: Vec<i64> = vec![0i64; 1000];
 
@@ -257,11 +246,11 @@ async fn main() -> anyhow::Result<()> {
 
             // waiting for unresolved tasks to catch up 
             if is_first_run { // may take longer because of the number of threads spawned.
-                timeout(Duration::from_secs(60*2), await_running_tasks(&tasks, &req_keys)).await;
+                timeout(Duration::from_secs(60*2), await_running_tasks(&tasks, &req_keys)).await.ok();
             } else if req_unresolved.len() >= num_cpus { 
                 // anyway we need to have free threads to spawn more tasks
                 // useful to wait here
-                timeout(Duration::from_secs(30), await_running_tasks(&tasks, &req_keys)).await;
+                timeout(Duration::from_secs(30), await_running_tasks(&tasks, &req_keys)).await.ok();
             } 
 
             let req_resolved_timestamps = get_timestamps_of_resolved_tasks(&tasks,&req_keys).await;
@@ -296,7 +285,7 @@ async fn main() -> anyhow::Result<()> {
                     req_to_check.len().to_string().purple(),
                     format!("{:?}",req_unresolved).to_string().red(),
                     format!("{:?}",req_to_update).to_string().purple()
-                    )).await; 
+                    )).await.ok(); 
             }else{
                 add_string_to_display(&new_display,1,format!(
                     "{}{}{}{}{}{}{}",
@@ -307,7 +296,7 @@ async fn main() -> anyhow::Result<()> {
                     req_to_update.len().to_string().yellow(),
                     ", total requirements: ".to_string().purple(),
                     req_to_check.len().to_string().purple()
-                    )).await; 
+                    )).await.ok(); 
             }
 
             requirements(&tasks,&user_settings,&req_to_update).await;  
@@ -322,7 +311,7 @@ async fn main() -> anyhow::Result<()> {
             if args_i.contains(&"market") {        
                 for t in display_market_info(&tasks, &new_display, &mut offset, is_first_run).await {
                     if timestamps_display[t.0] == 064 || now - timestamps_display[t.0] > 1 {
-                        add_to_display(&new_display,t.0,Box::pin(t.1)).await;
+                        add_to_display(&new_display,t.0,Box::pin(t.1)).await.ok();
                         timestamps_display[t.0] = now;
                     }
                 }
@@ -330,7 +319,7 @@ async fn main() -> anyhow::Result<()> {
             if args_i.contains(&"anchor") {        
                 for t in display_anchor_info(&tasks, &new_display, &mut offset, is_first_run).await {
                     if timestamps_display[t.0] == 064 || now - timestamps_display[t.0] > 1 {
-                        add_to_display(&new_display,t.0,Box::pin(t.1)).await;
+                        add_to_display(&new_display,t.0,Box::pin(t.1)).await.ok();
                         timestamps_display[t.0] = now;
                     } 
                 }
@@ -338,14 +327,14 @@ async fn main() -> anyhow::Result<()> {
             if args_a.contains(&"anchor_account") {        
                 for t in display_anchor_account(&tasks, &new_display, &mut offset, is_first_run).await {
                     if timestamps_display[t.0] == 064 || now - timestamps_display[t.0] > 1 {
-                        add_to_display(&new_display,t.0,Box::pin(t.1)).await;
+                        add_to_display(&new_display,t.0,Box::pin(t.1)).await.ok();
                         timestamps_display[t.0] = now;
                     } 
                 }
             }
 
             if args_b.contains(&"anchor_auto_stake") {
-                lazy_anchor_account_auto_stake_rewards(&tasks, &user_settings, &wallet_seed_phrase, &new_display, &mut offset, is_test, is_first_run).await;
+                lazy_anchor_account_auto_stake_rewards(&tasks, &wallet_seed_phrase, &new_display, &mut offset, is_test, is_first_run).await;
             } 
               
             display_all_errors(&tasks, &*req_unresolved ,&new_display, &mut offset).await;
@@ -359,13 +348,13 @@ async fn main() -> anyhow::Result<()> {
          
         }
  
-        Ok(())
+        //Ok(())
   
 } 
 
-pub fn display_add(item: String, space_len: usize, fixed_len: usize, new_lines: usize) -> String {
+pub fn display_add(item: String, fixed_len: usize, new_lines: usize) -> String {
 
-    let mut split = item.split("    ");
+    let split = item.split("    ");
     let mut result = "".to_string();
 
     for s in split {
@@ -383,9 +372,9 @@ pub fn display_add(item: String, space_len: usize, fixed_len: usize, new_lines: 
     result
 }
 
-pub async fn add_table_formatting(f: Pin<Box<dyn Future<Output = String> + Send + 'static >>, space_len: usize, fixed_len: usize, new_lines: usize) -> String {
+pub async fn add_table_formatting(f: Pin<Box<dyn Future<Output = String> + Send + 'static >>, fixed_len: usize, new_lines: usize) -> String {
     let res = f.await;
-    let mut split = res.split("    ");
+    let split = res.split("    ");
     let mut result = "".to_string();
 
     for s in split {
@@ -432,7 +421,7 @@ pub async fn add_string_to_display(new_display: &Arc<RwLock<Vec<String>>>, index
     Ok(())
 }
 
-pub fn add_view_to_display(new_display: &Arc<RwLock<Vec<String>>>, view: Vec<(String,usize)>) -> JoinHandle<anyhow::Result<()>> {
+pub fn add_view_to_display(new_display: &Arc<RwLock<Vec<String>>>, view: Vec<(String,usize)>) -> JoinHandle<()> {
      
     let display_clone = new_display.clone();
 
@@ -446,7 +435,7 @@ pub fn add_view_to_display(new_display: &Arc<RwLock<Vec<String>>>, view: Vec<(St
             for entry in view {
                 *vector.get_mut(entry.1).unwrap() = entry.0;
             }
-            Ok(())
+            
     });  
 }
 
@@ -497,17 +486,17 @@ pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromis
         *offset += 1; 
     }
 
-    add_view_to_display(&new_display, error_view).await; 
+    add_view_to_display(&new_display, error_view).await.ok(); 
 
 }
 
-pub async fn lazy_anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, user_settings: &UserSettings, wallet_seed_phrase: &SecUtf8,  new_display: &Arc<RwLock<Vec<String>>>,offset: &mut usize, is_test: bool, is_first_run: bool) {
+pub async fn lazy_anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_seed_phrase: &SecUtf8,  new_display: &Arc<RwLock<Vec<String>>>,offset: &mut usize, is_test: bool, is_first_run: bool) {
      
-    add_string_to_display(new_display,*offset,"\n  **Anchor Protocol Auto Stake**\n\n".truecolor(75,219,75).to_string()).await; 
+    add_string_to_display(new_display,*offset,"\n  **Anchor Protocol Auto Stake**\n\n".truecolor(75,219,75).to_string()).await.ok(); 
     *offset += 1;
 
     if is_first_run {
-        add_string_to_display(new_display,*offset,format!("{}{}","   [Auto Stake]    next:        ".truecolor(75,219,75),"--".to_string().purple())).await; 
+        add_string_to_display(new_display,*offset,format!("{}{}","   [Auto Stake]    next:        ".truecolor(75,219,75),"--".to_string().purple())).await.ok(); 
     }
   
     // initial resolve may take some time.
@@ -519,17 +508,17 @@ pub async fn lazy_anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<S
     }
     let date_next_to_auto_claim_and_stake = date_next_to_auto_claim_and_stake.unwrap();
  
-    add_string_to_display(new_display,*offset,format!("{}{}","   [Auto Stake]    next:        ".truecolor(75,219,75),date_next_to_auto_claim_and_stake.to_string().yellow())).await; 
+    add_string_to_display(new_display,*offset,format!("{}{}","   [Auto Stake]    next:        ".truecolor(75,219,75),date_next_to_auto_claim_and_stake.to_string().yellow())).await.ok(); 
     *offset += 1;
 
     if date_next_to_auto_claim_and_stake == "now".to_string() {   
-        anchor_account_auto_stake_rewards(&tasks,  user_settings,wallet_seed_phrase,new_display,offset,is_test).await;
+        anchor_account_auto_stake_rewards(&tasks, wallet_seed_phrase,new_display,offset,is_test).await;
     }
  
 
 }
 
-async fn anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, user_settings: &UserSettings, wallet_seed_phrase: &SecUtf8, new_display: &Arc<RwLock<Vec<String>>>,offset: &mut usize, is_test: bool) {
+async fn anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_seed_phrase: &SecUtf8, new_display: &Arc<RwLock<Vec<String>>>,offset: &mut usize, is_test: bool) {
 
     // check next time to auto stake
     let date_next_to_auto_claim_and_stake = estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(), "loan_amount","date_next",2).await;
@@ -539,19 +528,19 @@ async fn anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<String, Ma
         // check for sufficient funds
         match terra_balance_to_string(tasks.clone(),"uusd",false,2).await.as_ref() {
             "--" => {
-                add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]".truecolor(75,219,75),"        Error:    Loading UST account balance failed".red())).await; 
+                add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]".truecolor(75,219,75),"        Error:    Loading UST account balance failed".red())).await.ok(); 
                 *offset += 1;
                 return;
             },
             "0" => {
-                add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]".truecolor(75,219,75),"        Error:    insufficient funds".red())).await; 
+                add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]".truecolor(75,219,75),"        Error:    insufficient funds".red())).await.ok(); 
                 *offset += 1;
                 return; 
             },
             e => {
                 match min_ust_balance_to_string(tasks.clone(),2).await.as_ref() {
                     "--" => {
-                        add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]".truecolor(75,219,75),"        Error:    min_ust_balance undefined".red())).await; 
+                        add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]".truecolor(75,219,75),"        Error:    min_ust_balance undefined".red())).await.ok(); 
                         *offset += 1;
                         return; 
                     },
@@ -560,7 +549,7 @@ async fn anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<String, Ma
                         println!("{}",e);
                         let min_balance = Decimal::from_str(m).unwrap();
                         if balance < min_balance {
-                            add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]".truecolor(75,219,75),"        Error:    insufficient funds: less than min_ust_balance".red())).await; 
+                            add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]".truecolor(75,219,75),"        Error:    insufficient funds: less than min_ust_balance".red())).await.ok(); 
                             *offset += 1;
                             return; 
                         }
@@ -569,28 +558,28 @@ async fn anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<String, Ma
             }
         } 
 
-        add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]    estimate:    ".truecolor(75,219,75),"--".to_string().yellow())).await; 
+        add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]    estimate:    ".truecolor(75,219,75),"--".to_string().yellow())).await.ok(); 
         let result = anchor_borrow_claim_and_stake_rewards(tasks.clone(), wallet_seed_phrase,true).await; 
-        add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]    estimate:    ".truecolor(75,219,75),result.to_string().yellow())).await; 
+        add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]    estimate:    ".truecolor(75,219,75),result.to_string().yellow())).await.ok(); 
         *offset += 1;
 
         if !is_test {
-            add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]    result:      ".truecolor(75,219,75),"--".to_string().yellow())).await; 
+            add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]    result:      ".truecolor(75,219,75),"--".to_string().yellow())).await.ok(); 
             let result = anchor_borrow_claim_and_stake_rewards(tasks.clone(), wallet_seed_phrase,false).await; 
-            add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]    result:      ".truecolor(75,219,75),result.to_string().yellow())).await; 
+            add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]    result:      ".truecolor(75,219,75),result.to_string().yellow())).await.ok(); 
             *offset += 1;
 
         }
 /*
         let result = anchor_borrow_claim_rewards(tasks.clone(), wallet_seed_phrase,true).await;
-        display_add(format!("\n   [Auto Stake]   complete:    {:?}",result),10 as usize, 43 as usize,1 as usize); 
+        display_add(format!("\n   [Auto Stake]   complete:    {:?}",result), 43 as usize,1 as usize); 
    
         let result = anchor_governance_stake_balance(tasks.clone(), wallet_seed_phrase,true).await;
-        display_add(format!("\n   [Auto Stake]   complete:    {:?}",result),10 as usize, 43 as usize,1 as usize); 
+        display_add(format!("\n   [Auto Stake]   complete:    {:?}",result), 43 as usize,1 as usize); 
 */ 
 
     }else {  
-        add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]    next:        ".truecolor(75,219,75),date_next_to_auto_claim_and_stake.to_string().yellow())).await; 
+        add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]    next:        ".truecolor(75,219,75),date_next_to_auto_claim_and_stake.to_string().yellow())).await.ok(); 
         *offset += 1;
     }
 
@@ -700,7 +689,7 @@ pub async fn display_anchor_account(tasks: &Arc<RwLock<HashMap<String, MaybeOrPr
     //anchor_view.push((format!("{}{}","\n   [Borrow]".truecolor(75,219,75),"    fee to claim & stake:    ".to_string(),*offset));
    /*
     let available_liquidity_from_ust_deposit = borrower_deposit_liquidity_to_string(tasks.clone(),2).await;
-    display_add(format!("   [Earn]    deposit liquidity:    {}",available_liquidity_from_ust_deposit),10 as usize, 23 as usize,2 as usize); 
+    display_add(format!("   [Earn]    deposit liquidity:    {}",available_liquidity_from_ust_deposit), 23 as usize,2 as usize); 
    */  
     anchor_view.push((format!("{}{}","\n\n   [Gov]".truecolor(75,219,75),"       balance:                 ".purple().to_string()),*offset));
     *offset += 1;
@@ -734,178 +723,178 @@ pub async fn display_anchor_account(tasks: &Arc<RwLock<HashMap<String, MaybeOrPr
   
     //   add -> (=absolute returns) UST or ANC FOR DISTRIBUTION APR AND AUTO STAKING
   
-    anchor_view.push((format!("    {}",display_add("   _    _    Net APY    Borrow APY    Distribution APY    Earn APY    Auto Staking APY (not included in Net APY)".purple().to_string(),10 as usize, 23 as usize,2 as usize)),*offset));
+    anchor_view.push((format!("    {}",display_add("   _    _    Net APY    Borrow APY    Distribution APY    Earn APY    Auto Staking APY (not included in Net APY)".purple().to_string(), 23 as usize,2 as usize)),*offset));
     *offset += 1;
    
-    anchor_view.push((display_add("   [Anchor]    loan_amount:    --".purple().to_string(),10 as usize, 23 as usize,0 as usize),*offset));
+    anchor_view.push((display_add("   [Anchor]    loan_amount:    --".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(apy_on_collateral_by(tasks.clone(),"loan_amount","net_apr",2));
     let f = Box::pin(add_format_to_result("   [Anchor]    loan_amount:    ".to_string(),"".to_string(),f));
-    let f = Box::pin(add_table_formatting(f,10 as usize, 23 as usize,0 as usize));
+    let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset,f);
     anchor_tasks.push(t);
     *offset += 1;
 
-    anchor_view.push((display_add("--".purple().to_string(),10 as usize, 23 as usize,0 as usize),*offset));
+    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(apy_on_collateral_by(tasks.clone(),"loan_amount","borrow_apr",2));
     let f = Box::pin(add_format_to_result("    -".to_string(),"".to_string(),f));
-    let f = Box::pin(add_table_formatting(f,10 as usize, 23 as usize,0 as usize));
+    let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset,f);
     anchor_tasks.push(t);
     *offset += 1;
 
-    anchor_view.push((display_add("--".purple().to_string(),10 as usize, 23 as usize,0 as usize),*offset));
+    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(apy_on_collateral_by(tasks.clone(),"loan_amount","distribution_apr",2));
     let f = Box::pin(add_format_to_result("    +".to_string(),"".to_string(),f));
-    let f = Box::pin(add_table_formatting(f,10 as usize, 23 as usize,0 as usize));
+    let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset,f);
     anchor_tasks.push(t);
     *offset += 1;
 
-    anchor_view.push((display_add("--".purple().to_string(),10 as usize, 23 as usize,0 as usize),*offset));
+    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(apy_on_collateral_by(tasks.clone(),"loan_amount","earn_apr",2));
     let f = Box::pin(add_format_to_result("    +".to_string(),"".to_string(),f));
-    let f = Box::pin(add_table_formatting(f,10 as usize, 23 as usize,0 as usize));
+    let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset,f);
     anchor_tasks.push(t);
     *offset += 1;
 
-    anchor_view.push((display_add("--".purple().to_string(),10 as usize, 23 as usize,0 as usize),*offset));
+    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"loan_amount","apr",2));
     let f = Box::pin(add_format_to_result("    +".to_string(),"".to_string(),f));
-    let f = Box::pin(add_table_formatting(f,10 as usize, 23 as usize,0 as usize));
+    let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset,f);
     anchor_tasks.push(t);
     *offset += 1;
 
-    anchor_view.push((display_add("--".purple().to_string(),10 as usize, 23 as usize,0 as usize),*offset));
+    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"loan_amount","total_returns",2));
     let f = Box::pin(add_format_to_result(" (=".to_string()," UST)".to_string(),f));
-    let f = Box::pin(add_table_formatting(f,10 as usize, 23 as usize,0 as usize));
+    let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset,f);
     anchor_tasks.push(t);
     *offset += 1;
 
-    anchor_view.push((display_add("--".purple().to_string(),10 as usize, 23 as usize,0 as usize),*offset));
+    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"loan_amount","date_next",2));
     let f = Box::pin(add_format_to_result(" Next Auto Stake: ".to_string(),"".to_string(),f));
-    let f = Box::pin(add_table_formatting(f,10 as usize, 23 as usize,0 as usize));
+    let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset,f);
     anchor_tasks.push(t);
     *offset += 1;
 
-    anchor_view.push((display_add("--".purple().to_string(),10 as usize, 23 as usize,1 as usize),*offset));
+    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,1 as usize),*offset));
     let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"loan_amount","duration_next",2));
     let f = Box::pin(add_format_to_result(" (every ".to_string(),")".to_string(),f));
-    let f = Box::pin(add_table_formatting(f,10 as usize, 23 as usize,1 as usize));
+    let f = Box::pin(add_table_formatting(f, 23 as usize,1 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset,f);
     anchor_tasks.push(t);
     *offset += 1;
 
 
-    anchor_view.push((display_add("   [Anchor]    target_ltv:    --".purple().to_string(),10 as usize, 23 as usize,0 as usize),*offset));
+    anchor_view.push((display_add("   [Anchor]    target_ltv:    --".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(apy_on_collateral_by(tasks.clone(),"target_ltv","net_apr",2));
     let f = Box::pin(add_format_to_result("   [Anchor]    target_ltv:    ".to_string(),"".to_string(),f));
-    let f = Box::pin(add_table_formatting(f,10 as usize, 23 as usize,0 as usize));
+    let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset,f);
     anchor_tasks.push(t);
     *offset += 1;
 
-    anchor_view.push((display_add("--".purple().to_string(),10 as usize, 23 as usize,0 as usize),*offset));
+    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(apy_on_collateral_by(tasks.clone(),"target_ltv","borrow_apr",2));
     let f = Box::pin(add_format_to_result("    -".to_string(),"".to_string(),f));
-    let f = Box::pin(add_table_formatting(f,10 as usize, 23 as usize,0 as usize));
+    let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset,f);
     anchor_tasks.push(t);
     *offset += 1;
 
 
-    anchor_view.push((display_add("--".purple().to_string(),10 as usize, 23 as usize,0 as usize),*offset));
+    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(apy_on_collateral_by(tasks.clone(),"target_ltv","distribution_apr",2));
     let f = Box::pin(add_format_to_result("    +".to_string(),"".to_string(),f));
-    let f = Box::pin(add_table_formatting(f,10 as usize, 23 as usize,0 as usize));
+    let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset,f);
     anchor_tasks.push(t);
     *offset += 1;
 
-    anchor_view.push((display_add("--".purple().to_string(),10 as usize, 23 as usize,0 as usize),*offset));
+    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(apy_on_collateral_by(tasks.clone(),"target_ltv","earn_apr",2));
     let f = Box::pin(add_format_to_result("    +".to_string(),"".to_string(),f));
-    let f = Box::pin(add_table_formatting(f,10 as usize, 23 as usize,0 as usize));
+    let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset,f);
     anchor_tasks.push(t);
     *offset += 1;
 
-    anchor_view.push((display_add("--".purple().to_string(),10 as usize, 23 as usize,0 as usize),*offset));
+    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"target_ltv","apr",2));
     let f = Box::pin(add_format_to_result("    +".to_string(),"".to_string(),f));
-    let f = Box::pin(add_table_formatting(f,10 as usize, 23 as usize,0 as usize));
+    let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset,f);
     anchor_tasks.push(t);
     *offset += 1;
 
 
-    anchor_view.push((display_add("--".purple().to_string(),10 as usize, 23 as usize,0 as usize),*offset));
+    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"target_ltv","total_returns",2));
     let f = Box::pin(add_format_to_result(" (=".to_string()," UST)".to_string(),f));
-    let f = Box::pin(add_table_formatting(f,10 as usize, 23 as usize,0 as usize));
+    let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset,f);
     anchor_tasks.push(t);
     *offset += 1;
 
-    anchor_view.push((display_add("--".purple().to_string(),10 as usize, 23 as usize,0 as usize),*offset));
+    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"target_ltv","date_next",2));
     let f = Box::pin(add_format_to_result(" Next Auto Stake: ".to_string(),"".to_string(),f));
-    let f = Box::pin(add_table_formatting(f,10 as usize, 23 as usize,0 as usize));
+    let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset,f);
     anchor_tasks.push(t);
     *offset += 1;
 
-    anchor_view.push((display_add("--".purple().to_string(),10 as usize, 23 as usize,1 as usize),*offset));
+    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,1 as usize),*offset));
     let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"target_ltv","duration_next",2));
     let f = Box::pin(add_format_to_result(" (every ".to_string(),")".to_string(),f));
-    let f = Box::pin(add_table_formatting(f,10 as usize, 23 as usize,1 as usize));
+    let f = Box::pin(add_table_formatting(f, 23 as usize,1 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset,f);
     anchor_tasks.push(t);
     *offset += 1;
 
 
-    anchor_view.push((display_add("   [Anchor]    deposit_amount:    --".purple().to_string(),10 as usize, 23 as usize,0 as usize),*offset));
+    anchor_view.push((display_add("   [Anchor]    deposit_amount:    --".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(apy_on_collateral_by(tasks.clone(),"deposit_amount","net_apr",2));
     let f = Box::pin(add_format_to_result("   [Anchor]    deposit_amount:    ".to_string(),"".to_string(),f));
-    let f = Box::pin(add_table_formatting(f,10 as usize, 23 as usize,0 as usize));
+    let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset,f);
     anchor_tasks.push(t);
     *offset += 1;
 
-    anchor_view.push((display_add("--".purple().to_string(),10 as usize, 23 as usize,0 as usize),*offset));
+    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(apy_on_collateral_by(tasks.clone(),"deposit_amount","borrow_apr",2));
     let f = Box::pin(add_format_to_result("    -".to_string(),"".to_string(),f));
-    let f = Box::pin(add_table_formatting(f,10 as usize, 23 as usize,0 as usize));
+    let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset,f);
     anchor_tasks.push(t);
     *offset += 1;
 
 
-    anchor_view.push((display_add("--".purple().to_string(),10 as usize, 23 as usize,0 as usize),*offset));
+    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(apy_on_collateral_by(tasks.clone(),"deposit_amount","distribution_apr",2));
     let f = Box::pin(add_format_to_result("    +".to_string(),"".to_string(),f));
-    let f = Box::pin(add_table_formatting(f,10 as usize, 23 as usize,0 as usize));
+    let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset,f);
     anchor_tasks.push(t);
     *offset += 1;
 
-    anchor_view.push((display_add("--".purple().to_string(),10 as usize, 23 as usize,0 as usize),*offset));
+    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(apy_on_collateral_by(tasks.clone(),"deposit_amount","earn_apr",2));
     let f = Box::pin(add_format_to_result("    +".to_string(),"".to_string(),f));
-    let f = Box::pin(add_table_formatting(f,10 as usize, 23 as usize,0 as usize));
+    let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset,f);
     anchor_tasks.push(t);
     *offset += 1;
 
-    anchor_view.push((display_add("--".purple().to_string(),10 as usize, 23 as usize,1 as usize),*offset));
+    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,1 as usize),*offset));
     let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"loan_amount","apr",2));
     let f = Box::pin(add_format_to_result("    +".to_string(),"".to_string(),f));
-    let f = Box::pin(add_table_formatting(f,10 as usize, 23 as usize,1 as usize));
+    let f = Box::pin(add_table_formatting(f, 23 as usize,1 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset,f);
     anchor_tasks.push(t);
     *offset += 1;
@@ -915,7 +904,7 @@ pub async fn display_anchor_account(tasks: &Arc<RwLock<HashMap<String, MaybeOrPr
     // ANC -50%, -25%, 0%, + 25%, +50%, + 100%
 
     if is_first_run {
-        add_view_to_display(&new_display, anchor_view).await; 
+        add_view_to_display(&new_display, anchor_view).await.ok(); 
     }
 
     return anchor_tasks;
@@ -1034,7 +1023,7 @@ pub async fn display_anchor_info(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
     *offset += 1;
  
     if is_first_run {
-        add_view_to_display(&new_display, anchor_view).await;
+        add_view_to_display(&new_display, anchor_view).await.ok();
     }
 
     return anchor_tasks;
@@ -1186,7 +1175,7 @@ pub async fn display_market_info(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
     *offset += 1;
 
     if is_first_run {
-        add_view_to_display(&new_display, market_view).await;
+        add_view_to_display(&new_display, market_view).await.ok();
     }
 
     return market_tasks;

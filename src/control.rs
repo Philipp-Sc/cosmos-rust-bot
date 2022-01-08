@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 pub mod view;
 use secstr::*;
 
@@ -26,7 +28,7 @@ pub async fn anchor_borrow_claim_and_stake_rewards(tasks: Arc<RwLock<HashMap<Str
 	        Ok(response_result) => { 
 	            max_gas_adjustment = Decimal::from_str(response_result.as_str()).unwrap();             
 	        },
-	        Err(err) => {
+	        Err(_) => {
         	}
 		}
 
@@ -75,7 +77,7 @@ pub async fn anchor_borrow_claim_and_stake_rewards(tasks: Arc<RwLock<HashMap<Str
 	            					 .checked_add(gas_adjustment_preference).unwrap()
 	            					 .checked_div(Decimal::from_str("2").unwrap()).unwrap();    
 	        },
-	        Err(err) => {
+	        Err(_) => {
         	}
 		}
  
@@ -90,14 +92,14 @@ pub async fn anchor_borrow_claim_and_stake_rewards(tasks: Arc<RwLock<HashMap<Str
 			}
 		};
 
-		let mut anc_to_claim = Decimal::from_str("0").unwrap();
+		let mut _anc_to_claim = Decimal::from_str("0").unwrap();
 
 		match borrower_rewards_to_string(tasks.clone(), true,0).await.as_ref() {
 			"--" => {
 				return "Could not get pending ANC rewards: Likely no ANC available.".to_string();
 			},
 			e => {
-				anc_to_claim = Decimal::from_str(e).unwrap() 
+				_anc_to_claim = Decimal::from_str(e).unwrap() 
 			}
 		};
 
@@ -106,7 +108,7 @@ pub async fn anchor_borrow_claim_and_stake_rewards(tasks: Arc<RwLock<HashMap<Str
             Ok(response_result) => { 
                 let gas_fees_uusd = Decimal::from_str(response_result.as_str()).unwrap();   
 
-                match anchor_governance_claim_and_stake(wallet_seed_phrase.unsecure(),anc_to_claim,gas_fees_uusd, avg_tx_fee, max_gas_adjustment,only_estimate).await {
+                match anchor_governance_claim_and_stake(wallet_seed_phrase.unsecure(),_anc_to_claim,gas_fees_uusd, avg_tx_fee, max_gas_adjustment,only_estimate).await {
 		        	Ok(msg) => {
 		        		return msg;
 		        	},
@@ -119,10 +121,8 @@ pub async fn anchor_borrow_claim_and_stake_rewards(tasks: Arc<RwLock<HashMap<Str
             	return format!("Unexpected Error: {:?}", err);
             }
         } 
-        return "".to_string()
 }
-
-
+ 
 pub async fn anchor_borrow_claim_rewards(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,  wallet_seed_phrase: &SecUtf8, only_estimate: bool) -> String {
 
 		let mut max_gas_adjustment = Decimal::from_str("1.67").unwrap();
@@ -131,7 +131,7 @@ pub async fn anchor_borrow_claim_rewards(tasks: Arc<RwLock<HashMap<String, Maybe
 	        Ok(response_result) => { 
 	            max_gas_adjustment = Decimal::from_str(response_result.as_str()).unwrap();             
 	        },
-	        Err(err) => {
+	        Err(_) => {
         	}
 		}
 
@@ -153,7 +153,7 @@ pub async fn anchor_borrow_claim_rewards(tasks: Arc<RwLock<HashMap<String, Maybe
 	            					 .checked_add(gas_adjustment_preference).unwrap()
 	            					 .checked_div(Decimal::from_str("2").unwrap()).unwrap();    
 	        },
-	        Err(err) => {
+	        Err(_) => {
         	}
 		}
 		  
@@ -185,8 +185,6 @@ pub async fn anchor_borrow_claim_rewards(tasks: Arc<RwLock<HashMap<String, Maybe
         }
     
 }
-
-
 pub async fn anchor_governance_stake_balance(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,  wallet_seed_phrase: &SecUtf8, only_estimate: bool) -> String {
 
 		let mut max_gas_adjustment = Decimal::from_str("1.67").unwrap();
@@ -195,7 +193,7 @@ pub async fn anchor_governance_stake_balance(tasks: Arc<RwLock<HashMap<String, M
 	        Ok(response_result) => { 
 	            max_gas_adjustment = Decimal::from_str(response_result.as_str()).unwrap();             
 	        },
-	        Err(err) => {
+	        Err(_) => {
         	}
 		}
 
@@ -217,7 +215,7 @@ pub async fn anchor_governance_stake_balance(tasks: Arc<RwLock<HashMap<String, M
 	            					 .checked_add(gas_adjustment_preference).unwrap()
 	            					 .checked_div(Decimal::from_str("2").unwrap()).unwrap();    
 	        },
-	        Err(err) => {
+	        Err(_) => {
         	}
 		}
  
@@ -231,14 +229,14 @@ pub async fn anchor_governance_stake_balance(tasks: Arc<RwLock<HashMap<String, M
 		};
 
 
-		let mut anc_balance = Decimal::from_str("0").unwrap();
+		let mut _anc_balance = Decimal::from_str("0").unwrap();
 
 		match borrower_anc_deposited_to_string(tasks.clone(), true,0).await.as_ref() {
 			"--" => {
 				return "Could not get ANC balance: Likely no ANC available.".to_string();
 			},
 			e => {
-				anc_balance = Decimal::from_str(e).unwrap()  
+				_anc_balance = Decimal::from_str(e).unwrap()  
 			}
 		};
   
@@ -247,7 +245,7 @@ pub async fn anchor_governance_stake_balance(tasks: Arc<RwLock<HashMap<String, M
                 let gas_fees_uusd = Decimal::from_str(response_result.as_str()).unwrap();   
  
 
-                match anchor_governance_stake(wallet_seed_phrase.unsecure(),anc_balance, gas_fees_uusd, avg_tx_fee, max_gas_adjustment,only_estimate).await {
+                match anchor_governance_stake(wallet_seed_phrase.unsecure(),_anc_balance, gas_fees_uusd, avg_tx_fee, max_gas_adjustment,only_estimate).await {
 		        	Ok(msg) => {
 		        		return msg;
 		        	},
@@ -261,4 +259,4 @@ pub async fn anchor_governance_stake_balance(tasks: Arc<RwLock<HashMap<String, M
             }
         }
     
-}
+} 

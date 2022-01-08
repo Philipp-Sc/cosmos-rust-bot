@@ -1,5 +1,5 @@
 use rust_decimal::Decimal;
-use core::str::FromStr;
+//use core::str::FromStr;
   
  
 use serde::Deserialize;
@@ -8,9 +8,7 @@ use serde::Serialize;
 pub mod smart_contracts;
 
 use smart_contracts::{ResponseResult};
-use smart_contracts::meta::api::{fetch_gas_price, QueryResponse};
-use smart_contracts::meta::api::data::{GasPrices};
-use smart_contracts::meta::api::data::endpoints::get_terra_fcd;
+use smart_contracts::meta::api::{fetch_gas_price}; 
  
 use smart_contracts::{
     state_query_msg,
@@ -32,30 +30,22 @@ use smart_contracts::{
     anchor_protocol_anc_balance,
     terra_balances};
 
-use std::collections::HashMap;
-use core::pin::Pin;
-use core::future::Future;
+use std::collections::HashMap; 
 
-use anyhow::anyhow;
-use enum_as_inner::EnumAsInner;
+use anyhow::anyhow; 
 
 use tokio::task::JoinHandle;
 
 use std::sync::Arc; 
 use tokio::sync::RwLock; 
  
-
-use std::{thread, time};
  
-use std::time::{Duration, Instant};
+use std::time::{Duration};
 
-use tokio::time::timeout;
-use tokio::time::Timeout;
+use tokio::time::timeout; 
+ 
 
-use tokio::time::sleep;
-
-
-use chrono::{DateTime, TimeZone, NaiveDateTime, Utc};
+use chrono::{Utc};
 
 
 pub enum MaybeOrPromise { 
@@ -144,7 +134,7 @@ pub async fn get_data_maybe_or_await_task(tasks: &Arc<RwLock<HashMap<String, May
         }*/
 
         let mut map = tasks.write().await; 
-        let mut res = map.get_mut(key).ok_or(anyhow!("Error: key does not exist"))?;
+        let res = map.get_mut(key).ok_or(anyhow!("Error: key does not exist"))?;
         
         if let MaybeOrPromise::Data(QueryData::Task(task)) = res { 
  
@@ -189,7 +179,7 @@ pub async fn get_timestamp_or_await_task(tasks: &Arc<RwLock<HashMap<String, Mayb
         }*/
 
         let mut map = tasks.write().await; 
-        let mut res = map.get_mut(key).ok_or(anyhow!("Error: key does not exist"))?;
+        let res = map.get_mut(key).ok_or(anyhow!("Error: key does not exist"))?;
         
         if let MaybeOrPromise::Data(QueryData::Task(task)) = res { 
  
@@ -303,7 +293,7 @@ pub async fn get_meta_data_maybe_or_await_task(tasks: &Arc<RwLock<HashMap<String
 pub async fn await_running_tasks(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, req: &[&str]) -> anyhow::Result<String> {
 
     for k in req { 
-         get_data_maybe_or_await_task(tasks,k).await;
+         get_data_maybe_or_await_task(tasks,k).await.ok();
     }
     Ok("finished".to_string())
 } 

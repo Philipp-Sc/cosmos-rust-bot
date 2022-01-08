@@ -8,7 +8,7 @@ use serde::Deserialize;
 use serde::Serialize;
 
  
-use serde_json::json;
+//use serde_json::json;
 use serde_json::Value;
 
 
@@ -20,8 +20,8 @@ use terra_rust_api::client::tx_types::V1TXSResult;
 
 use terra_rust_api::{PrivateKey};
 use terra_rust_api::messages::wasm::MsgExecuteContract;
-use terra_rust_api::core_types::{StdSignMsg, StdSignature}; 
-use terra_rust_api::messages::bank::MsgSend;
+//use terra_rust_api::core_types::{StdSignMsg, StdSignature}; 
+//use terra_rust_api::messages::bank::MsgSend;
 
 use terra_rust_api::messages::Message;
 
@@ -35,8 +35,8 @@ use std::time::SystemTime;
 
 
 use rust_decimal::Decimal;
-use rust_decimal_macros::dec;
-use rust_decimal::prelude::FromPrimitive;
+//use rust_decimal_macros::dec;
+//use rust_decimal::prelude::FromPrimitive;
 use rust_decimal::prelude::ToPrimitive;
 use core::str::FromStr;
 
@@ -371,14 +371,13 @@ pub async fn get_fcd_or_lcd_query(contract_addr: &str, query_msg: &str, gas_pric
 	/*
      * Returns the response from which ever server is faster.
      * If a request fails, the alternative server is tried once.
-	 */
-	let mut result: anyhow::Result<String> = Err(anyhow!("Unexpected Error: Null"));
+	 */ 
 	 tokio::select! {
-        v1 = get_fcd_query(contract_addr,query_msg) => {result=v1},
-        v1 = get_lcd_query(contract_addr,query_msg, gas_prices) => {result=v1},
+        v1 = get_fcd_query(contract_addr,query_msg) => {return v1},
+        v1 = get_lcd_query(contract_addr,query_msg, gas_prices) => {return v1},
     };
     //result = get_lcd_query(query_identifier, gas_prices).await;
-    result
+    //Err(anyhow!("Unexpected Error: Null"))
 
 }
 
