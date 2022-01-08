@@ -71,8 +71,6 @@ mod simple_user_input {
 
 // TODO: Add auto repay functionality.
 
-// TODO: Remove all compiler warnings.
-
  
 
  #[tokio::main]
