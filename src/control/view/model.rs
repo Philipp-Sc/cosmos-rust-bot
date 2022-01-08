@@ -64,17 +64,17 @@ pub enum MaybeOrPromise {
 }
 
 pub enum QueryData { 
-    Maybe(Maybe), // add timestamp here.
+    Maybe(Maybe<ResponseResult>), // add timestamp here.
     Task(JoinHandle<anyhow::Result<ResponseResult>>), 
 }
 
 pub enum MetaData { 
-    Maybe(anyhow::Result<String>),
+    Maybe(Maybe<String>),
     Task(JoinHandle<anyhow::Result<String>>), // not used
 }
 
-pub struct Maybe {
-    pub data: anyhow::Result<ResponseResult>,   
+pub struct Maybe<T> {
+    pub data: anyhow::Result<T>,   
     pub timestamp: i64,
 } 
 
@@ -110,7 +110,7 @@ pub async fn get_data_maybe_or_meta_data_maybe(tasks: &Arc<RwLock<HashMap<String
         } 
     }
     if let MaybeOrPromise::MetaData(MetaData::Maybe(m)) = res {
-        match m {
+        match &m.data {
             Ok(n) => {
                 return Ok(ResponseResult::Text(n.clone()));
             },
@@ -152,7 +152,7 @@ pub async fn get_data_maybe_or_await_task(tasks: &Arc<RwLock<HashMap<String, May
                 Ok(n) => { n },
                 Err(e) => { Err(anyhow!("Error: {:?}",e)) } // JoinError
             };
-            let maybe: Maybe = Maybe {data: maybe, timestamp: Utc::now().timestamp()};
+            let maybe: Maybe<ResponseResult>= Maybe {data: maybe, timestamp: Utc::now().timestamp()};
 
             *res = MaybeOrPromise::Data(QueryData::Maybe(maybe));  
 
@@ -197,7 +197,7 @@ pub async fn get_timestamp_or_await_task(tasks: &Arc<RwLock<HashMap<String, Mayb
                 Ok(n) => { n },
                 Err(e) => { Err(anyhow!("Error: {:?}",e)) } // JoinError
             };
-            let maybe: Maybe = Maybe {data: maybe, timestamp: Utc::now().timestamp()};
+            let maybe: Maybe<ResponseResult>= Maybe {data: maybe, timestamp: Utc::now().timestamp()};
 
             *res = MaybeOrPromise::Data(QueryData::Maybe(maybe));  
 
@@ -206,7 +206,9 @@ pub async fn get_timestamp_or_await_task(tasks: &Arc<RwLock<HashMap<String, Mayb
             } 
         } else if let MaybeOrPromise::Data(QueryData::Maybe(maybe)) = res {
             return Ok(maybe.timestamp);
-        } 
+        } else if let MaybeOrPromise::MetaData(MetaData::Maybe(maybe)) = res {
+            return Ok(maybe.timestamp);
+        }
         return Err(anyhow!("Unexpected Error: Unreachable point reached."));
         
  }
@@ -247,7 +249,7 @@ pub async fn get_meta_data_maybe_or_await_task(tasks: &Arc<RwLock<HashMap<String
             } 
         } else*/
         if let MaybeOrPromise::MetaData(MetaData::Maybe(maybe)) = res {
-            match maybe {
+            match &maybe.data {
                 Ok(n) => {
                     return Ok(n.clone());
                 },
@@ -469,19 +471,19 @@ pub async fn await_running_tasks(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
                             map.insert("anchor_protocol_txs_staking".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
                     }, 
                     "gas_fees_uusd" => {                      
-                        map.insert("gas_fees_uusd".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Ok(gas_prices.response.as_ref().unwrap().uusd.to_string().to_owned()))));
+                        map.insert("gas_fees_uusd".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Maybe {data: Ok(gas_prices.response.as_ref().unwrap().uusd.to_string().to_owned()), timestamp: Utc::now().timestamp()})));
                     }, 
                     "trigger_percentage" => {     
-                        map.insert("trigger_percentage".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Ok(user_settings.trigger_percentage.to_string().to_owned()))));
+                        map.insert("trigger_percentage".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Maybe {data: Ok(user_settings.trigger_percentage.to_string().to_owned()), timestamp: Utc::now().timestamp()})));
                     },  
                     "max_gas_adjustment" => {      
-                        map.insert("max_gas_adjustment".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Ok(user_settings.max_gas_adjustment.to_string().to_owned()))));
+                        map.insert("max_gas_adjustment".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Maybe {data: Ok(user_settings.max_gas_adjustment.to_string().to_owned()), timestamp: Utc::now().timestamp()})));
                     },    
                     "gas_adjustment_preference" => {      
-                        map.insert("gas_adjustment_preference".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Ok(user_settings.gas_adjustment_preference.to_string().to_owned()))));
+                        map.insert("gas_adjustment_preference".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Maybe {data: Ok(user_settings.gas_adjustment_preference.to_string().to_owned()), timestamp: Utc::now().timestamp()})));
                     },    
                     "min_ust_balance" => {       
-                        map.insert("min_ust_balance".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Ok(user_settings.min_ust_balance.to_string().to_owned()))));
+                        map.insert("min_ust_balance".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Maybe {data: Ok(user_settings.min_ust_balance.to_string().to_owned()), timestamp: Utc::now().timestamp()})));
                     },     
                     &_ => {
 

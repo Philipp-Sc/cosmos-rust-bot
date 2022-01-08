@@ -29,7 +29,7 @@ fn duration_to_string(duration: chrono::Duration) -> String {
 }
 
 pub fn timestamp_now_to_string() -> String {
-    let dt = Utc::now();
+    let dt = Utc::now();//.timestamp()
     let now = dt.format("%d/%m/%y %H:%M:%S");
     return now.to_string();              
 }
@@ -1075,6 +1075,17 @@ pub async fn distribution_apr_to_string(tasks: Arc<RwLock<HashMap<String, MaybeO
                 return "--".to_string();
             }
         }
+}
+
+pub async fn gas_price_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
+          match get_meta_data_maybe_or_await_task(&tasks,"gas_fees_uusd").await {
+                    Ok(response_result) => { 
+                        return Decimal::from_str(response_result.as_str()).unwrap().round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero).to_string();             
+                    },
+                    Err(err) => {
+                        return "--".to_string();
+                    }
+                }
 }
 
 pub async fn staking_apy_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
