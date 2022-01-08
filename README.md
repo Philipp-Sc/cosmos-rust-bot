@@ -20,9 +20,24 @@
 
 ## What 
 
-* Market Dashboard (todo: user provides json with token information -> app generates dashboard)
-* Anchor Dashboard
+* Market Dashboard (todo: user provides json with token information -> app generates dashboard) 
+
+ <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/development/terra-rust-bot_v0.1_terra.png" width="280">
+ 
+ 
+* Anchor Dashboard  
+
+
+ <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/development/terra-rust-bot_v0.1_anchor.png" width="1180">
+  
+ 
 * Anchor Auto Stake Rewards
+
+
+ <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/development/terra-rust-bot_v0.1_auto_stake.png" width="280">
+  
+ 
+ 
 * Anchor Auto Exchange Rewards (not yet implemented)
 * Anchor Auto Loan Repay (not yet implemented)
 
