@@ -46,11 +46,11 @@
 
 * Sensitive information is gathered at runtime via user input. This avoids storing sensitive information within config files.
 * The seed phrase is stored safely in memory with <a href="https://github.com/unrelentingtech/secstr">secstr</a>.
-* Requests are either made directly to the Terra FCD or LCD. If possible the LCD is prefered. For that terra-rust-bot mainly relies on the [Terra-Rust-API](https://crates.io/crates/terra-rust-api).
+* Requests are either made directly to the Terra FCD or LCD. For that terra-rust-bot mainly relies on the [Terra-Rust-API](https://crates.io/crates/terra-rust-api). In some cases <a href="api.anchorprotocol.com/api/v2/distribution-apy">api.anchorprotocol.com</a> is used.
 
 ## Disclaimer
 
-> This may steal your money. Do you own research. Take a look at the code.
+> This may steal your money. Do your own research. Take a look at the code.
 
 
 ## Manual - Just Read The Instructions
@@ -95,7 +95,6 @@
 * Anchor Dashboard 1: `./terra-rust-bot -i anchor -a anchor_account`
 * Anchor Dashboard 2: `./terra-rust-bot -i anchor -a anchor_account -b anchor_auto_stake`
 * Auto Staking Only: `./terra-rust-bot -b anchor_auto_stake`
-
 
 
 ## Similar projects

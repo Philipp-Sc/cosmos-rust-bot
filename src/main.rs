@@ -9,10 +9,11 @@ use core::str::FromStr;
 
 mod control;
 
-use control::view::model::{UserSettings,MaybeOrPromise,requirements,get_keys_of_running_tasks,await_running_tasks,get_timestamps_of_resolved_tasks};
+use control::view::simple_view::model::{UserSettings,MaybeOrPromise,requirements,get_keys_of_running_tasks,await_running_tasks,get_timestamps_of_resolved_tasks};
  
 
 use control::view::*;
+use control::view::simple_view::*;
 use control::*;
 
 use std::collections::HashMap;
@@ -59,41 +60,35 @@ mod simple_user_input {
         }
         input.trim().to_string()
     }
-} 
- 
-// TODO: Hardening the requests, what happens when once request fails repeatedly. 
-// for each FCD have a LCD backup option.
+}  
 
 // TODO: Error handling. Every Unwrapp needs to be inspected. 
 
-// TODO: view.rs order functions and put them in modules
-// TODO: optimise view.rs reused code.
 
 // TODO: Add auto repay functionality.
 
- 
+
+// TODO: then
+// clean up main.rs
 
  #[tokio::main]
 async fn main() -> anyhow::Result<()> {
 
-        let num_cpus = num_cpus::get();
-
-
+        /* Load arguments */
 
         let args: Vec<String> = env::args().collect();
-
+        // println!("{:?}", args);
         //./target/debug/terra-rust-bot -i market anchor -a anchor_account -b anchor_auto_stake -d test dev
-        //println!("{:?}", args);
-
+        
         let mut args_i: Vec<&str> = Vec::new();
         let mut args_a: Vec<&str> = Vec::new();
         let mut args_b: Vec<&str> = Vec::new();
         let mut args_d: Vec<&str> = Vec::new();
 
-        let mut last_item = 0;
         let mut is_test = false;
         let mut is_debug = false;
 
+        let mut last_item = 0;
         for x in 1..args.len() {
             if &args[x] == "-i" || &args[x] == "-a" || &args[x] == "-b" ||  &args[x] == "-d" {
                 last_item = x;
@@ -119,25 +114,31 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
         }
+        //println!("{:?}",(args_i,args_a,args_b,args_d));
         let is_test = *&is_test;
         let is_debug = *&is_debug;
-        //println!("{:?}",(args_i,args_a,args_b,args_d));
 
-        println!("{esc}c", esc = 27 as char); 
+        /* Get wallet seed phrase */
+
+        println!("{esc}c", esc = 27 as char); // clear terminal
 
         let mut wallet_seed_phrase = SecUtf8::from("".to_string());
         if args_b.len() > 0 {
             wallet_seed_phrase = SecUtf8::from(get_input("Enter your seed phrase (press Enter to skip):").to_string());
             // https://github.com/unrelentingtech/secstr
-            println!("{esc}c", esc = 27 as char); 
+            println!("{esc}c", esc = 27 as char);  
         } 
+
+        /* Get wallet address */
 
         let mut wallet_acc_address = "".to_string();  
         if args_a.len() > 0 {
             wallet_acc_address = get_input("Enter your wallet address (press Enter to skip):").to_string();
+            println!("{esc}c", esc = 27 as char); 
         } 
 
-        // todo: read user settings from file. JSON.
+        /* Load user settings */
+
         let user_settings: UserSettings = UserSettings {
             trigger_percentage: Decimal::from_str("0.85").unwrap(),
             max_gas_adjustment: Decimal::from_str("1.67").unwrap(),
@@ -145,27 +146,17 @@ async fn main() -> anyhow::Result<()> {
             min_ust_balance: Decimal::from_str("10").unwrap(), 
             wallet_acc_address: wallet_acc_address,  
         };
+        // todo: read and override user settings from json file, if exists.
 
-        println!("{esc}c", esc = 27 as char); 
-
-        let tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>> = Arc::new(RwLock::new(HashMap::new())); 
-
-        let mut display: Vec<String> = vec!["".to_string(); 99];
-
-        let new_display: Arc<RwLock<Vec<String>>> = Arc::new(RwLock::new(vec!["".to_string(); 1000]));
-
-        display[0] = format!("{esc}c", esc = 27 as char);
-       
-        let every_block: i32 = 6;  // around every 6s a new block is generated. fastest setting.
-
-        let fast: i32 = 10;    // for requests short lived information
-        let medium: i32 = 60;    // for requests short lived information
-        let slow: i32 = 60*10; // for requests that have relative constant results. 
+ 
+        // note: around every 6s a new block is generated. 
+        let fast: i32 = 10;      // 10s for short lived information
+        let medium: i32 = 60;    // 1m  for short lived information
+        let slow: i32 = 60*10;   // 10m for relative constant information. 
 
         // (key, target_refresh_time, dependency_tag)
-
         let req = vec![
-        ("terra_balances", every_block, vec!["anchor_auto_stake"]),
+        ("terra_balances", fast, vec!["anchor_auto_stake"]),
         /* <market_info> */
         /* core_tokens */
         ("core_swap uusd usdr", fast, vec!["market"]),
@@ -195,11 +186,11 @@ async fn main() -> anyhow::Result<()> {
         ("config anchorprotocol mmInterestModel", fast, vec!["anchor","anchor_account"]),
         //("config anchorprotocol collector",every_minute),
         /* <anchor_protocol account> */ 
-        ("borrow_limit", every_block, vec!["anchor_account","anchor_auto_stake"]),
-        ("borrow_info", every_block, vec!["anchor_account","anchor_auto_stake"]),
-        ("balance", every_block, vec!["anchor_account"]),
-        ("anc_balance", every_block, vec!["anchor_account"]),
-        ("staker", every_block, vec!["anchor_account"]),
+        ("borrow_limit", fast, vec!["anchor_account","anchor_auto_stake"]),
+        ("borrow_info", fast, vec!["anchor_account","anchor_auto_stake"]),
+        ("balance", fast, vec!["anchor_account"]),
+        ("anc_balance", fast, vec!["anchor_account"]),
+        ("staker", fast, vec!["anchor_account"]),
         ("blocks_per_year", slow, vec!["market","anchor","anchor_account"]), 
         ("earn_apy", slow, vec!["anchor","anchor_account"]),
         /* <meta data> */ 
@@ -213,37 +204,42 @@ async fn main() -> anyhow::Result<()> {
         /* <from gas_prices>*/
         ("gas_fees_uusd", medium, vec!["market","anchor","anchor_account","anchor_auto_stake"]),
         ]; 
- 
 
-        let mut req_keys: Vec<&str> = Vec::new();
-        for i in 0..req.len() {
-               req_keys.push(req[i].0);
-        } 
-        let req_keys = &*req_keys;
-
-        let mut is_first_run: bool = true;
-
-        let mut req_to_check: Vec<&str> = Vec::new(); 
+        let mut req_keys: Vec<&str> = Vec::new(); 
         for i in 0..req.len() {
             for x in &args {
                 if req[i].2.contains(&x.as_str()) {
-                    req_to_check.push(req[i].0);
+                    req_keys.push(req[i].0);
                     break;
                 }
             }
         }
+        let req_keys = &*req_keys;
+
+        /* Display */
+        // object that stores the terminal output
+        let display_slots = 1000;
+        let new_display: Arc<RwLock<Vec<String>>> = Arc::new(RwLock::new(vec!["".to_string(); display_slots])); 
+        // using timestamps to update each slot with a short delay.
+        let mut timestamps_display: Vec<i64> = vec![0i64; display_slots];
 
         add_string_to_display(&new_display, 0, format!("{esc}c", esc = 27 as char)).await.ok();
-
         let _display_loop = print_to_terminal(&new_display,false); 
 
-        let mut timestamps_display: Vec<i64> = vec![0i64; 1000];
+        let num_cpus = num_cpus::get();
+
+        /* Tasks */
+        // stores all requirements either as task or the resolved value.
+        let tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>> = Arc::new(RwLock::new(HashMap::new())); 
+
+        let mut is_first_run: bool = true;
 
         loop { 
             let req_unresolved = get_keys_of_running_tasks(&tasks,&req_keys).await;
 
             // waiting for unresolved tasks to catch up 
-            if is_first_run { // may take longer because of the number of threads spawned.
+            if is_first_run { 
+                // may take longer because of the number of threads spawned.
                 timeout(Duration::from_secs(60*2), await_running_tasks(&tasks, &req_keys)).await.ok();
             } else if req_unresolved.len() >= num_cpus { 
                 // anyway we need to have free threads to spawn more tasks
@@ -280,7 +276,7 @@ async fn main() -> anyhow::Result<()> {
                     ", upcomming requirements: ".purple(),
                     req_to_update.len().to_string().yellow(),
                     ", total requirements: ".to_string().purple(),
-                    req_to_check.len().to_string().purple(),
+                    req_keys.len().to_string().purple(),
                     format!("{:?}",req_unresolved).to_string().red(),
                     format!("{:?}",req_to_update).to_string().purple()
                     )).await.ok(); 
@@ -293,14 +289,13 @@ async fn main() -> anyhow::Result<()> {
                     ", upcomming requirements: ".purple(),
                     req_to_update.len().to_string().yellow(),
                     ", total requirements: ".to_string().purple(),
-                    req_to_check.len().to_string().purple()
+                    req_keys.len().to_string().purple()
                     )).await.ok(); 
             }
 
             requirements(&tasks,&user_settings,&req_to_update).await;  
              
             let mut offset: usize = 2;
- 
 
             // waiting for all open **display** updates.
             // if one task is slow, because the requirement is not yet resolved, it slows down the whole loop, 
@@ -676,7 +671,7 @@ pub async fn display_anchor_account(tasks: &Arc<RwLock<HashMap<String, MaybeOrPr
     *offset += 1;
 
     anchor_view.push(("--".purple().to_string(),*offset));
-    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(borrower_balance_to_string(tasks.clone(),"balance",2)));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(borrower_balance_to_string(tasks.clone(),2)));
     anchor_tasks.push(t);
     *offset += 1;
 
@@ -943,7 +938,7 @@ pub async fn display_anchor_info(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
     display[*offset] = format!("   [Anchor] base rate:               {}\n",base_rate);
     *offset += 1;
     println!("{}",display.join(""));
-    let interest_multiplier = interest_multiplier_to_string(tasks.clone(),"config anchorprotocol mmInterestModel",10).await;
+    let interest_multiplier = interest_multiplier_to_string(tasks.clone(),10).await;
     display[*offset] = format!("   [Anchor] interest multiplier:     {}\n",interest_multiplier);
     *offset += 1;
     println!("{}",display.join(""));
@@ -1043,7 +1038,7 @@ pub async fn display_market_info(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
     *offset += 1;
 
     market_view.push(("--".purple().to_string(),*offset));
-    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(blocks_per_year_to_string(tasks.clone(),"blocks_per_year",0)));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(blocks_per_year_to_string(tasks.clone(),0)));
     market_tasks.push(t);
     *offset += 1;
 
@@ -1093,7 +1088,7 @@ pub async fn display_market_info(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
     *offset += 1;
 
     market_view.push(("--".purple().to_string(),*offset));
-    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(b_luna_exchange_rate_to_string(tasks.clone(),"state anchorprotocol bLunaHub",4)));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(b_luna_exchange_rate_to_string(tasks.clone(),4)));
     market_tasks.push(t);
     *offset += 1;
 
@@ -1109,7 +1104,7 @@ pub async fn display_market_info(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
     *offset += 1;
 
     market_view.push(("--".purple().to_string(),*offset));
-    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(a_terra_exchange_rate_to_string(tasks.clone(), "epoch_state anchorprotocol mmMarket",4)));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(a_terra_exchange_rate_to_string(tasks.clone(),4)));
     market_tasks.push(t);
     *offset += 1; 
 

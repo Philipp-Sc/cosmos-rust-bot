@@ -7,9 +7,10 @@ use secstr::*;
 use rust_decimal::Decimal;
 use core::str::FromStr;
 
-use view::model::smart_contracts::meta::api::{anchor_claim_rewards,anchor_governance_stake,anchor_governance_claim_and_stake};
-use view::model::{MaybeOrPromise,get_meta_data_maybe_or_await_task};
+use view::simple_view::model::smart_contracts::meta::api::{anchor_claim_rewards,anchor_governance_stake,anchor_governance_claim_and_stake};
+use view::simple_view::model::{MaybeOrPromise,get_meta_data_maybe_or_await_task};
 
+use view::simple_view::*;
 use view::*;
 
 use std::collections::HashMap; 
