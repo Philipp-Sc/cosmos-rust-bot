@@ -63,7 +63,12 @@ mod simple_user_input {
 }  
 
 // TODO: Error handling. Every Unwrapp needs to be inspected. 
+// TODO: Add UST peg stat.
+// TODO: Add config for usersettings
+
 // TODO: Show UST balance
+// TODO: Anchor Auto Staking: Check if fee lowers the UST balance less than minimum allowed.
+
 // TODO: Add auto repay functionality.
  
  #[tokio::main]

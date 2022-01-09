@@ -36,8 +36,7 @@ pub fn timestamp_now_to_string() -> String {
     let now = dt.format("%d/%m/%y %H:%M:%S");
     return now.to_string();              
 }
-
-// todo: update this function. its ugly.
+ 
 pub async fn estimate_anchor_protocol_next_claim_and_stake_tx(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, field_amount: &str, field: &str, digits_rounded_to: u32) -> String {
   
             let mut _collateral_value = Decimal::from_str("0").unwrap();  
@@ -131,47 +130,51 @@ pub async fn estimate_anchor_protocol_next_claim_and_stake_tx(tasks: Arc<RwLock<
             let mut _optimal_anc_ust_value: Option<Decimal> = None;
             let mut _total_returns_in_ust: Option<Decimal> = None;
   
-  
             let one_year_equals_this_many_time_frames = Decimal::new(365*24,0);
            
-            let anc_dist_returns_per_day = _distribution_apr.checked_div(one_year_equals_this_many_time_frames).unwrap();
-            let anc_staking_returns_per_day = _staking_apy.checked_div(one_year_equals_this_many_time_frames).unwrap();
-            let anc_dist_returns_per_time_frame_in_ust = loan_amount.checked_mul(anc_dist_returns_per_day).unwrap(); 
+            let anc_dist_returns_per_timeframe = _distribution_apr.checked_div(one_year_equals_this_many_time_frames).unwrap();
+            let anc_dist_returns_per_time_frame_in_ust = loan_amount.checked_mul(anc_dist_returns_per_timeframe).unwrap(); 
             
+            let anc_staking_returns_per_timeframe = _staking_apy.checked_div(one_year_equals_this_many_time_frames).unwrap();
 
+            let claim_and_stake_gas_fee = Decimal::from_str("-1").unwrap().checked_mul(_transaction_fee).unwrap();
+            
             let mut max_value: Option<Decimal> = None;
             let mut max_index: Option<Decimal> = None;
-            for n in 1..one_year_equals_this_many_time_frames.checked_add(Decimal::new(1,0)).unwrap().to_i64().unwrap() {
-                let total_anc_returns_n_days_ust = anc_dist_returns_per_time_frame_in_ust.checked_mul(Decimal::new(n,0));
 
-                let claim_and_stake_gas_fee = Decimal::from_str("-1").unwrap().checked_mul(_transaction_fee);
+            let timeframes = one_year_equals_this_many_time_frames.checked_add(Decimal::new(1,0)).unwrap().to_i64().unwrap();
+            
+            for n in 1..timeframes {
+                // amount ANC rewards available after n timeframes
+                let total_anc_dist_returns_n_timeframes_ust = anc_dist_returns_per_time_frame_in_ust.checked_mul(Decimal::new(n,0)).unwrap();
 
-                let total_anc_staked_n_days_in_ust_after_tx = total_anc_returns_n_days_ust.unwrap().checked_add(claim_and_stake_gas_fee.unwrap());
+                // amount ANC staked, by claiming and staking the outstanding amount after n timeframes
+                let total_anc_staked_n_timeframes_in_ust_after_tx = total_anc_dist_returns_n_timeframes_ust.checked_add(claim_and_stake_gas_fee).unwrap();
 
-                let total_anc_staking_rewards_356_n_in_ust = total_anc_staked_n_days_in_ust_after_tx.unwrap()
-                .checked_mul(anc_staking_returns_per_day).unwrap()
-                .checked_mul(one_year_equals_this_many_time_frames.checked_sub(Decimal::new(n,0)).unwrap()).unwrap()
-                .checked_div(Decimal::new(n,0)).unwrap()
+                let total_anc_staking_rewards_one_year_in_ust = total_anc_staked_n_timeframes_in_ust_after_tx
+                .checked_mul(anc_staking_returns_per_timeframe).unwrap()
+                .checked_mul(one_year_equals_this_many_time_frames.checked_sub(Decimal::new(n,0)).unwrap()).unwrap() // remove the timeframes that already passed in the reference year
+                .checked_div(Decimal::new(n,0)).unwrap() // now normalize the result, to represent the ANC staking rewards in the reference year
                 .checked_mul(one_year_equals_this_many_time_frames).unwrap();
                 
                 if let Some(max) = max_value {
-                    if max < total_anc_staking_rewards_356_n_in_ust {
-                        max_value = Some(total_anc_staking_rewards_356_n_in_ust);
+                    if max < total_anc_staking_rewards_one_year_in_ust {
+                        max_value = Some(total_anc_staking_rewards_one_year_in_ust);
                         max_index = Some(Decimal::new(n,0));
                     }
                 }else{
-                    max_value = Some(total_anc_staking_rewards_356_n_in_ust);
+                    max_value = Some(total_anc_staking_rewards_one_year_in_ust);
                     max_index = Some(Decimal::new(n,0));
                 }
             }  
 
             _optimal_time_to_wait = max_index;
             _optimal_anc_ust_value = anc_dist_returns_per_time_frame_in_ust.checked_mul(max_index.unwrap());
-            let mut n = 0;
+            let mut n = 1;
             let mut value: Option<Decimal> = Some(Decimal::new(0,0));
-            while n < one_year_equals_this_many_time_frames.to_i64().unwrap() {
-                let staked_n_days_anc_value = anc_staking_returns_per_day.checked_mul(one_year_equals_this_many_time_frames.checked_sub(Decimal::new(n,0)).unwrap()).unwrap().checked_mul(_optimal_anc_ust_value.unwrap());
-                value = value.unwrap().checked_add(staked_n_days_anc_value.unwrap());
+            while n < timeframes {
+                let staked_n_timeframes_anc_value = anc_staking_returns_per_timeframe.checked_mul(one_year_equals_this_many_time_frames.checked_sub(Decimal::new(n-1,0)).unwrap()).unwrap().checked_mul(_optimal_anc_ust_value.unwrap());
+                value = value.unwrap().checked_add(staked_n_timeframes_anc_value.unwrap());
                 n = n + _optimal_time_to_wait.unwrap().to_i64().unwrap(); 
             }
             _total_returns_in_ust = value;
@@ -251,14 +254,14 @@ pub async fn estimate_anchor_protocol_tx_fee(tasks: Arc<RwLock<HashMap<String, M
             let mut avg_fee_amount = Decimal::from_str("0").unwrap();
             let mut avg_gas_adjustment = Decimal::from_str("0").unwrap(); // gas_wanted * gas_adjustment = fee_amount
             let mut avg_gas_used = Decimal::from_str("0").unwrap();
-            let mut _avg_gas_wanted = Decimal::from_str("0").unwrap();
+            let mut avg_gas_wanted = Decimal::from_str("0").unwrap();
             // estimate_fee_amount = avg_gas_adjustment * avg_gas_used;
             for entry in result {
                 avg_fee_amount = avg_fee_amount.checked_add(entry.fee_amount).unwrap();
                 let gas_adjustment = entry.fee_amount.checked_div(entry.gas_wanted).unwrap();
                 avg_gas_adjustment = avg_gas_adjustment.checked_add(gas_adjustment).unwrap();
                 avg_gas_used = avg_gas_used.checked_add(entry.gas_used).unwrap(); 
-                _avg_gas_wanted = _avg_gas_wanted.checked_add(entry.gas_wanted).unwrap(); 
+                avg_gas_wanted = avg_gas_wanted.checked_add(entry.gas_wanted).unwrap(); 
                 //println!("gas_wanted: {}, gas_used: {}, fee_denom: {}, fee_amount: {}, claim_amount: {}",entry.gas_wanted, entry.gas_used, entry.fee_denom, entry.fee_amount, entry.claim_amount);
             }
              match get_meta_data_maybe_or_await_task(&tasks,"gas_fees_uusd").await {
@@ -267,7 +270,7 @@ pub async fn estimate_anchor_protocol_tx_fee(tasks: Arc<RwLock<HashMap<String, M
                     avg_fee_amount = avg_fee_amount.checked_div(Decimal::from_str(result.len().to_string().as_str()).unwrap()).unwrap();
                     avg_gas_adjustment = avg_gas_adjustment.checked_div(gas_fees_uusd).unwrap().checked_div(Decimal::from_str(result.len().to_string().as_str()).unwrap()).unwrap();
                     avg_gas_used = avg_gas_used.checked_div(Decimal::from_str(result.len().to_string().as_str()).unwrap()).unwrap();
-                    _avg_gas_wanted = _avg_gas_wanted.checked_div(Decimal::from_str(result.len().to_string().as_str()).unwrap()).unwrap();
+                    avg_gas_wanted = avg_gas_wanted.checked_div(Decimal::from_str(result.len().to_string().as_str()).unwrap()).unwrap();
                     let fee_amount_at_threshold = avg_gas_used.checked_mul(gas_fees_uusd).unwrap();
                     let estimated_fee_amount = avg_gas_used.checked_mul(gas_fees_uusd).unwrap().checked_mul(avg_gas_adjustment).unwrap();
                     
@@ -277,6 +280,11 @@ pub async fn estimate_anchor_protocol_tx_fee(tasks: Arc<RwLock<HashMap<String, M
                     }
 
                      match key.as_ref() {
+                        "avg_gas_wanted" => {
+                            return avg_gas_wanted 
+                              .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
+                              .to_string();
+                        },
                         "avg_fee_amount" => {
                             return avg_fee_amount
                               .checked_div(micro).unwrap()

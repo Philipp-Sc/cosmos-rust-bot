@@ -20,7 +20,7 @@
 
 ## What 
 
-* Market Dashboard (todo: user provides json with token information -> app generates dashboard) 
+* Market Dashboard
 
  <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/development/terra-rust-bot_v0.1_terra.png" width="280">
  
@@ -52,8 +52,12 @@
 
 > This may steal your money. Do your own research. Take a look at the code.
 
-
 ## Manual - Just Read The Instructions
+
+
+**Install Rust**
+
+* <a href="https://doc.rust-lang.org/book/ch01-00-getting-started.html">Get started here.</a>.
 
 **Clone the repository**
 
