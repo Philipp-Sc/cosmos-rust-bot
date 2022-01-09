@@ -1,4 +1,4 @@
-> :warning: This code is experimental. :warning:
+> :warning: This code is experimental. Especially the development branch. :warning:
 
 # terra-rust-bot
 

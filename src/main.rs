@@ -63,14 +63,9 @@ mod simple_user_input {
 }  
 
 // TODO: Error handling. Every Unwrapp needs to be inspected. 
-
-
+// TODO: Show UST balance
 // TODO: Add auto repay functionality.
-
-
-// TODO: then
-// clean up main.rs
-
+ 
  #[tokio::main]
 async fn main() -> anyhow::Result<()> {
 
@@ -204,17 +199,19 @@ async fn main() -> anyhow::Result<()> {
         /* <from gas_prices>*/
         ("gas_fees_uusd", medium, vec!["market","anchor","anchor_account","anchor_auto_stake"]),
         ]; 
-
-        let mut req_keys: Vec<&str> = Vec::new(); 
+        let mut req_new = Vec::new();
+        let mut req_keys: Vec<&str> = Vec::new();  
         for i in 0..req.len() {
             for x in &args {
                 if req[i].2.contains(&x.as_str()) {
                     req_keys.push(req[i].0);
+                    req_new.push(&req[i]);
                     break;
                 }
             }
         }
-        let req_keys = &*req_keys;
+        let req_keys = &*req_keys; 
+        let req = &*req_new;
 
         /* Display */
         // object that stores the terminal output
