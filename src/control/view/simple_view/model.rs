@@ -72,9 +72,12 @@ pub struct Maybe<T> {
 pub struct UserSettings {
     pub wallet_acc_address: String,  
     pub trigger_percentage: Decimal, 
+    pub target_percentage: Decimal,  
     pub max_gas_adjustment: Decimal, 
     pub min_ust_balance: Decimal, 
-    pub gas_adjustment_preference: Decimal, 
+    pub gas_adjustment_preference: Decimal,            
+    pub max_tx_fee: Decimal,
+
 } 
  
 
@@ -456,8 +459,7 @@ pub async fn await_running_tasks(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
                                 
                                 return get_block_txs_fee_data("staking").await;   
                             }
-                        });
-                       
+                        });                       
                             map.insert("anchor_protocol_txs_staking".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
                     }, 
                     "gas_fees_uusd" => {                      
@@ -465,6 +467,9 @@ pub async fn await_running_tasks(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
                     }, 
                     "trigger_percentage" => {     
                         map.insert("trigger_percentage".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Maybe {data: Ok(user_settings.trigger_percentage.to_string().to_owned()), timestamp: Utc::now().timestamp()})));
+                    }, 
+                    "target_percentage" => {     
+                        map.insert("target_percentage".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Maybe {data: Ok(user_settings.target_percentage.to_string().to_owned()), timestamp: Utc::now().timestamp()})));
                     },  
                     "max_gas_adjustment" => {      
                         map.insert("max_gas_adjustment".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Maybe {data: Ok(user_settings.max_gas_adjustment.to_string().to_owned()), timestamp: Utc::now().timestamp()})));
@@ -474,6 +479,9 @@ pub async fn await_running_tasks(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
                     },    
                     "min_ust_balance" => {       
                         map.insert("min_ust_balance".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Maybe {data: Ok(user_settings.min_ust_balance.to_string().to_owned()), timestamp: Utc::now().timestamp()})));
+                    },    
+                    "max_tx_fee" => {       
+                        map.insert("max_tx_fee".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Maybe {data: Ok(user_settings.max_tx_fee.to_string().to_owned()), timestamp: Utc::now().timestamp()})));
                     },     
                     &_ => {
 

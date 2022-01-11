@@ -66,19 +66,23 @@ mod simple_user_input {
 // TODO: Add UST peg stat.
 // TODO: Add config for usersettings
 
-// TODO: Show UST balance
-// TODO: Anchor Auto Staking: Check if fee lowers the UST balance less than minimum allowed.
+// TODO: Show UST balance 
 
 // TODO: Add auto repay functionality.
+
+// TODO: Have Logs when the bot did something stay for longer until the bot is stopped and limited by usersetting history length.
  
  #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+
+
+        let mut wallet_acc_address = "".to_string();  
 
         /* Load arguments */
 
         let args: Vec<String> = env::args().collect();
         // println!("{:?}", args);
-        //./target/debug/terra-rust-bot -i market anchor -a anchor_account -b anchor_auto_stake -d test dev
+        //./target/debug/terra-rust-bot -i market anchor -a anchor_account -b anchor_auto_stake anchor_auto_repay -d test dev
         
         let mut args_i: Vec<&str> = Vec::new();
         let mut args_a: Vec<&str> = Vec::new();
@@ -90,9 +94,12 @@ async fn main() -> anyhow::Result<()> {
 
         let mut last_item = 0;
         for x in 1..args.len() {
-            if &args[x] == "-i" || &args[x] == "-a" || &args[x] == "-b" ||  &args[x] == "-d" {
+            if &args[x] == "-i" || &args[x] == "-a" || &args[x] == "-b" ||  &args[x] == "-d" || &args[x] == "-w" {
                 last_item = x;
             }else{
+                if &args[last_item] == "-w" {
+                    wallet_acc_address = format!("{}",&args[x]);
+                }
                 if &args[last_item] == "-i" {
                     args_i.push(&args[x]);
                 }
@@ -123,24 +130,29 @@ async fn main() -> anyhow::Result<()> {
         println!("{esc}c", esc = 27 as char); // clear terminal
 
         let mut wallet_seed_phrase = SecUtf8::from("".to_string());
-        if args_b.len() > 0 {
-            wallet_seed_phrase = SecUtf8::from(get_input("Enter your seed phrase (press Enter to skip):").to_string());
-            // https://github.com/unrelentingtech/secstr
-            println!("{esc}c", esc = 27 as char);  
-        } 
 
-        /* Get wallet address */
+        if wallet_acc_address.len()==0 {
 
-        let mut wallet_acc_address = "".to_string();  
-        if args_a.len() > 0 {
-            wallet_acc_address = get_input("Enter your wallet address (press Enter to skip):").to_string();
-            println!("{esc}c", esc = 27 as char); 
-        } 
+            if args_b.len() > 0 {
+                wallet_seed_phrase = SecUtf8::from(get_input("Enter your seed phrase (press Enter to skip):").to_string());
+                // https://github.com/unrelentingtech/secstr
+                println!("{esc}c", esc = 27 as char);  
+            } 
+
+            /* Get wallet address */
+            if args_a.len() > 0 || args_b.len() > 0 {
+                wallet_acc_address = get_input("Enter your wallet address (press Enter to skip):").to_string();
+                println!("{esc}c", esc = 27 as char); 
+            } 
+
+        }
 
         /* Load user settings */
 
         let user_settings: UserSettings = UserSettings {
-            trigger_percentage: Decimal::from_str("0.85").unwrap(),
+            trigger_percentage: Decimal::from_str("0.85").unwrap(),  // 1 -> 60%
+            target_percentage: Decimal::from_str("0.75").unwrap(),  // 1 -> 60%
+            max_tx_fee: Decimal::from_str("5").unwrap(),
             max_gas_adjustment: Decimal::from_str("1.67").unwrap(),
             gas_adjustment_preference: Decimal::from_str("1.2").unwrap(),
             min_ust_balance: Decimal::from_str("10").unwrap(), 
@@ -156,7 +168,7 @@ async fn main() -> anyhow::Result<()> {
 
         // (key, target_refresh_time, dependency_tag)
         let req = vec![
-        ("terra_balances", fast, vec!["anchor_auto_stake"]),
+        ("terra_balances", fast, vec!["anchor_auto_stake","anchor_auto_repay"]),
         /* <market_info> */
         /* core_tokens */
         ("core_swap uusd usdr", fast, vec!["market"]),
@@ -167,8 +179,8 @@ async fn main() -> anyhow::Result<()> {
         /* anchor_tokens */
         ("simulation anchorprotocol uluna terraswapblunaLunaPair",fast, vec!["market","anchor_account"]),
         ("state anchorprotocol bLunaHub", fast, vec!["market","anchor_account"]),
-        ("simulation_cw20 anchorprotocol ANC terraswapAncUstPair", fast, vec!["market","anchor_account"]),
-        ("epoch_state anchorprotocol mmMarket", fast, vec!["anchor","market","anchor_account"]),
+        ("simulation_cw20 anchorprotocol ANC terraswapAncUstPair", fast, vec!["market","anchor_account","anchor_auto_stake"]),
+        ("epoch_state anchorprotocol mmMarket", fast, vec!["anchor","market","anchor_account","anchor_auto_repay"]),
         /* nexus_tokens */
         ("simulation_cw20 nexusprotocol nLunaToken Psi-nLuna_Pair", fast, vec!["market"]),
         ("simulation_cw20 nexusprotocol PsiToken Psi-UST_Pair", fast, vec!["market"]),
@@ -186,9 +198,9 @@ async fn main() -> anyhow::Result<()> {
         ("config anchorprotocol mmInterestModel", fast, vec!["anchor","anchor_account"]),
         //("config anchorprotocol collector",every_minute),
         /* <anchor_protocol account> */ 
-        ("borrow_limit", fast, vec!["anchor_account","anchor_auto_stake"]),
-        ("borrow_info", fast, vec!["anchor_account","anchor_auto_stake"]),
-        ("balance", fast, vec!["anchor_account"]),
+        ("borrow_limit", fast, vec!["anchor_account","anchor_auto_stake","anchor_auto_repay"]),
+        ("borrow_info", fast, vec!["anchor_account","anchor_auto_stake","anchor_auto_repay"]),
+        ("balance", fast, vec!["anchor_account","anchor_auto_repay"]),
         ("anc_balance", fast, vec!["anchor_account"]),
         ("staker", fast, vec!["anchor_account"]),
         ("blocks_per_year", slow, vec!["market","anchor","anchor_account"]), 
@@ -197,12 +209,14 @@ async fn main() -> anyhow::Result<()> {
         /* <from settings> */ 
         ("anchor_protocol_txs_claim_rewards", slow, vec!["anchor","anchor_account","anchor_auto_stake"]), 
         ("anchor_protocol_txs_staking", slow, vec!["anchor","anchor_account","anchor_auto_stake"]), 
-        ("trigger_percentage", fast, vec!["anchor_account"]),
-        ("max_gas_adjustment", fast, vec!["anchor_account"]),
-        ("gas_adjustment_preference",fast, vec!["anchor_account"]),
-        ("min_ust_balance", fast, vec!["anchor_account"]),
+        ("trigger_percentage", fast, vec!["anchor_account","anchor_auto_repay"]),
+        ("target_percentage", fast, vec!["anchor_auto_repay"]),
+        ("max_gas_adjustment", fast, vec!["anchor_account","anchor_auto_stake","anchor_auto_repay"]),
+        ("gas_adjustment_preference",fast, vec!["anchor_account","anchor_auto_stake","anchor_auto_repay"]),
+        ("min_ust_balance", fast, vec!["anchor_account","anchor_auto_stake","anchor_auto_repay"]),
+        ("max_tx_fee", fast, vec!["anchor_auto_stake","anchor_auto_repay"]),
         /* <from gas_prices>*/
-        ("gas_fees_uusd", medium, vec!["market","anchor","anchor_account","anchor_auto_stake"]),
+        ("gas_fees_uusd", medium, vec!["market","anchor","anchor_account","anchor_auto_stake","anchor_auto_repay"]),
         ]; 
         let mut req_new = Vec::new();
         let mut req_keys: Vec<&str> = Vec::new();  
@@ -330,8 +344,12 @@ async fn main() -> anyhow::Result<()> {
 
             if args_b.contains(&"anchor_auto_stake") {
                 lazy_anchor_account_auto_stake_rewards(&tasks, &wallet_seed_phrase, &new_display, &mut offset, is_test, is_first_run).await;
-            } 
-              
+            }  
+
+            if args_b.contains(&"anchor_auto_repay") {
+                anchor_account_auto_repay(&tasks, &wallet_seed_phrase, &new_display, &mut offset, is_test, is_first_run).await;
+            }   
+
             display_all_errors(&tasks, &*req_unresolved ,&new_display, &mut offset).await;
             // todo: only write logs when special event (Errors, or TX).
             // todo: can write display to a log file.  
@@ -485,6 +503,57 @@ pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromis
 
 }
 
+pub async fn anchor_account_auto_repay(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_seed_phrase: &SecUtf8,  new_display: &Arc<RwLock<Vec<String>>>,offset: &mut usize, is_test: bool, is_first_run: bool) {
+
+    add_string_to_display(new_display,*offset,"\n  **Anchor Protocol Auto Repay**\n\n".truecolor(75,219,75).to_string()).await.ok(); 
+    *offset += 1;
+
+    let repay_status = timeout(Duration::from_millis(100),check_anchor_loan_status(tasks.clone(),2)).await;
+    if repay_status.is_err() {
+        *offset += 6;
+        return;
+    }
+    let repay_status = repay_status.unwrap();
+    add_string_to_display(new_display,*offset,format!("{}{}","   [Auto Repay]    left to trigger:                 ".truecolor(75,219,75), repay_status.yellow())).await.ok(); 
+    *offset += 1;
+
+    let repay_amount = calculate_repay_amount(tasks.clone(),false,2).await; 
+    add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay]    repay amount:                    ".truecolor(75,219,75), format!("{} UST",repay_amount).yellow())).await.ok(); 
+    *offset += 1; 
+ 
+    let available_to_repay = calculate_repay_plan(tasks.clone(),"ust_available_to_repay",2).await;
+    add_string_to_display(new_display,*offset,format!("{}{}","\n\n\n   [Auto Repay]    available to repay:              ".truecolor(75,219,75), format!("{} UST",available_to_repay).yellow())).await.ok(); 
+    *offset += 1;
+  
+    let more_funds_required = calculate_repay_plan(tasks.clone(),"more_funds_required",2).await;
+    add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay]    more funds required:             ".truecolor(75,219,75), more_funds_required.yellow())).await.ok(); 
+    *offset += 1;
+    
+    let available_in_deposit = calculate_repay_plan(tasks.clone(),"available_in_deposit",2).await;
+    add_string_to_display(new_display,*offset,format!("{}{}","\n\n   [Auto Repay]    available in deposit:            ".truecolor(75,219,75), format!("{} UST",available_in_deposit).yellow())).await.ok(); 
+    *offset += 1;
+
+    let sufficient_funds_to_repay = calculate_repay_plan(tasks.clone(),"sufficient_funds_to_repay",2).await;
+    add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay]    sufficient funds to repay:       ".truecolor(75,219,75), sufficient_funds_to_repay.yellow())).await.ok(); 
+    *offset += 1;
+    
+    let to_withdraw_from_account = calculate_repay_plan(tasks.clone(),"to_withdraw_from_account",2).await;
+    
+    add_string_to_display(new_display,*offset,format!("{}{}","\n\n   [Auto Repay]    to withdraw from account:        ".truecolor(75,219,75), format!("{} UST",to_withdraw_from_account).yellow())).await.ok(); 
+    *offset += 1;
+    let to_withdraw_from_deposit = calculate_repay_plan(tasks.clone(),"to_withdraw_from_deposit",2).await;
+    add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay]    to withdraw from deposit:        ".truecolor(75,219,75), to_withdraw_from_deposit.yellow())).await.ok(); 
+    *offset += 1;
+
+
+    if repay_status == "repay".to_string() {
+         
+         // control
+         // repay function.
+    }
+ 
+}
+
 pub async fn lazy_anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_seed_phrase: &SecUtf8,  new_display: &Arc<RwLock<Vec<String>>>,offset: &mut usize, is_test: bool, is_first_run: bool) {
      
     add_string_to_display(new_display,*offset,"\n  **Anchor Protocol Auto Stake**\n\n".truecolor(75,219,75).to_string()).await.ok(); 
@@ -498,7 +567,7 @@ pub async fn lazy_anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<S
     // therefore timeout after 1s.
     let date_next_to_auto_claim_and_stake = timeout(Duration::from_millis(100),estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"loan_amount","date_next",2)).await;
     if date_next_to_auto_claim_and_stake.is_err() {
-        *offset += 1;
+        *offset += 2;
         return;
     }
     let date_next_to_auto_claim_and_stake = date_next_to_auto_claim_and_stake.unwrap();
@@ -523,19 +592,19 @@ async fn anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<String, Ma
         // check for sufficient funds
         match terra_balance_to_string(tasks.clone(),"uusd",false,2).await.as_ref() {
             "--" => {
-                add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]".truecolor(75,219,75),"        Error:    Loading UST account balance failed".red())).await.ok(); 
+                add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]".truecolor(75,219,75),"    error:       Loading UST account balance failed".red())).await.ok(); 
                 *offset += 1;
                 return;
             },
             "0" => {
-                add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]".truecolor(75,219,75),"        Error:    insufficient funds".red())).await.ok(); 
+                add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]".truecolor(75,219,75),"    error:       insufficient funds".red())).await.ok(); 
                 *offset += 1;
                 return; 
             },
             e => {
                 match min_ust_balance_to_string(tasks.clone(),2).await.as_ref() {
                     "--" => {
-                        add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]".truecolor(75,219,75),"        Error:    min_ust_balance undefined".red())).await.ok(); 
+                        add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]".truecolor(75,219,75),"    error:       minimum UST balance undefined".red())).await.ok(); 
                         *offset += 1;
                         return; 
                     },
@@ -543,8 +612,8 @@ async fn anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<String, Ma
                         let balance = Decimal::from_str(e).unwrap();
                         println!("{}",e);
                         let min_balance = Decimal::from_str(m).unwrap();
-                        if balance < min_balance {
-                            add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]".truecolor(75,219,75),"        Error:    insufficient funds: less than min_ust_balance".red())).await.ok(); 
+                        if balance <= min_balance {
+                            add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]".truecolor(75,219,75),"    error:       insufficient funds: minimum UST balance reached".red())).await.ok(); 
                             *offset += 1;
                             return; 
                         }

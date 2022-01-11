@@ -27,6 +27,19 @@ pub async fn min_ust_balance_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOr
     }
 }
 
+pub async fn max_tx_fee_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
+    match get_meta_data_maybe_or_await_task(&tasks,"max_tx_fee").await {
+        Ok(response_result) => { 
+            return Decimal::from_str(response_result.as_str()).unwrap()
+                    .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
+                    .to_string();             
+        },
+        Err(_) => {
+            return "--".to_string();
+        }
+    }
+}
+
 pub async fn anc_staked_balance_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
     match get_data_maybe_or_await_task(&tasks,"staker").await {
         Ok(response_result) => {

@@ -54,7 +54,7 @@ pub struct QueryResponse<T> {
     pub response: Option<T> 
 }  
  
-pub async fn anchor_governance_claim_and_stake(mnemonics: &str, coin_amount: Decimal, gas_price_uusd: Decimal, max_tx_fee: Decimal, gas_adjustment: Decimal, only_estimate: bool) -> anyhow::Result<String>{
+pub async fn anchor_governance_claim_and_stake(mnemonics: &str, coin_amount: Decimal, gas_price_uusd: Decimal, max_tx_fee: Decimal, gas_adjustment: Decimal, max_tx_fee_setting: Decimal, only_estimate: bool) -> anyhow::Result<String>{
 	 	let contract_addr_anc = get_contract("anchorprotocol","ANC"); 
 	 	let contract_addr_gov = get_contract("anchorprotocol","gov"); 
 	 	let contract_addr_mm_market = get_contract("anchorprotocol","mmMarket"); 
@@ -120,7 +120,7 @@ pub async fn anchor_governance_claim_and_stake(mnemonics: &str, coin_amount: Dec
 			return Ok(format!("tx fee: {} UST (gas limit: {})",tx_fee,gas_limit));
         }
  
-        if fees[0].amount > max_tx_fee {
+        if fees[0].amount > max_tx_fee || fees[0].amount > max_tx_fee_setting {
 			return Err(anyhow!("Unexpected High Fee: {:?}",fees));
         }
         if fees[0].denom != "uusd" {

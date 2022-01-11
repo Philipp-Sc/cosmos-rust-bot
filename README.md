@@ -16,7 +16,9 @@
 * Easy to use. One executable.
 
 * Extending, building on top of <a href="https://github.com/unl1k3ly/AnchorHODL">AnchorHODL</a>, adding new strategies.
+* Reducing transaction fees to a minimum.
 * As a failsafe against Anchor/Mirror webapp issues.
+
 
 ## What 
 
@@ -37,9 +39,9 @@
  <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/development/terra-rust-bot_v0.1_auto_stake.png" width="280">
   
  
+* Anchor Auto Loan Repay 
  
 * Anchor Auto Exchange Rewards (not yet implemented)
-* Anchor Auto Loan Repay (not yet implemented)
 
 ## How
 
@@ -47,6 +49,8 @@
 * Sensitive information is gathered at runtime via user input. This avoids storing sensitive information within config files.
 * The seed phrase is stored safely in memory with <a href="https://github.com/unrelentingtech/secstr">secstr</a>.
 * Requests are either made directly to the Terra FCD or LCD. For that terra-rust-bot mainly relies on the [Terra-Rust-API](https://crates.io/crates/terra-rust-api). In some cases <a href="api.anchorprotocol.com/api/v2/distribution-apy">api.anchorprotocol.com</a> is used.
+* The <a href="https://app.anchorprotocol.com/"> Anchor Web App </a> or <a href="https://github.com/unl1k3ly/AnchorHODL">AnchorHODL</a> have rather high gas fees hard coded into the application. This ensures each transaction goes through, but this also means some money is unnecessarily being spent. Looking at past transactions terra-rust-bot estimates a reasonable transaction fee. In particually by calculating a decent gas adjustment, as well as a maximum transaction fee, derived from past transactions. In the unlikely case if the LCD returns a to high transaction fee estimate the transaction will then not be executed. To not stale a transaction the user can provide a maximum transaction fee, they are willing to pay. 
+* If possible transactions are grouped together, to further reduce the gas fees.
 
 ## Disclaimer
 
@@ -57,7 +61,7 @@
 
 **Install Rust**
 
-* <a href="https://doc.rust-lang.org/book/ch01-00-getting-started.html">Get started here.</a>.
+* <a href="https://doc.rust-lang.org/book/ch01-00-getting-started.html">Get started here.</a>
 
 **Clone the repository**
 

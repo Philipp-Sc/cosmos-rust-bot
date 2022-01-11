@@ -37,6 +37,244 @@ pub fn timestamp_now_to_string() -> String {
     return now.to_string();              
 }
  
+
+pub async fn calculate_repay_plan(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, field: &str, digits_rounded_to: u32) -> String {
+
+    let mut ust_amount_liquid = match terra_balance_to_string(tasks.clone(),"uusd",false,digits_rounded_to).await.as_ref() {
+        "--" => {
+            Decimal::from_str("0").unwrap()
+        },
+        e => {
+            Decimal::from_str(e).unwrap()
+        }
+    };
+
+    match min_ust_balance_to_string(tasks.clone(),digits_rounded_to).await.as_ref() {
+        "--" => { 
+            return "--".to_string();
+        },
+        e => { 
+            ust_amount_liquid = ust_amount_liquid.checked_sub(Decimal::from_str(e).unwrap()).unwrap();             
+        }
+    }
+
+    if field == "ust_available_to_repay" {
+        return ust_amount_liquid.to_string();
+    }
+
+    let repay_amount = match calculate_repay_amount(tasks.clone(),false,digits_rounded_to).await.as_ref() {
+        "--" => {
+            return "--".to_string();
+        },
+        e => {
+            Decimal::from_str(e).unwrap()
+        }
+    };
+    
+    let zero = Decimal::from_str("0").unwrap();
+    let further_funds_needed = ust_amount_liquid.checked_sub(repay_amount).unwrap() < zero;
+
+    if field == "more_funds_required" {
+        return further_funds_needed.to_string();
+    }
+    
+    let a_ust_deposit_liquid = match borrower_ust_deposited_to_string(tasks.clone(),digits_rounded_to).await.as_ref() {
+        "--" => {
+            Decimal::from_str("0").unwrap()
+        },
+        e => {
+            Decimal::from_str(e).unwrap()
+        }
+    };
+
+    if field == "available_in_deposit" {
+        return a_ust_deposit_liquid.to_string();
+    }
+
+    let sufficient_funds_available = a_ust_deposit_liquid.checked_add(ust_amount_liquid).unwrap().checked_sub(repay_amount).unwrap() >= zero;
+
+    if field == "sufficient_funds_to_repay" {
+        return sufficient_funds_available.to_string();
+    } 
+
+    // here need/can estimate the fees, depending on the booleans.
+    // easy would be to setup a static fee that is always sufficient.
+    // better would be to look at the blockchain or to calculate the fee.
+    // 1. Deposit in Anchor UST fee // probably has tax fee
+    // {"deposit_stable": {}}
+    // 2. Withdraw in Anchor UST fee // looks like it is similar to claim rewards, independent from amount
+    // {"redeem_stable":{}}
+    // 3. Send UST to repay contract fee
+    
+
+    if ust_amount_liquid >= repay_amount || (ust_amount_liquid > zero && a_ust_deposit_liquid <= zero) { 
+
+        // case only use UST balance
+        // either because UST balance is sufficient or because there are still UST available but no aUST to withdraw.
+        if field == "to_withdraw_from_account" {
+            return repay_amount.to_string();
+        } 
+        if field == "to_withdraw_from_deposit" {
+            zero.to_string();
+        } 
+
+    }else if (ust_amount_liquid > zero && a_ust_deposit_liquid > zero)  || a_ust_deposit_liquid > zero  { 
+        // case use both UST balance and aUST withdrawal
+        // there are still UST available and aUST to withdraw.
+
+        // also matches case only use aUST withdrawal 
+
+        if field == "to_withdraw_from_account" {
+            return ust_amount_liquid.to_string();
+        }   
+
+        let a_ust_liquidity_needed = repay_amount.checked_sub(ust_amount_liquid).unwrap();
+        if a_ust_liquidity_needed <= a_ust_deposit_liquid {
+            if field == "to_withdraw_from_deposit" {
+                    return a_ust_liquidity_needed.to_string();
+            } 
+        }else{
+            if field == "to_withdraw_from_deposit" {
+                    return a_ust_deposit_liquid.to_string();
+            } 
+        }
+    } 
+    return "--".to_string();
+}
+
+pub async fn calculate_repay_amount(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,as_micro: bool, digits_rounded_to: u32) -> String {
+    /* Calculate the repay amount required based on the desired "target_percent" value from user config.
+     * target_percent is where ltv will be at once repay is complete.
+     */
+
+    let mut _target_percent = Decimal::from_str("0").unwrap(); 
+    match get_meta_data_maybe_or_await_task(&tasks,"target_percentage").await {
+                    Ok(response_result) => { 
+                        _target_percent = Decimal::from_str(response_result.as_str()).unwrap();           
+                    },
+                    Err(_) => {
+                        return "--".to_string();
+                    }
+                }
+
+    let zero =  Decimal::from_str("0").unwrap(); 
+
+    let mut _trigger_percentage =  Decimal::from_str("0.85").unwrap(); 
+
+    match get_meta_data_maybe_or_await_task(&tasks,"trigger_percentage").await {
+                    Ok(response_result) => { 
+                        _trigger_percentage = Decimal::from_str(response_result.as_str()).unwrap();           
+                    },
+                    Err(_) => {
+                        return "--".to_string();
+                    }
+                }
+
+
+    let mut _borrow_limit =  Decimal::from_str("0").unwrap(); 
+
+    match get_data_maybe_or_await_task(&tasks,"borrow_limit").await {
+        Ok(response_result) => { 
+            _borrow_limit = Decimal::from_str(response_result.as_borrow_limit().unwrap().result.borrow_limit.to_string().as_str()).unwrap();
+        },
+        Err(_) => {
+            return "--".to_string();
+        }
+    }
+
+    let target_loan_amount = _borrow_limit.checked_mul(_target_percent).unwrap();
+
+    let mut _loan_amount = Decimal::from_str("0").unwrap();
+
+    match get_data_maybe_or_await_task(&tasks,"borrow_info").await {
+        Ok(response_result) => { 
+            _loan_amount = Decimal::from_str(response_result.as_borrow_info().unwrap().result.loan_amount.to_string().as_str()).unwrap();   
+        },
+        Err(_) => {
+            return "--".to_string();
+        }
+    }
+
+    if _borrow_limit <= zero || _loan_amount <= zero {
+        return "--".to_string();
+    }
+
+    let difference_to_adjust = _loan_amount.checked_sub(target_loan_amount).unwrap();
+
+    let mut micro = Decimal::from_str("1").unwrap();
+    if !as_micro {
+        micro = Decimal::from_str("1000000").unwrap();                
+    }
+
+    if difference_to_adjust > zero {
+        return difference_to_adjust
+                .checked_div(micro).unwrap()
+                .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();
+
+    }else {
+        return "--".to_string();
+    }
+
+    
+   
+}
+
+pub async fn check_anchor_loan_status(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String {
+ 
+    let zero =  Decimal::from_str("0").unwrap(); 
+
+    let mut _trigger_percentage =  Decimal::from_str("0.85").unwrap(); 
+
+    match get_meta_data_maybe_or_await_task(&tasks,"trigger_percentage").await {
+                    Ok(response_result) => { 
+                        _trigger_percentage = Decimal::from_str(response_result.as_str()).unwrap();           
+                    },
+                    Err(_) => {
+                        return "--".to_string();
+                    }
+                }
+
+
+    let mut _borrow_limit =  Decimal::from_str("0").unwrap(); 
+
+    match get_data_maybe_or_await_task(&tasks,"borrow_limit").await {
+        Ok(response_result) => { 
+            _borrow_limit = Decimal::from_str(response_result.as_borrow_limit().unwrap().result.borrow_limit.to_string().as_str()).unwrap();
+        },
+        Err(_) => {
+            return "--".to_string();
+        }
+    }
+
+    let mut _loan_amount = Decimal::from_str("0").unwrap();
+
+    match get_data_maybe_or_await_task(&tasks,"borrow_info").await {
+        Ok(response_result) => { 
+            _loan_amount = Decimal::from_str(response_result.as_borrow_info().unwrap().result.loan_amount.to_string().as_str()).unwrap();  
+        },
+        Err(_) => {
+            return "--".to_string();
+        }
+    }
+
+    if _borrow_limit <= zero || _loan_amount <= zero {
+        return "--".to_string();
+    }
+
+    let current_percent = _loan_amount.checked_div(_borrow_limit).unwrap();
+
+    let left_to_trigger = _trigger_percentage.checked_sub(current_percent).unwrap();
+
+    if left_to_trigger <= zero {
+        return "repay due".to_string();
+    }
+
+    return format!("{}%",left_to_trigger.checked_mul(Decimal::from_str("100").unwrap()).unwrap()
+                          .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::ToZero).to_string());
+
+}
+
+
 pub async fn estimate_anchor_protocol_next_claim_and_stake_tx(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, field_amount: &str, field: &str, digits_rounded_to: u32) -> String {
   
             let mut _collateral_value = Decimal::from_str("0").unwrap();  
@@ -215,14 +453,20 @@ pub async fn estimate_anchor_protocol_next_claim_and_stake_tx(tasks: Arc<RwLock<
                          .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
                          .to_string();
             }else if "apr"==field && _total_returns_in_ust!=None  {
-                return  format!("{}%",
-                            _total_returns_in_ust
-                            .unwrap()
-                            .checked_div(_collateral_value).unwrap()
+                match _total_returns_in_ust.unwrap().checked_div(_collateral_value) {
+                    None => {
+                        return "--".to_string();
+                    },
+                    Some(e) => {
+                        return  format!("{}%",
+                            e
                             .checked_mul(Decimal::from_str("100").unwrap()).unwrap()
                             .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
                             .to_string()
                             );
+                    }
+                }
+                
             }
             return "--".to_string();
 
@@ -456,11 +700,17 @@ pub async fn apy_on_collateral_by(tasks: Arc<RwLock<HashMap<String, MaybeOrPromi
         apr = _distribution_apr;
     }
 
-    return format!("{}%",apr
-                  .checked_mul(_loan_amount).unwrap()
-                  .checked_div(_collateral_value).unwrap()
+
+    match apr.checked_mul(_loan_amount).unwrap().checked_div(_collateral_value) {
+        None => { 
+            return "--".to_string();
+        },
+        Some(e) => {
+            return format!("{}%",e
                   .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
                   .to_string()); 
+        }
+    }
 }
 
 pub async fn anc_staked_balance_in_ust_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
@@ -649,10 +899,18 @@ pub async fn borrower_ltv_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPro
         }
     }
 
-    return format!("{}%",_loan_amount.checked_div(collateral_value).unwrap()
-           .checked_mul(Decimal::from_str("100").unwrap()).unwrap()
-           .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
-           .to_string());
+    match _loan_amount.checked_div(collateral_value) {
+        None => { 
+            return "--".to_string();
+        },
+        Some(e) => {
+            return format!("{}%",e
+                   .checked_mul(Decimal::from_str("100").unwrap()).unwrap()
+                   .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
+                   .to_string());
+        }
+    }
+
 }
 
 

@@ -20,6 +20,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock; 
 
 
+
 pub async fn anchor_borrow_claim_and_stake_rewards(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_seed_phrase: &SecUtf8, only_estimate: bool) -> String {
  
 
@@ -32,6 +33,17 @@ pub async fn anchor_borrow_claim_and_stake_rewards(tasks: Arc<RwLock<HashMap<Str
 	        Err(_) => {
         	}
 		}
+
+
+		let mut max_tx_fee = Decimal::from_str("5").unwrap();
+
+		match max_tx_fee_to_string(tasks.clone(), 4).await.as_ref() {
+			"--" => {
+			},
+			e => {
+				max_tx_fee = Decimal::from_str(e).unwrap();
+			}
+		};
 
 		let mut avg_gas_adjustment = Decimal::from_str("0").unwrap();
 
@@ -109,7 +121,7 @@ pub async fn anchor_borrow_claim_and_stake_rewards(tasks: Arc<RwLock<HashMap<Str
             Ok(response_result) => { 
                 let gas_fees_uusd = Decimal::from_str(response_result.as_str()).unwrap();   
 
-                match anchor_governance_claim_and_stake(wallet_seed_phrase.unsecure(),_anc_to_claim,gas_fees_uusd, avg_tx_fee, max_gas_adjustment,only_estimate).await {
+                match anchor_governance_claim_and_stake(wallet_seed_phrase.unsecure(),_anc_to_claim,gas_fees_uusd, avg_tx_fee, max_gas_adjustment, max_tx_fee, only_estimate).await {
 		        	Ok(msg) => {
 		        		return msg;
 		        	},
