@@ -18,8 +18,7 @@ use terra_rust_api::core_types::{Coin};
 use terra_rust_api::client::tendermint_types::BlockResult;
 use terra_rust_api::client::tx_types::V1TXSResult;
 
-use terra_rust_api::{PrivateKey};
-use terra_rust_api::messages::wasm::MsgExecuteContract;
+use terra_rust_api::{PrivateKey}; 
 //use terra_rust_api::core_types::{StdSignMsg, StdSignature}; 
 //use terra_rust_api::messages::bank::MsgSend;
 
@@ -39,8 +38,12 @@ use rust_decimal::Decimal;
 //use rust_decimal::prelude::FromPrimitive;
 use rust_decimal::prelude::ToPrimitive;
 use core::str::FromStr;
+ 
 
-use data::terra_contracts::get_contract;
+use terra_rust_api::LCDResult;
+use terra_rust_api::client::tx_types::TxFeeResult;
+
+
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ResponseStatus {
@@ -53,57 +56,51 @@ pub struct QueryResponse<T> {
     pub response_status: Option<ResponseStatus>,
     pub response: Option<T> 
 }  
- 
-pub async fn anchor_governance_claim_and_stake(mnemonics: &str, coin_amount: Decimal, gas_price_uusd: Decimal, max_tx_fee: Decimal, gas_adjustment: Decimal, max_tx_fee_setting: Decimal, only_estimate: bool) -> anyhow::Result<String>{
-	 	let contract_addr_anc = get_contract("anchorprotocol","ANC"); 
-	 	let contract_addr_gov = get_contract("anchorprotocol","gov"); 
-	 	let contract_addr_mm_market = get_contract("anchorprotocol","mmMarket"); 
+  
 
-	 	let secp = Secp256k1::new();
+pub fn get_from_account(mnemonics: &str) -> anyhow::Result<String>{
+		let secp = Secp256k1::new();
         let from_key = PrivateKey::from_words(&secp,mnemonics,0,0)?;
         let from_public_key = from_key.public_key(&secp);
-  
         let from_account = from_public_key.account()?;
+        Ok(from_account)  
+ }
+
+pub async fn execute_messages(mnemonics: &str, messages: Vec<Message>, gas_opts: GasOptions) -> anyhow::Result<String>{
+ 	    let secp = Secp256k1::new();
+        let from_key = PrivateKey::from_words(&secp,mnemonics,0,0)?; 
  
-        let execute_msg_json_claim = r##"{"claim_rewards":{}}"##;
-
-        let coins: [Coin;0] = []; // no coins needed
-
-        let send_claim = MsgExecuteContract::create_from_json(&from_account, &contract_addr_mm_market, execute_msg_json_claim, &coins)?;
-
-        /* JSON: "{"stake_voting_tokens":{}}"
-  		 * Base64-encoded JSON: "eyJzdGFrZV92b3RpbmdfdG9rZW5zIjp7fX0="
-  		 */
-        let execute_msg_json_stake = format!("{}{}{}{}{}",r##"{
-									  "send": {
-									    "msg": "eyJzdGFrZV92b3RpbmdfdG9rZW5zIjp7fX0=",
-									    "amount": ""##,coin_amount.to_string().as_str(),r##"",
-									    "contract": ""##,contract_addr_gov,r##""
-									  }
-									}"##);
-
-        let send_stake = MsgExecuteContract::create_from_json(&from_account, &contract_addr_anc, &execute_msg_json_stake, &coins)?;
-        
-        let messages: [Message;2] = [send_claim,send_stake];
-
-        // get fee estimate
-
 		let endpoint: &str = &get_terra_lcd();
 		let chain: &str = &get_terra_chain();
- 		let terra = Terra::lcd_client_no_tx(endpoint,chain); 
 
- 		let gas_coin = Coin::create("uusd", gas_price_uusd);
+	 	let terra = Terra::lcd_client(endpoint,chain, &gas_opts, None);
+       
 
-		let res = terra.tx()
-        .estimate_fee(
-            &from_account,
-            &messages,
-            gas_adjustment.to_f64().unwrap(),
-            &[&gas_coin],
-        ).await?;
+        let (std_sign_msg, sigs) = terra
+               .generate_transaction_to_broadcast(
+                   &secp,
+                   &from_key,
+                   messages,
+                   None
+               )
+               .await?; 
 
-        //let estimate_json = serde_json::to_string(&res.result); 
-		//{"fee":{"amount":[{"amount":"90462","denom":"uusd"}],"gas":"603080"}}
+        // send it out
+		let resp = terra.tx().broadcast_sync(&std_sign_msg, &sigs).await?;
+
+		match resp.code {
+		     Some(code) => {
+		         let t1 = format!("{}", serde_json::to_string(&resp)?);
+		         let t2 = format!("Transaction returned a {} {}", code, resp.txhash);
+                 return Err(anyhow!("Unexpected Fee Denom: {:?}",format!("{}\n\n{}",t1,t2)));  
+		     }
+		     None => {
+				 return Ok(format!("tx hash: {}",resp.txhash)); 
+		     }
+		 }
+ }
+
+ pub fn estimate_to_gas_opts(res: LCDResult<TxFeeResult>,only_estimate: bool, max_tx_fee: Decimal, max_tx_fee_setting: Decimal) -> anyhow::Result<GasOptions> {
 
         let fees: Vec<Coin> = res.result.fee.amount; 
  
@@ -117,7 +114,7 @@ pub async fn anchor_governance_claim_and_stake(mnemonics: &str, coin_amount: Dec
 		let gas_limit = res.result.fee.gas;
 
         if only_estimate {
-			return Ok(format!("tx fee: {} UST (gas limit: {})",tx_fee,gas_limit));
+			return Err(anyhow!(format!("tx fee: {} UST (gas limit: {})",tx_fee,gas_limit)));
         }
  
         if fees[0].amount > max_tx_fee || fees[0].amount > max_tx_fee_setting {
@@ -127,242 +124,28 @@ pub async fn anchor_governance_claim_and_stake(mnemonics: &str, coin_amount: Dec
 			return Err(anyhow!("Unexpected Fee Denom: {:?}",fees));        	
         } 
  
-        let gas_opts = GasOptions {
+        Ok(GasOptions {
             fees: Some(Coin::create(&fees[0].denom,fees[0].amount)),
             estimate_gas: false,
             gas: Some(res.result.fee.gas),
             gas_price: None,
             gas_adjustment: None,
-        };
+        })
 
-	 	let terra = Terra::lcd_client(endpoint,chain, &gas_opts, None);
-        
+ }
 
-	 	let send_claim = MsgExecuteContract::create_from_json(&from_account, &contract_addr_mm_market, &execute_msg_json_claim, &coins)?;
-
-        let send_stake = MsgExecuteContract::create_from_json(&from_account, &contract_addr_anc, &execute_msg_json_stake, &coins)?;
-       
-        let messages: Vec<Message> = vec![send_claim,send_stake];
-
-        let (std_sign_msg, sigs) = terra
-               .generate_transaction_to_broadcast(
-                   &secp,
-                   &from_key,
-                   messages,
-                   None
-               )
-               .await?; 
-
-        // send it out
-		let resp = terra.tx().broadcast_sync(&std_sign_msg, &sigs).await?;
-
-		match resp.code {
-		     Some(code) => {
-		         let t1 = format!("{}", serde_json::to_string(&resp)?);
-		         let t2 = format!("Transaction returned a {} {}", code, resp.txhash);
-                 return Err(anyhow!("Unexpected Fee Denom: {:?}",format!("{}\n\n{}",t1,t2)));  
-		     }
-		     None => {
-				 return Ok(format!("tx hash: {}, tx fee: {} UST (gas limit: {})",resp.txhash,tx_fee,gas_limit)); 
-		     }
-		 }
-
-}
-
-
-
-pub async fn anchor_governance_stake(mnemonics: &str, coin_amount: Decimal, gas_price_uusd: Decimal, max_tx_fee: Decimal, gas_adjustment: Decimal, only_estimate: bool) -> anyhow::Result<String>{
-		let contract = get_contract("anchorprotocol","ANC"); 
-	 	let contract_addr_gov = get_contract("anchorprotocol","gov");
- 		// transaction message
-
-		let secp = Secp256k1::new();
-        let from_key = PrivateKey::from_words(&secp,mnemonics,0,0)?;
-        let from_public_key = from_key.public_key(&secp);
-  
-        let from_account = from_public_key.account()?;
-  
-  		/* JSON: "{"stake_voting_tokens":{}}"
-  		 * Base64-encoded JSON: "eyJzdGFrZV92b3RpbmdfdG9rZW5zIjp7fX0="
-  		 */
-        let execute_msg_json = format!("{}{}{}{}{}",r##"{
-									  "send": {
-									    "msg": "eyJzdGFrZV92b3RpbmdfdG9rZW5zIjp7fX0=",
-									    "amount": ""##,coin_amount.to_string().as_str(),r##"",
-									    "contract": ""##,contract_addr_gov,r##""
-									  }
-									}"##);
-
-
-        let coins: [Coin;0] = [];  
-
-        let send = MsgExecuteContract::create_from_json(&from_account, &contract, &execute_msg_json, &coins)?;
-        let messages: [Message;1] = [send];
-
-        // get fee estimate
-
+pub async fn estimate_messages(wallet_acc_address: &str, messages: Vec<Message>, gas_price_uusd: Decimal, gas_adjustment: Decimal) -> anyhow::Result<LCDResult<TxFeeResult>> {
 		let endpoint: &str = &get_terra_lcd();
 		let chain: &str = &get_terra_chain();
  		let terra = Terra::lcd_client_no_tx(endpoint,chain); 
-
  		let gas_coin = Coin::create("uusd", gas_price_uusd);
-
-		let res = terra.tx()
+ 		Ok(terra.tx()
         .estimate_fee(
-            &from_account,
+            wallet_acc_address,
             &messages,
             gas_adjustment.to_f64().unwrap(),
             &[&gas_coin],
-        ).await?;
-
-        let estimate_json = serde_json::to_string(&res.result);
-        let fees: Vec<Coin> = res.result.fee.amount; 
-
-        if fees.len() != 1 {
-        	return Err(anyhow!("Unexpected Fee Estimate. fees.len() = {:?}",fees.len()));
-        }
-
-        
-        if only_estimate {
-        	return Ok(format!("{}",estimate_json?));
-        }
- 
-        if fees[0].amount > max_tx_fee {
-			return Err(anyhow!("Unexpected High Fee: {:?}",fees));
-        }
-        if fees[0].denom != "uusd" {
-			return Err(anyhow!("Unexpected Fee Denom: {:?}",fees));        	
-        } 
- 
-        let gas_opts = GasOptions {
-            fees: Some(Coin::create(&fees[0].denom,fees[0].amount)),
-            estimate_gas: false,
-            gas: Some(res.result.fee.gas),
-            gas_price: None,
-            gas_adjustment: None,
-        };
- 
-
-	 	let terra = Terra::lcd_client(endpoint,chain, &gas_opts, None);
-       
-
-        let send = MsgExecuteContract::create_from_json(&from_account, &contract, &execute_msg_json, &coins)?;
-        let messages: Vec<Message> = vec![send];
-
-        let (std_sign_msg, sigs) = terra
-               .generate_transaction_to_broadcast(
-                   &secp,
-                   &from_key,
-                   messages,
-                   None
-               )
-               .await?; 
-
-        // send it out
-		let resp = terra.tx().broadcast_sync(&std_sign_msg, &sigs).await?;
-
-		match resp.code {
-		     Some(code) => {
-		         let t1 = format!("{}", serde_json::to_string(&resp)?);
-		         let t2 = format!("Transaction returned a {} {}", code, resp.txhash);
-                 return Err(anyhow!("Unexpected Fee Denom: {:?}",format!("{}\n\n{}",t1,t2)));  
-		     }
-		     None => {
-		         return Ok(format!("{}", resp.txhash));
-		     }
-		 }
-}
-
-pub async fn anchor_claim_rewards(mnemonics: &str, gas_price_uusd: Decimal, max_tx_fee: Decimal, gas_adjustment: Decimal, only_estimate: bool) -> anyhow::Result<String>{
-
-	 	let contract = get_contract("anchorprotocol","mmMarket");
- 		// transaction message
-
-		let secp = Secp256k1::new();
-        let from_key = PrivateKey::from_words(&secp,mnemonics,0,0)?;
-        let from_public_key = from_key.public_key(&secp);
-  
-        let from_account = from_public_key.account()?;
- 
-        let execute_msg_json = r##"{"claim_rewards":{}}"##;
-
-        let coins: [Coin;0] = []; // no coins needed
-
-        let send = MsgExecuteContract::create_from_json(&from_account, &contract, execute_msg_json, &coins)?;
-
-        let messages: [Message;1] = [send];
-
-        // get fee estimate
-
-		let endpoint: &str = &get_terra_lcd();
-		let chain: &str = &get_terra_chain();
- 		let terra = Terra::lcd_client_no_tx(endpoint,chain); 
-
- 		let gas_coin = Coin::create("uusd", gas_price_uusd);
-
-		let res = terra.tx()
-        .estimate_fee(
-            &from_account,
-            &messages,
-            gas_adjustment.to_f64().unwrap(),
-            &[&gas_coin],
-        ).await?;
-
-
-        let estimate_json = serde_json::to_string(&res.result);
-        let fees: Vec<Coin> = res.result.fee.amount; 
-
-        if fees.len() != 1 {
-        	return Err(anyhow!("Unexpected Fee Estimate. fees.len() = {:?}",fees.len()));
-        }
-        
-        if only_estimate {
-        	return Ok(format!("{}",estimate_json?));
-        }
- 
-        if fees[0].amount > max_tx_fee {
-			return Err(anyhow!("Unexpected High Fee: {:?}",fees));
-        }
-        if fees[0].denom != "uusd" {
-			return Err(anyhow!("Unexpected Fee Denom: {:?}",fees));        	
-        } 
- 
-        let gas_opts = GasOptions {
-            fees: Some(Coin::create(&fees[0].denom,fees[0].amount)),
-            estimate_gas: false,
-            gas: Some(res.result.fee.gas),
-            gas_price: None,
-            gas_adjustment: None,
-        };
- 
-
-	 	let terra = Terra::lcd_client(endpoint,chain, &gas_opts, None);
-       
-        let send = MsgExecuteContract::create_from_json(&from_account, &contract, execute_msg_json, &coins)?;
-        let messages: Vec<Message> = vec![send];
-
-        let (std_sign_msg, sigs) = terra
-               .generate_transaction_to_broadcast(
-                   &secp,
-                   &from_key,
-                   messages,
-                   None
-               )
-               .await?; 
-
-        // send it out
-		let resp = terra.tx().broadcast_sync(&std_sign_msg, &sigs).await?;
-
-		match resp.code {
-		     Some(code) => {
-		         let t1 = format!("{}", serde_json::to_string(&resp)?);
-		         let t2 = format!("Transaction returned a {} {}", code, resp.txhash);
-                 return Err(anyhow!("Unexpected Fee Denom: {:?}",format!("{}\n\n{}",t1,t2)));  
-		     }
-		     None => {
-		         return Ok(format!("{}", resp.txhash));
-		     }
-		 }
+        ).await?)
 }
 
 

@@ -1,10 +1,10 @@
 #![allow(dead_code)]
 
-pub mod simple_view;
+pub mod interface;
 
-use simple_view::model::{MaybeOrPromise,get_data_maybe_or_meta_data_maybe,get_data_maybe_or_await_task,get_meta_data_maybe_or_await_task};  
+use interface::model::{MaybeOrPromise,get_data_maybe_or_meta_data_maybe,get_data_maybe_or_await_task,get_meta_data_maybe_or_await_task};  
 
-use simple_view::*;
+use interface::*;
 
 use std::collections::HashMap;
 
@@ -20,6 +20,10 @@ use chrono::{Utc};
 
 use std::sync::Arc; 
 use tokio::sync::RwLock; 
+
+// only allowed to interact with the model via interface!
+// this keeps the code readable.
+
 
 fn duration_to_string(duration: chrono::Duration) -> String {
 
@@ -49,7 +53,7 @@ pub async fn calculate_repay_plan(tasks: Arc<RwLock<HashMap<String, MaybeOrPromi
         }
     };
 
-    match min_ust_balance_to_string(tasks.clone(),digits_rounded_to).await.as_ref() {
+    match min_ust_balance_to_string(tasks.clone(),false,digits_rounded_to).await.as_ref() {
         "--" => { 
             return "--".to_string();
         },
@@ -78,7 +82,7 @@ pub async fn calculate_repay_plan(tasks: Arc<RwLock<HashMap<String, MaybeOrPromi
         return further_funds_needed.to_string();
     }
     
-    let a_ust_deposit_liquid = match borrower_ust_deposited_to_string(tasks.clone(),digits_rounded_to).await.as_ref() {
+    let a_ust_deposit_liquid = match borrower_ust_deposited_to_string(tasks.clone(),false,digits_rounded_to).await.as_ref() {
         "--" => {
             Decimal::from_str("0").unwrap()
         },
@@ -97,48 +101,70 @@ pub async fn calculate_repay_plan(tasks: Arc<RwLock<HashMap<String, MaybeOrPromi
         return sufficient_funds_available.to_string();
     } 
 
-    // here need/can estimate the fees, depending on the booleans.
-    // easy would be to setup a static fee that is always sufficient.
-    // better would be to look at the blockchain or to calculate the fee.
-    // 1. Deposit in Anchor UST fee // probably has tax fee
-    // {"deposit_stable": {}}
-    // 2. Withdraw in Anchor UST fee // looks like it is similar to claim rewards, independent from amount
-    // {"redeem_stable":{}}
-    // 3. Send UST to repay contract fee
-    
+    let mut to_withdraw_from_account = Decimal::from_str("0").unwrap();
+    let mut to_withdraw_from_deposit = Decimal::from_str("0").unwrap();
 
     if ust_amount_liquid >= repay_amount || (ust_amount_liquid > zero && a_ust_deposit_liquid <= zero) { 
 
         // case only use UST balance
         // either because UST balance is sufficient or because there are still UST available but no aUST to withdraw.
-        if field == "to_withdraw_from_account" {
-            return repay_amount.to_string();
-        } 
-        if field == "to_withdraw_from_deposit" {
-            zero.to_string();
-        } 
+        to_withdraw_from_account = repay_amount;  
 
-    }else if (ust_amount_liquid > zero && a_ust_deposit_liquid > zero)  || a_ust_deposit_liquid > zero  { 
+    }else if a_ust_deposit_liquid > zero  { 
         // case use both UST balance and aUST withdrawal
         // there are still UST available and aUST to withdraw.
 
         // also matches case only use aUST withdrawal 
-
-        if field == "to_withdraw_from_account" {
-            return ust_amount_liquid.to_string();
-        }   
+        if ust_amount_liquid > zero {
+            to_withdraw_from_account = ust_amount_liquid;  
+        }
 
         let a_ust_liquidity_needed = repay_amount.checked_sub(ust_amount_liquid).unwrap();
         if a_ust_liquidity_needed <= a_ust_deposit_liquid {
-            if field == "to_withdraw_from_deposit" {
-                    return a_ust_liquidity_needed.to_string();
-            } 
-        }else{
-            if field == "to_withdraw_from_deposit" {
-                    return a_ust_deposit_liquid.to_string();
-            } 
+            to_withdraw_from_deposit = a_ust_liquidity_needed;
+        }else{ 
+            to_withdraw_from_deposit = a_ust_deposit_liquid; 
         }
+    }
+
+    if field == "to_withdraw_from_account" { 
+        return to_withdraw_from_account.to_string();
+    }  
+    if field == "to_withdraw_from_deposit" { 
+        return to_withdraw_from_deposit.to_string();
     } 
+    let to_repay = to_withdraw_from_account.checked_add(to_withdraw_from_deposit).unwrap();
+
+    if field == "to_repay" { 
+        return to_repay.to_string();
+    }  
+    let uusd_tax_cap = match uusd_tax_cap_to_string(tasks.clone(),10).await.as_ref() {
+            "--" => {
+                return "--".to_string();
+            },
+            e => {
+                Decimal::from_str(e).unwrap().checked_div(Decimal::from_str("1000000").unwrap()).unwrap()
+            }
+        };
+    if field == "max_stability_tax" {
+        return uusd_tax_cap.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();
+    }
+    if field == "stability_tax" {
+        let tax_rate = match tax_rate_to_string(tasks.clone(),10).await.as_ref() {
+            "--" => {
+                return "--".to_string();
+            },
+            e => {
+                Decimal::from_str(e).unwrap()
+            }
+        };
+        
+        let tx = to_repay.checked_mul(tax_rate).unwrap();
+        if tx > uusd_tax_cap {
+            return uusd_tax_cap.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();
+        }
+        return tx.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();
+    }
     return "--".to_string();
 }
 
@@ -492,17 +518,63 @@ pub async fn estimate_anchor_protocol_tx_fee_claim_and_stake(tasks: Arc<RwLock<H
 
 pub async fn estimate_anchor_protocol_tx_fee(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, tx_key: &str, key: String, as_micro: bool, digits_rounded_to: u32) -> String { 
  
+    let mut tax_rate = Decimal::from_str("0").unwrap();
+
+    match get_data_maybe_or_await_task(&tasks,"tax_rate").await {
+        Ok(response_result) => { 
+            tax_rate = Decimal::from_str(response_result.as_tax_rate().unwrap().result.as_str()).unwrap();
+        },
+        Err(_) => { 
+        }
+    }
+
+    let mut tax_cap_uusd = Decimal::from_str("0").unwrap();
+
+    match get_data_maybe_or_await_task(&tasks,"tax_caps").await {
+        Ok(response_result) => { 
+            let vec_tax_caps = &response_result.as_tax_caps().unwrap().result;
+            for tax_cap in vec_tax_caps {
+                if tax_cap.denom == "uusd".to_string() {
+                    tax_cap_uusd = Decimal::from_str(tax_cap.tax_cap.as_str()).unwrap();
+                    break;
+                }
+            }                   
+        },
+        Err(_) => { 
+        }
+    }
+
     match get_data_maybe_or_await_task(&tasks,tx_key).await {
         Ok(response_result) => { 
             let result = &response_result.as_transactions().unwrap().result;
             let mut avg_fee_amount = Decimal::from_str("0").unwrap();
             let mut avg_gas_adjustment = Decimal::from_str("0").unwrap(); // gas_wanted * gas_adjustment = fee_amount
+            let mut avg_gas_adjustment_for_stability_fee_case = Decimal::from_str("0").unwrap(); 
             let mut avg_gas_used = Decimal::from_str("0").unwrap();
             let mut avg_gas_wanted = Decimal::from_str("0").unwrap();
+            let mut avg_fee_amount_without_stability_fee = Decimal::from_str("0").unwrap();
+            let mut avg_fee_amount_adjusted_without_stability_fee = Decimal::from_str("0").unwrap();
             // estimate_fee_amount = avg_gas_adjustment * avg_gas_used;
             for entry in result {
+ 
+
+                let stability_tax = entry.amount.checked_mul(tax_rate).unwrap();
+                let mut fee_amount_without_stability_fee = Decimal::from_str("0").unwrap();
+                if stability_tax < tax_cap_uusd {
+                    fee_amount_without_stability_fee = entry.fee_amount.checked_sub(stability_tax).unwrap();
+                } else {                    
+                    fee_amount_without_stability_fee = entry.fee_amount.checked_sub(tax_cap_uusd).unwrap();
+                }
+                avg_fee_amount_adjusted_without_stability_fee = avg_fee_amount_adjusted_without_stability_fee.checked_add(fee_amount_without_stability_fee).unwrap();
+
+                let gas_adjustment = entry.gas_wanted.checked_div(entry.gas_used).unwrap();
+                fee_amount_without_stability_fee = fee_amount_without_stability_fee.checked_div(gas_adjustment).unwrap();
+                avg_gas_adjustment_for_stability_fee_case = avg_gas_adjustment_for_stability_fee_case.checked_add(gas_adjustment).unwrap();
+
+                avg_fee_amount_without_stability_fee = avg_fee_amount_without_stability_fee.checked_add(fee_amount_without_stability_fee).unwrap();
+                let gas_adjustment = entry.fee_amount.checked_div(entry.gas_wanted).unwrap(); 
+
                 avg_fee_amount = avg_fee_amount.checked_add(entry.fee_amount).unwrap();
-                let gas_adjustment = entry.fee_amount.checked_div(entry.gas_wanted).unwrap();
                 avg_gas_adjustment = avg_gas_adjustment.checked_add(gas_adjustment).unwrap();
                 avg_gas_used = avg_gas_used.checked_add(entry.gas_used).unwrap(); 
                 avg_gas_wanted = avg_gas_wanted.checked_add(entry.gas_wanted).unwrap(); 
@@ -510,11 +582,15 @@ pub async fn estimate_anchor_protocol_tx_fee(tasks: Arc<RwLock<HashMap<String, M
             }
              match get_meta_data_maybe_or_await_task(&tasks,"gas_fees_uusd").await {
                 Ok(response_result) => { 
-                    let gas_fees_uusd = Decimal::from_str(response_result.as_str()).unwrap();    
-                    avg_fee_amount = avg_fee_amount.checked_div(Decimal::from_str(result.len().to_string().as_str()).unwrap()).unwrap();
-                    avg_gas_adjustment = avg_gas_adjustment.checked_div(gas_fees_uusd).unwrap().checked_div(Decimal::from_str(result.len().to_string().as_str()).unwrap()).unwrap();
-                    avg_gas_used = avg_gas_used.checked_div(Decimal::from_str(result.len().to_string().as_str()).unwrap()).unwrap();
-                    avg_gas_wanted = avg_gas_wanted.checked_div(Decimal::from_str(result.len().to_string().as_str()).unwrap()).unwrap();
+                    let count_entries = Decimal::from_str(result.len().to_string().as_str()).unwrap();
+                    let gas_fees_uusd = Decimal::from_str(response_result.as_str()).unwrap();  
+                    avg_fee_amount_adjusted_without_stability_fee = avg_fee_amount_adjusted_without_stability_fee.checked_div(count_entries).unwrap();
+                    avg_fee_amount_without_stability_fee = avg_fee_amount_without_stability_fee.checked_div(count_entries).unwrap();
+                    avg_fee_amount = avg_fee_amount.checked_div(count_entries).unwrap();
+                    avg_gas_adjustment = avg_gas_adjustment.checked_div(gas_fees_uusd).unwrap().checked_div(count_entries).unwrap();
+                    avg_gas_used = avg_gas_used.checked_div(count_entries).unwrap();
+                    avg_gas_wanted = avg_gas_wanted.checked_div(count_entries).unwrap();
+                    avg_gas_adjustment_for_stability_fee_case = avg_gas_adjustment_for_stability_fee_case.checked_div(count_entries).unwrap();
                     let fee_amount_at_threshold = avg_gas_used.checked_mul(gas_fees_uusd).unwrap();
                     let estimated_fee_amount = avg_gas_used.checked_mul(gas_fees_uusd).unwrap().checked_mul(avg_gas_adjustment).unwrap();
                     
@@ -529,6 +605,18 @@ pub async fn estimate_anchor_protocol_tx_fee(tasks: Arc<RwLock<HashMap<String, M
                               .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
                               .to_string();
                         },
+                        "avg_fee_amount_without_stability_fee" => {
+                            return avg_fee_amount_without_stability_fee
+                              .checked_div(micro).unwrap()
+                              .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
+                              .to_string();
+                        },
+                        "avg_fee_amount_adjusted_without_stability_fee" => {
+                            return avg_fee_amount_adjusted_without_stability_fee
+                              .checked_div(micro).unwrap()
+                              .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
+                              .to_string();
+                        },
                         "avg_fee_amount" => {
                             return avg_fee_amount
                               .checked_div(micro).unwrap()
@@ -537,6 +625,11 @@ pub async fn estimate_anchor_protocol_tx_fee(tasks: Arc<RwLock<HashMap<String, M
                         },
                         "avg_gas_adjustment" => {
                             return avg_gas_adjustment
+                              .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
+                              .to_string();
+                        },
+                        "avg_gas_adjustment_for_stability_fee_case" => {
+                            return avg_gas_adjustment_for_stability_fee_case
                               .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
                               .to_string();
                         },
@@ -602,7 +695,7 @@ pub async fn apy_on_collateral_by(tasks: Arc<RwLock<HashMap<String, MaybeOrPromi
             }
         }
     }else if amount_field == "deposit_amount" {
-        match borrower_ust_deposited_to_string(tasks.clone(), 10).await.as_ref() {
+        match borrower_ust_deposited_to_string(tasks.clone(),false, 10).await.as_ref() {
             "--" => {
                 return "--".to_string();
             }, 
@@ -781,10 +874,15 @@ pub async fn anchor_claim_and_stake_transaction_gas_fees_ratio_to_string(tasks: 
 
     let anchor_protocol_tx_fee = Decimal::from_str(anchor_protocol_tx_fee.as_str()).unwrap();             
       
-    return format!("{}%",anchor_protocol_tx_fee
-                              .checked_div(_pending_rewards).unwrap()
-                              .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
-                              .to_string());
+    match anchor_protocol_tx_fee.checked_div(_pending_rewards){
+        None => {
+            return "--".to_string();
+        },
+        Some(e) => {
+            return format!("{}%",e.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero).to_string());
+        }
+    }
+
 }
 
 pub async fn borrower_rewards_in_ust_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
@@ -915,13 +1013,15 @@ pub async fn borrower_ltv_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPro
 
 
 
-pub async fn borrower_ust_deposited_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
+pub async fn borrower_ust_deposited_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, as_micro: bool, digits_rounded_to: u32) -> String { 
     let mut _balance = Decimal::from_str("0").unwrap();
     match get_data_maybe_or_await_task(&tasks,"balance").await {
         Ok(response_result) => { 
             _balance = Decimal::from_str(response_result.as_balance().unwrap().result.balance.to_string().as_str()).unwrap();
+            if !as_micro { 
             let micro = Decimal::from_str("1000000").unwrap();
-            _balance = _balance.checked_div(micro).unwrap();
+                _balance = _balance.checked_div(micro).unwrap();
+            }
             
         },
         Err(_) => {
@@ -1202,3 +1302,43 @@ pub async fn utilization_ratio_to_string(tasks: Arc<RwLock<HashMap<String, Maybe
 
 }
 
+
+pub async fn estimate_anchor_protocol_auto_repay_tx_fee(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
+     
+
+    // does include gas_adjustment
+    let mut _fee_to_redeem_stable = Decimal::from_str("0").unwrap();
+    match estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_redeem_stable","fee_amount_adjusted".to_owned(),false,10).await.as_ref() {
+            "--" => {
+                return "--".to_string();
+            },
+            e => { 
+                 _fee_to_redeem_stable = Decimal::from_str(e).unwrap(); 
+            }
+    }
+    // does include gas_adjustment
+    let mut _anchor_protocol_txs_repay_stable = Decimal::from_str("0").unwrap();
+    match estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_repay_stable","avg_fee_amount_adjusted_without_stability_fee".to_owned(),false,10).await.as_ref() {
+            "--" => {
+                return "--".to_string();
+            },
+            e => { 
+                 _anchor_protocol_txs_repay_stable = Decimal::from_str(e).unwrap(); 
+            }
+    }
+    // min(to_repay * tax_rate , tax_cap)
+    let mut _stability_tax = Decimal::from_str("0").unwrap();
+    match calculate_repay_plan(tasks.clone(),"stability_tax",10).await.as_ref() {
+            "--" => {
+                return "--".to_string();
+            },
+            e => { 
+                 _stability_tax = Decimal::from_str(e).unwrap(); 
+            }
+    }
+
+    return _fee_to_redeem_stable.checked_add(_anchor_protocol_txs_repay_stable).unwrap()
+                                .checked_add(_stability_tax).unwrap()
+                                .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero).to_string();
+
+}

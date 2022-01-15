@@ -64,7 +64,9 @@ pub enum ResponseResult {
     Blocks(Response<BlocksPerYearResponse>),
     StablecoinDeposits(Response<Vec<DepositStableLog>>),
     Transactions(Response<Vec<TXLog>>),
-    EarnAPY(Response<APY>)
+    EarnAPY(Response<APY>),
+    TaxRate(Response<String>),
+    TaxCaps(Response<Vec<TaxCap>>)
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -245,7 +247,17 @@ pub struct GovRewardResponse {
     pub gov_share_index: Decimal,
     pub current_apy: Decimal,
 }
- 
+
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TaxCap {
+    pub denom: String,
+    #[serde(rename = "tax_cap")]
+    pub tax_cap: String,
+}
+
+
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -538,6 +550,15 @@ fn get_tx_log(entry: &Value, account: &str, query_msg: &str, amount_field: &str)
         || (query_msg=="claim_rewards" &&
             msg[0].get("value").ok_or(anyhow!("no value"))?.get("execute_msg").ok_or(anyhow!("no execute_msg"))?.get("claim_rewards") != None
             )
+        || (query_msg=="redeem_stable" &&
+            msg[0].get("value").ok_or(anyhow!("no value"))?.get("execute_msg").ok_or(anyhow!("no execute_msg"))?.get("send").ok_or(anyhow!("no send"))?.get("msg").ok_or(anyhow!("no msg"))?.to_string().contains("eyJyZWRlZW1fc3RhYmxlIjp7fX0=")
+            )
+        || (query_msg=="deposit_stable" &&
+            msg[0].get("value").ok_or(anyhow!("no value"))?.get("execute_msg").ok_or(anyhow!("no execute_msg"))?.get("deposit_stable") != None
+            )
+        || (query_msg=="repay_stable" &&
+            msg[0].get("value").ok_or(anyhow!("no value"))?.get("execute_msg").ok_or(anyhow!("no execute_msg"))?.get("repay_stable") != None
+            )
         ) && msg[0].get("value").ok_or(anyhow!("no value"))?.get("contract").ok_or(anyhow!("no contract"))? == account
     {
             let gas_wanted = entry.get("gas_wanted").ok_or(anyhow!("no gas_wanted"))?;  // gas_limit // gas requested
@@ -602,6 +623,18 @@ fn get_tx_log(entry: &Value, account: &str, query_msg: &str, amount_field: &str)
 }
 
 
+pub async fn get_tax_rate() -> anyhow::Result<ResponseResult> { 
+        let res: String = query_api("https://lcd.terra.dev/treasury/tax_rate").await?;
+        let res: Response<String> = serde_json::from_str(&res)?;
+        return Ok(ResponseResult::TaxRate(res));
+}
+
+pub async fn get_tax_caps() -> anyhow::Result<ResponseResult> { 
+        let res: String = query_api("https://lcd.terra.dev/treasury/tax_caps").await?;
+        let res: Response<Vec<TaxCap>> = serde_json::from_str(&res)?;
+        return Ok(ResponseResult::TaxCaps(res));
+}
+
 pub async fn get_txs_fee_data(offset: &str, tx_data: &mut Vec<TXLog>,account: &str, query_msg: &str, amount_field: &str) -> anyhow::Result<String> {
 
         let query = format!("https://fcd.terra.dev/v1/txs?offset={}&limit=100&account={}",offset, account); 
@@ -641,6 +674,16 @@ pub async fn get_block_txs_fee_data(key: &str) -> anyhow::Result<ResponseResult>
         if key == "staking" {
             next = get_txs_fee_data(temp_offset.as_str(),&mut tx_data,"terra14z56l0fp2lsf86zy3hty2z47ezkhnthtr9yq76","staking","amount").await; 
         }
+        if key == "redeem_stable" {
+            next = get_txs_fee_data(temp_offset.as_str(),&mut tx_data,"terra1hzh9vpxhsk8253se0vv5jj6etdvxu3nv8z07zu","redeem_stable","redeem_amount").await; 
+        }
+        if key == "deposit_stable" {
+            next = get_txs_fee_data(temp_offset.as_str(),&mut tx_data,"terra1sepfj7s0aeg5967uxnfk4thzlerrsktkpelm5s","deposit_stable","deposit_amount").await; 
+        }
+        if key == "repay_stable" {
+            next = get_txs_fee_data(temp_offset.as_str(),&mut tx_data,"terra1sepfj7s0aeg5967uxnfk4thzlerrsktkpelm5s","repay_stable","repay_amount").await; 
+        }
+
         if next.is_ok() {
             temp_offset = next.unwrap();
             err_count = 0;

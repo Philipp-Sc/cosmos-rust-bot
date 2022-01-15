@@ -12,11 +12,50 @@ use std::sync::Arc;
 use tokio::sync::RwLock; 
 
 pub mod model;
+ 
+
+pub async fn tax_rate_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
+    match get_data_maybe_or_await_task(&tasks,"tax_rate").await {
+        Ok(response_result) => { 
+            return Decimal::from_str(response_result.as_tax_rate().unwrap().result.as_str()).unwrap()
+                    .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
+                    .to_string();             
+        },
+        Err(_) => {
+            return "--".to_string();
+        }
+    }
+}
+
+pub async fn uusd_tax_cap_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
+    match get_data_maybe_or_await_task(&tasks,"tax_caps").await {
+        Ok(response_result) => { 
+            let vec_tax_caps = &response_result.as_tax_caps().unwrap().result;
+            for tax_cap in vec_tax_caps {
+                if tax_cap.denom == "uusd".to_string() {
+                    return Decimal::from_str(tax_cap.tax_cap.as_str()).unwrap()
+                    .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
+                    .to_string();     
+                }
+            }                   
+        },
+        Err(_) => {
+            return "--".to_string();
+        }
+    }
+    return "--".to_string();
+}
 
 
-pub async fn min_ust_balance_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
+pub async fn min_ust_balance_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, as_micro: bool, digits_rounded_to: u32) -> String { 
     match get_meta_data_maybe_or_await_task(&tasks,"min_ust_balance").await {
         Ok(response_result) => { 
+             if as_micro {
+                let micro = Decimal::from_str("1000000").unwrap();
+                return Decimal::from_str(response_result.as_str()).unwrap().checked_mul(micro).unwrap()
+                    .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
+                    .to_string();  
+            }
             return Decimal::from_str(response_result.as_str()).unwrap()
                     .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
                     .to_string();             

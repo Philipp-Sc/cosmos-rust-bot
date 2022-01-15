@@ -11,6 +11,8 @@ use smart_contracts::{ResponseResult};
 use smart_contracts::meta::api::{fetch_gas_price}; 
  
 use smart_contracts::{
+    get_tax_rate,
+    get_tax_caps,
     state_query_msg,
     epoch_state_query_msg,
     config_query_msg,
@@ -462,6 +464,56 @@ pub async fn await_running_tasks(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
                         });                       
                             map.insert("anchor_protocol_txs_staking".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
                     }, 
+                    "anchor_protocol_txs_redeem_stable" => {  
+                        let handle = tokio::spawn(async move { 
+                            {    
+                                
+                                return get_block_txs_fee_data("redeem_stable").await;   
+                            }
+                        });
+                            map.insert("anchor_protocol_txs_redeem_stable".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
+                         
+                    }, 
+                    "anchor_protocol_txs_deposit_stable" => {  
+                        let handle = tokio::spawn(async move { 
+                            {    
+                                
+                                return get_block_txs_fee_data("deposit_stable").await;   
+                            }
+                        });
+                            map.insert("anchor_protocol_txs_deposit_stable".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
+                         
+                    }, 
+                    "anchor_protocol_txs_repay_stable" => {  
+                        let handle = tokio::spawn(async move { 
+                            {    
+                                
+                                return get_block_txs_fee_data("repay_stable").await;   
+                            }
+                        });
+                            map.insert("anchor_protocol_txs_repay_stable".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
+                         
+                    }, 
+                     "tax_rate" => { 
+                        let handle = tokio::spawn(async move { 
+                            {    
+                                
+                                return get_tax_rate().await;   
+                            }
+                        });
+                       
+                            map.insert("tax_rate".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
+                    },
+                     "tax_caps" => { 
+                        let handle = tokio::spawn(async move { 
+                            {    
+                                
+                                return get_tax_caps().await;   
+                            }
+                        });
+                       
+                            map.insert("tax_caps".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
+                    },
                     "gas_fees_uusd" => {                      
                         map.insert("gas_fees_uusd".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Maybe {data: Ok(gas_prices.response.as_ref().unwrap().uusd.to_string().to_owned()), timestamp: Utc::now().timestamp()})));
                     }, 
