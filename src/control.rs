@@ -19,38 +19,28 @@ use std::collections::HashMap;
 use std::sync::Arc; 
 use tokio::sync::RwLock; 
 
-
-pub async fn anchor_reedem_stable(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_seed_phrase: &SecUtf8, only_estimate: bool) -> String {
-    let mut ust_amount_liquid = match terra_balance_to_string(tasks.clone(),"uusd",true,0).await.as_ref() {
-        "--" => {
-            Decimal::from_str("0").unwrap()
-        },
-        e => {
-            Decimal::from_str(e).unwrap()
-        }
-    };
-
-    match min_ust_balance_to_string(tasks.clone(),true,0).await.as_ref() {
-        "--" => { 
-            return "--".to_string();
-        },
-        e => { 
-            ust_amount_liquid = ust_amount_liquid.checked_sub(Decimal::from_str(e).unwrap()).unwrap();             
+macro_rules! decimal_or_return {
+    ( $e:expr ) => {
+        match $e {
+            "--" => return String::from("--"),
+            e => Decimal::from_str(e).unwrap(),
         }
     }
- 
-    let repay_amount = match calculate_repay_amount(tasks.clone(),true,0).await.as_ref() {
-        "--" => {
-            return "--".to_string();
-        },
-        e => {
-            Decimal::from_str(e).unwrap()
-        }
-    };
+} 
+
+
+pub async fn anchor_reedem_stable(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_seed_phrase: &SecUtf8, only_estimate: bool) -> String {
+    // ust balance is needed, no way to do anything otherwise.
+    let mut ust_amount_liquid = decimal_or_return!(terra_balance_to_string(tasks.clone(),"uusd",true,0).await.as_ref());
+
+    let min_ust_balance = decimal_or_return!(min_ust_balance_to_string(tasks.clone(),true,0).await.as_ref());
+    ust_amount_liquid = ust_amount_liquid.checked_sub(min_ust_balance).unwrap();      
+
+    let repay_amount = decimal_or_return!(calculate_repay_amount(tasks.clone(),true,0).await.as_ref());
     
     let zero = Decimal::from_str("0").unwrap();
     let further_funds_needed = ust_amount_liquid.checked_sub(repay_amount).unwrap() < zero;
- 
+
     let a_ust_deposit_liquid = match borrower_ust_deposited_to_string(tasks.clone(),true,0).await.as_ref() {
         "--" => {
             Decimal::from_str("0").unwrap()
@@ -90,37 +80,16 @@ pub async fn anchor_reedem_stable(tasks: Arc<RwLock<HashMap<String, MaybeOrPromi
   
     let to_repay = to_withdraw_from_account.checked_add(to_withdraw_from_deposit).unwrap();
  
-    let tax_rate = match tax_rate_to_string(tasks.clone(),10).await.as_ref() {
-        "--" => {
-            return "--".to_string();
-        },
-        e => {
-            Decimal::from_str(e).unwrap()
-        }
-    };
-    let uusd_tax_cap = match uusd_tax_cap_to_string(tasks.clone(),10).await.as_ref() {
-        "--" => {
-            return "--".to_string();
-        },
-        e => {
-            Decimal::from_str(e).unwrap() 
-        }
-    };
+    let tax_rate = decimal_or_return!(tax_rate_to_string(tasks.clone(),10).await.as_ref());
+
+    let uusd_tax_cap = decimal_or_return!(uusd_tax_cap_to_string(tasks.clone(),true,0).await.as_ref());
+
     let mut tx = to_repay.checked_mul(tax_rate).unwrap();
     if tx > uusd_tax_cap {
         tx = uusd_tax_cap;
-    } 
+    }
 
-
-	let mut max_gas_adjustment = Decimal::from_str("1.67").unwrap();
-
-	match get_meta_data_maybe_or_await_task(&tasks,"max_gas_adjustment").await {
-        Ok(response_result) => { 
-            max_gas_adjustment = Decimal::from_str(response_result.as_str()).unwrap();             
-        },
-        Err(_) => {
-    	}
-	}
+	let mut max_gas_adjustment = decimal_or_return!(max_gas_adjustment_to_string(tasks.clone(),10).await.as_ref());
 
 	let mut avg_gas_adjustment = Decimal::from_str("0").unwrap();
 
@@ -154,25 +123,12 @@ pub async fn anchor_reedem_stable(tasks: Arc<RwLock<HashMap<String, MaybeOrPromi
 		max_gas_adjustment = avg_gas_adjustment;
 	}
 
-	match get_meta_data_maybe_or_await_task(&tasks,"gas_adjustment_preference").await {
-        Ok(response_result) => { 
-            let gas_adjustment_preference = Decimal::from_str(response_result.as_str()).unwrap();       
-            max_gas_adjustment = max_gas_adjustment
-            					 .checked_add(gas_adjustment_preference).unwrap()
-            					 .checked_div(Decimal::from_str("2").unwrap()).unwrap();    
-        },
-        Err(_) => {
-    	}
-	}
+	let gas_adjustment_preference = decimal_or_return!(gas_adjustment_preference_to_string(tasks.clone(),10).await.as_ref());
+		max_gas_adjustment = max_gas_adjustment
+	            					 .checked_add(gas_adjustment_preference).unwrap()
+	            					 .checked_div(Decimal::from_str("2").unwrap()).unwrap();
 
-	let exchange_rate = match a_terra_exchange_rate_to_string(tasks.clone(),10).await.as_ref() {
-        "--" => {
-            return "--".to_string();
-        },
-        e => {
-            Decimal::from_str(e).unwrap()
-        }
-    };
+	let exchange_rate = decimal_or_return!(a_terra_exchange_rate_to_string(tasks.clone(),10).await.as_ref());
 
     to_withdraw_from_deposit = to_withdraw_from_deposit.checked_div(exchange_rate).unwrap().round_dp_with_strategy(0, rust_decimal::RoundingStrategy::ToZero);
 
@@ -187,70 +143,37 @@ pub async fn anchor_reedem_stable(tasks: Arc<RwLock<HashMap<String, MaybeOrPromi
     };
 
     let to_repay = to_repay.checked_sub(est_auto_repay_fees).unwrap().round_dp_with_strategy(0, rust_decimal::RoundingStrategy::ToZero);
-    
 
-    match get_meta_data_maybe_or_await_task(&tasks,"gas_fees_uusd").await {
-            Ok(response_result) => { 
-                let gas_fees_uusd = Decimal::from_str(response_result.as_str()).unwrap();   
+    let gas_fees_uusd = decimal_or_return!(gas_price_to_string(tasks.clone(),10).await.as_ref());
 
-                if to_withdraw_from_deposit > zero {
-/*
-	                match anchor_reedem_stable_tx(wallet_seed_phrase.unsecure(),to_withdraw_from_deposit,gas_fees_uusd, max_gas_adjustment, true).await {
-			        	Ok(msg) => {
-			        		return msg;
-			        	},
-			        	Err(msg) => {
-			        		return msg.to_string();
-			        	}
-			        }*/
+    if to_withdraw_from_deposit > zero {
+		/*
+        match anchor_reedem_stable_tx(wallet_seed_phrase.unsecure(),to_withdraw_from_deposit,gas_fees_uusd, max_gas_adjustment, true).await {
+        	Ok(msg) => {
+        		return msg;
+        	},
+        	Err(msg) => {
+        		return msg.to_string();
+        	}
+        }*/
 
-			        match anchor_redeem_and_repay_stable_tx(wallet_seed_phrase.unsecure(),to_withdraw_from_deposit,to_repay,gas_fees_uusd,  Decimal::from_str("5").unwrap(), max_gas_adjustment,  Decimal::from_str("5").unwrap(), true).await {
-			        	Ok(msg) => {
-			        		return msg;
-			        	},
-			        	Err(msg) => {
-			        		return msg.to_string();
-			        	}
-			        }
-
-			        
-		    	}
-            },
-            Err(err) => {
-            	return format!("Unexpected Error: {:?}", err);
-            }
-        }
+        match anchor_redeem_and_repay_stable_tx(wallet_seed_phrase.unsecure(),to_withdraw_from_deposit,to_repay,gas_fees_uusd,  Decimal::from_str("5").unwrap(), max_gas_adjustment,  Decimal::from_str("5").unwrap(), true).await {
+        	Ok(msg) => {
+        		return msg;
+        	},
+        	Err(msg) => {
+        		return msg.to_string();
+        	}
+        }        
+	}
     "nothing".to_string()
-
-
-
 }
 
 
 pub async fn anchor_borrow_claim_and_stake_rewards(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_seed_phrase: &SecUtf8, only_estimate: bool) -> String {
- 
-
-		let mut max_gas_adjustment = Decimal::from_str("1.67").unwrap();
-
-		match get_meta_data_maybe_or_await_task(&tasks,"max_gas_adjustment").await {
-	        Ok(response_result) => { 
-	            max_gas_adjustment = Decimal::from_str(response_result.as_str()).unwrap();             
-	        },
-	        Err(_) => {
-        	}
-		}
-
-
-		let mut max_tx_fee = Decimal::from_str("5").unwrap();
-
-		match max_tx_fee_to_string(tasks.clone(), 4).await.as_ref() {
-			"--" => {
-			},
-			e => {
-				max_tx_fee = Decimal::from_str(e).unwrap();
-			}
-		};
-
+		let max_tx_fee = decimal_or_return!(max_tx_fee_to_string(tasks.clone(), 4).await.as_ref());
+		let mut max_gas_adjustment = decimal_or_return!(max_gas_adjustment_to_string(tasks.clone(),10).await.as_ref());
+		
 		let mut avg_gas_adjustment = Decimal::from_str("0").unwrap();
 
 		match estimate_anchor_protocol_tx_fee(tasks.clone(), "anchor_protocol_txs_claim_rewards","avg_gas_adjustment".to_owned(),false,4).await.as_ref() {
@@ -289,16 +212,12 @@ pub async fn anchor_borrow_claim_and_stake_rewards(tasks: Arc<RwLock<HashMap<Str
 			max_gas_adjustment = avg_gas_adjustment;
 		}
 
-		match get_meta_data_maybe_or_await_task(&tasks,"gas_adjustment_preference").await {
-	        Ok(response_result) => { 
-	            let gas_adjustment_preference = Decimal::from_str(response_result.as_str()).unwrap();       
-	            max_gas_adjustment = max_gas_adjustment
+		let gas_adjustment_preference = decimal_or_return!(gas_adjustment_preference_to_string(tasks.clone(),10).await.as_ref());
+		max_gas_adjustment = max_gas_adjustment
 	            					 .checked_add(gas_adjustment_preference).unwrap()
-	            					 .checked_div(Decimal::from_str("2").unwrap()).unwrap();    
-	        },
-	        Err(_) => {
-        	}
-		}
+	            					 .checked_div(Decimal::from_str("2").unwrap()).unwrap();   
+ 
+		  
  
 		match estimate_anchor_protocol_tx_fee(tasks.clone(), "anchor_protocol_txs_staking","avg_fee_amount".to_owned(),true,0).await.as_ref() {
 			"--" => {
@@ -311,57 +230,27 @@ pub async fn anchor_borrow_claim_and_stake_rewards(tasks: Arc<RwLock<HashMap<Str
 			}
 		};
 
-		let mut _anc_to_claim = Decimal::from_str("0").unwrap();
+		let anc_to_claim = decimal_or_return!(borrower_rewards_to_string(tasks.clone(), true,0).await.as_ref());
+		
+	    //println!("{:?}",(anc_to_claim, avg_tx_fee, max_gas_adjustment) ); 
 
-		match borrower_rewards_to_string(tasks.clone(), true,0).await.as_ref() {
-			"--" => {
-				return "Could not get pending ANC rewards: Likely no ANC available.".to_string();
-			},
-			e => {
-				_anc_to_claim = Decimal::from_str(e).unwrap() 
-			}
-		};
+        let gas_fees_uusd = decimal_or_return!(gas_price_to_string(tasks.clone(),10).await.as_ref());
 
-	   //println!("{:?}",(anc_to_claim, avg_tx_fee, max_gas_adjustment) ); 
-	   match get_meta_data_maybe_or_await_task(&tasks,"gas_fees_uusd").await {
-            Ok(response_result) => { 
-                let gas_fees_uusd = Decimal::from_str(response_result.as_str()).unwrap();   
-
-                match anchor_governance_claim_and_stake(wallet_seed_phrase.unsecure(),_anc_to_claim,gas_fees_uusd, avg_tx_fee, max_gas_adjustment, max_tx_fee, only_estimate).await {
-		        	Ok(msg) => {
-		        		return msg;
-		        	},
-		        	Err(msg) => {
-		        		return msg.to_string();
-		        	}
-		        }
-            },
-            Err(err) => {
-            	return format!("Unexpected Error: {:?}", err);
-            }
-        } 
+	    match anchor_governance_claim_and_stake(wallet_seed_phrase.unsecure(),anc_to_claim,gas_fees_uusd, avg_tx_fee, max_gas_adjustment, max_tx_fee, only_estimate).await {
+        	Ok(msg) => {
+        		return msg;
+        	},
+        	Err(msg) => {
+        		return msg.to_string();
+        	}
+        }
 }
  
 pub async fn anchor_borrow_claim_rewards(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,  wallet_seed_phrase: &SecUtf8, only_estimate: bool) -> String {
-        let mut max_tx_fee = Decimal::from_str("5").unwrap();
-
-		match max_tx_fee_to_string(tasks.clone(), 4).await.as_ref() {
-			"--" => {
-			},
-			e => {
-				max_tx_fee = Decimal::from_str(e).unwrap();
-			}
-		};
-		let mut max_gas_adjustment = Decimal::from_str("1.67").unwrap();
+         
+        let max_tx_fee = decimal_or_return!(max_tx_fee_to_string(tasks.clone(), 4).await.as_ref());
+		let mut max_gas_adjustment = decimal_or_return!(max_gas_adjustment_to_string(tasks.clone(),10).await.as_ref());
 		
-		match get_meta_data_maybe_or_await_task(&tasks,"max_gas_adjustment").await {
-	        Ok(response_result) => { 
-	            max_gas_adjustment = Decimal::from_str(response_result.as_str()).unwrap();             
-	        },
-	        Err(_) => {
-        	}
-		}
-
 		match estimate_anchor_protocol_tx_fee(tasks.clone(), "anchor_protocol_txs_claim_rewards","avg_gas_adjustment".to_owned(),false,4).await.as_ref() {
 			"--" => {
 			},
@@ -373,17 +262,11 @@ pub async fn anchor_borrow_claim_rewards(tasks: Arc<RwLock<HashMap<String, Maybe
 			}
 		};
 
-		match get_meta_data_maybe_or_await_task(&tasks,"gas_adjustment_preference").await {
-	        Ok(response_result) => { 
-	            let gas_adjustment_preference = Decimal::from_str(response_result.as_str()).unwrap();       
-	            max_gas_adjustment = max_gas_adjustment
+		let gas_adjustment_preference = decimal_or_return!(gas_adjustment_preference_to_string(tasks.clone(),10).await.as_ref());
+		max_gas_adjustment = max_gas_adjustment
 	            					 .checked_add(gas_adjustment_preference).unwrap()
-	            					 .checked_div(Decimal::from_str("2").unwrap()).unwrap();    
-	        },
-	        Err(_) => {
-        	}
-		}
-		  
+	            					 .checked_div(Decimal::from_str("2").unwrap()).unwrap();   
+ 
 		let avg_tx_fee = match estimate_anchor_protocol_tx_fee(tasks.clone(), "anchor_protocol_txs_claim_rewards","avg_fee_amount".to_owned(),true,0).await.as_ref() {
 			"--" => {
 				Decimal::from_str("250657").unwrap() // 0.25 UST 
@@ -393,46 +276,22 @@ pub async fn anchor_borrow_claim_rewards(tasks: Arc<RwLock<HashMap<String, Maybe
 			}
 		};
   
-	   match get_meta_data_maybe_or_await_task(&tasks,"gas_fees_uusd").await {
-            Ok(response_result) => { 
-                let gas_fees_uusd = Decimal::from_str(response_result.as_str()).unwrap();   
+        let gas_fees_uusd = decimal_or_return!(gas_price_to_string(tasks.clone(),10).await.as_ref());
 
-                match anchor_claim_rewards(wallet_seed_phrase.unsecure(),gas_fees_uusd, avg_tx_fee, max_gas_adjustment,max_tx_fee,only_estimate).await {
-		        	Ok(msg) => {
-		        		return msg;
-		        	},
-		        	Err(msg) => {
-		        		return msg.to_string();
-		        	}
-		        }
-            },
-            Err(err) => {
-            	return format!("Unexpected Error: {:?}", err);
-            }
+        match anchor_claim_rewards(wallet_seed_phrase.unsecure(),gas_fees_uusd, avg_tx_fee, max_gas_adjustment,max_tx_fee,only_estimate).await {
+        	Ok(msg) => {
+        		return msg;
+        	},
+        	Err(msg) => {
+        		return msg.to_string();
+        	}
         }
-    
 }
 pub async fn anchor_governance_stake_balance(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,  wallet_seed_phrase: &SecUtf8, only_estimate: bool) -> String {
-        let mut max_tx_fee = Decimal::from_str("5").unwrap();
-
-		match max_tx_fee_to_string(tasks.clone(), 4).await.as_ref() {
-			"--" => {
-			},
-			e => {
-				max_tx_fee = Decimal::from_str(e).unwrap();
-			}
-		};
-
-		let mut max_gas_adjustment = Decimal::from_str("1.67").unwrap();
+        
+        let max_tx_fee = decimal_or_return!(max_tx_fee_to_string(tasks.clone(), 4).await.as_ref());
+		let mut max_gas_adjustment = decimal_or_return!(max_gas_adjustment_to_string(tasks.clone(),10).await.as_ref());
 		
-		match get_meta_data_maybe_or_await_task(&tasks,"max_gas_adjustment").await {
-	        Ok(response_result) => { 
-	            max_gas_adjustment = Decimal::from_str(response_result.as_str()).unwrap();             
-	        },
-	        Err(_) => {
-        	}
-		}
-
 		match estimate_anchor_protocol_tx_fee(tasks.clone(), "anchor_protocol_txs_staking","avg_gas_adjustment".to_owned(),false,4).await.as_ref() {
 			"--" => {
 			},
@@ -444,16 +303,10 @@ pub async fn anchor_governance_stake_balance(tasks: Arc<RwLock<HashMap<String, M
 			}
 		};
 
-		match get_meta_data_maybe_or_await_task(&tasks,"gas_adjustment_preference").await {
-	        Ok(response_result) => { 
-	            let gas_adjustment_preference = Decimal::from_str(response_result.as_str()).unwrap();       
-	            max_gas_adjustment = max_gas_adjustment
+		let gas_adjustment_preference = decimal_or_return!(gas_adjustment_preference_to_string(tasks.clone(),10).await.as_ref());
+		max_gas_adjustment = max_gas_adjustment
 	            					 .checked_add(gas_adjustment_preference).unwrap()
-	            					 .checked_div(Decimal::from_str("2").unwrap()).unwrap();    
-	        },
-	        Err(_) => {
-        	}
-		}
+	            					 .checked_div(Decimal::from_str("2").unwrap()).unwrap();   
  
 		let avg_tx_fee = match estimate_anchor_protocol_tx_fee(tasks.clone(), "anchor_protocol_txs_staking","avg_fee_amount".to_owned(),true,0).await.as_ref() {
 			"--" => {
@@ -464,35 +317,16 @@ pub async fn anchor_governance_stake_balance(tasks: Arc<RwLock<HashMap<String, M
 			}
 		};
 
-
-		let mut _anc_balance = Decimal::from_str("0").unwrap();
-
-		match borrower_anc_deposited_to_string(tasks.clone(), true,0).await.as_ref() {
-			"--" => {
-				return "Could not get ANC balance: Likely no ANC available.".to_string();
-			},
-			e => {
-				_anc_balance = Decimal::from_str(e).unwrap()  
-			}
-		};
+		let anc_balance = decimal_or_return!(borrower_anc_deposited_to_string(tasks.clone(), true,0).await.as_ref());
   
-	    match get_meta_data_maybe_or_await_task(&tasks,"gas_fees_uusd").await {
-            Ok(response_result) => { 
-                let gas_fees_uusd = Decimal::from_str(response_result.as_str()).unwrap();   
- 
+		let gas_fees_uusd = decimal_or_return!(gas_price_to_string(tasks.clone(),10).await.as_ref());
 
-                match anchor_governance_stake(wallet_seed_phrase.unsecure(),_anc_balance, gas_fees_uusd, avg_tx_fee, max_gas_adjustment,max_tx_fee,only_estimate).await {
-		        	Ok(msg) => {
-		        		return msg;
-		        	},
-		        	Err(msg) => {
-		        		return msg.to_string();
-		        	}
-		        }
-            },
-            Err(err) => {
-            	return format!("Unexpected Error: {:?}", err);
-            }
-        }
-    
+	    match anchor_governance_stake(wallet_seed_phrase.unsecure(),anc_balance, gas_fees_uusd, avg_tx_fee, max_gas_adjustment,max_tx_fee,only_estimate).await {
+	    	Ok(msg) => {
+	    		return msg;
+	    	},
+	    	Err(msg) => {
+	    		return msg.to_string();
+	    	}
+	    }  
 } 

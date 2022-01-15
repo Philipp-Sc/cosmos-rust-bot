@@ -21,18 +21,35 @@ use chrono::{Utc};
 use std::sync::Arc; 
 use tokio::sync::RwLock; 
 
-// only allowed to interact with the model via interface!
-// this keeps the code readable.
+macro_rules! decimal_or_return {
+    ( $e:expr ) => {
+        match $e {
+            "--" => return String::from("--"),
+            e => Decimal::from_str(e).unwrap(),
+        }
+    }
+} 
 
+macro_rules! percent_decimal_or_return {
+    ( $e:expr ) => {
+        match $e {
+            "--" => return String::from("--"),
+            e => {
+                let mut chars = e.chars(); 
+                chars.next_back(); 
+                Decimal::from_str(chars.as_str()).unwrap().checked_div(Decimal::from_str("100").unwrap()).unwrap()
+            },
+        }
+    }
+} 
+ 
+// idially only allowed to interact with the model via interface! 
 
 fn duration_to_string(duration: chrono::Duration) -> String {
-
         let days = ((duration.num_seconds() / 60) / 60) / 24; 
         let hours = ((duration.num_seconds() / 60) / 60) % 24;
         let minutes = (duration.num_seconds() / 60) % 60;
-
         format!("{}d, {}h, {}m",days, hours, minutes)
-
 }
 
 pub fn timestamp_now_to_string() -> String {
@@ -41,39 +58,18 @@ pub fn timestamp_now_to_string() -> String {
     return now.to_string();              
 }
  
-
 pub async fn calculate_repay_plan(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, field: &str, digits_rounded_to: u32) -> String {
 
-    let mut ust_amount_liquid = match terra_balance_to_string(tasks.clone(),"uusd",false,digits_rounded_to).await.as_ref() {
-        "--" => {
-            Decimal::from_str("0").unwrap()
-        },
-        e => {
-            Decimal::from_str(e).unwrap()
-        }
-    };
-
-    match min_ust_balance_to_string(tasks.clone(),false,digits_rounded_to).await.as_ref() {
-        "--" => { 
-            return "--".to_string();
-        },
-        e => { 
-            ust_amount_liquid = ust_amount_liquid.checked_sub(Decimal::from_str(e).unwrap()).unwrap();             
-        }
-    }
-
+    let mut ust_amount_liquid = decimal_or_return!(terra_balance_to_string(tasks.clone(),"uusd",false,digits_rounded_to).await.as_ref());
+    
+    let min_ust_balance = decimal_or_return!(min_ust_balance_to_string(tasks.clone(),false,digits_rounded_to).await.as_ref());
+    ust_amount_liquid = ust_amount_liquid.checked_sub(min_ust_balance).unwrap();  
+ 
     if field == "ust_available_to_repay" {
         return ust_amount_liquid.to_string();
     }
 
-    let repay_amount = match calculate_repay_amount(tasks.clone(),false,digits_rounded_to).await.as_ref() {
-        "--" => {
-            return "--".to_string();
-        },
-        e => {
-            Decimal::from_str(e).unwrap()
-        }
-    };
+    let repay_amount = decimal_or_return!(calculate_repay_amount(tasks.clone(),false,digits_rounded_to).await.as_ref());
     
     let zero = Decimal::from_str("0").unwrap();
     let further_funds_needed = ust_amount_liquid.checked_sub(repay_amount).unwrap() < zero;
@@ -82,14 +78,7 @@ pub async fn calculate_repay_plan(tasks: Arc<RwLock<HashMap<String, MaybeOrPromi
         return further_funds_needed.to_string();
     }
     
-    let a_ust_deposit_liquid = match borrower_ust_deposited_to_string(tasks.clone(),false,digits_rounded_to).await.as_ref() {
-        "--" => {
-            Decimal::from_str("0").unwrap()
-        },
-        e => {
-            Decimal::from_str(e).unwrap()
-        }
-    };
+    let a_ust_deposit_liquid = decimal_or_return!(borrower_ust_deposited_to_string(tasks.clone(),false,digits_rounded_to).await.as_ref());
 
     if field == "available_in_deposit" {
         return a_ust_deposit_liquid.to_string();
@@ -138,26 +127,13 @@ pub async fn calculate_repay_plan(tasks: Arc<RwLock<HashMap<String, MaybeOrPromi
     if field == "to_repay" { 
         return to_repay.to_string();
     }  
-    let uusd_tax_cap = match uusd_tax_cap_to_string(tasks.clone(),10).await.as_ref() {
-            "--" => {
-                return "--".to_string();
-            },
-            e => {
-                Decimal::from_str(e).unwrap().checked_div(Decimal::from_str("1000000").unwrap()).unwrap()
-            }
-        };
+    let uusd_tax_cap = decimal_or_return!(uusd_tax_cap_to_string(tasks.clone(),false,10).await.as_ref());
+
     if field == "max_stability_tax" {
         return uusd_tax_cap.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();
     }
     if field == "stability_tax" {
-        let tax_rate = match tax_rate_to_string(tasks.clone(),10).await.as_ref() {
-            "--" => {
-                return "--".to_string();
-            },
-            e => {
-                Decimal::from_str(e).unwrap()
-            }
-        };
+        let tax_rate = decimal_or_return!(tax_rate_to_string(tasks.clone(),10).await.as_ref());
         
         let tx = to_repay.checked_mul(tax_rate).unwrap();
         if tx > uusd_tax_cap {
@@ -173,28 +149,11 @@ pub async fn calculate_repay_amount(tasks: Arc<RwLock<HashMap<String, MaybeOrPro
      * target_percent is where ltv will be at once repay is complete.
      */
 
-    let mut _target_percent = Decimal::from_str("0").unwrap(); 
-    match get_meta_data_maybe_or_await_task(&tasks,"target_percentage").await {
-                    Ok(response_result) => { 
-                        _target_percent = Decimal::from_str(response_result.as_str()).unwrap();           
-                    },
-                    Err(_) => {
-                        return "--".to_string();
-                    }
-                }
-
+    let target_percent = decimal_or_return!(target_percentage_to_string(tasks.clone(),10).await.as_ref());
     let zero =  Decimal::from_str("0").unwrap(); 
 
-    let mut _trigger_percentage =  Decimal::from_str("0.85").unwrap(); 
+    //let trigger_percentage = decimal_or_return!(trigger_percentage_to_string(tasks.clone(),10).await.as_ref());
 
-    match get_meta_data_maybe_or_await_task(&tasks,"trigger_percentage").await {
-                    Ok(response_result) => { 
-                        _trigger_percentage = Decimal::from_str(response_result.as_str()).unwrap();           
-                    },
-                    Err(_) => {
-                        return "--".to_string();
-                    }
-                }
 
 
     let mut _borrow_limit =  Decimal::from_str("0").unwrap(); 
@@ -208,7 +167,7 @@ pub async fn calculate_repay_amount(tasks: Arc<RwLock<HashMap<String, MaybeOrPro
         }
     }
 
-    let target_loan_amount = _borrow_limit.checked_mul(_target_percent).unwrap();
+    let target_loan_amount = _borrow_limit.checked_mul(target_percent).unwrap();
 
     let mut _loan_amount = Decimal::from_str("0").unwrap();
 
@@ -240,26 +199,13 @@ pub async fn calculate_repay_amount(tasks: Arc<RwLock<HashMap<String, MaybeOrPro
     }else {
         return "--".to_string();
     }
-
-    
-   
 }
 
 pub async fn check_anchor_loan_status(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String {
  
     let zero =  Decimal::from_str("0").unwrap(); 
 
-    let mut _trigger_percentage =  Decimal::from_str("0.85").unwrap(); 
-
-    match get_meta_data_maybe_or_await_task(&tasks,"trigger_percentage").await {
-                    Ok(response_result) => { 
-                        _trigger_percentage = Decimal::from_str(response_result.as_str()).unwrap();           
-                    },
-                    Err(_) => {
-                        return "--".to_string();
-                    }
-                }
-
+    let trigger_percentage = decimal_or_return!(trigger_percentage_to_string(tasks.clone(),10).await.as_ref());
 
     let mut _borrow_limit =  Decimal::from_str("0").unwrap(); 
 
@@ -289,7 +235,7 @@ pub async fn check_anchor_loan_status(tasks: Arc<RwLock<HashMap<String, MaybeOrP
 
     let current_percent = _loan_amount.checked_div(_borrow_limit).unwrap();
 
-    let left_to_trigger = _trigger_percentage.checked_sub(current_percent).unwrap();
+    let left_to_trigger = trigger_percentage.checked_sub(current_percent).unwrap();
 
     if left_to_trigger <= zero {
         return "repay due".to_string();
@@ -300,95 +246,29 @@ pub async fn check_anchor_loan_status(tasks: Arc<RwLock<HashMap<String, MaybeOrP
 
 }
 
-
 pub async fn estimate_anchor_protocol_next_claim_and_stake_tx(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, field_amount: &str, field: &str, digits_rounded_to: u32) -> String {
   
             let mut _collateral_value = Decimal::from_str("0").unwrap();  
-            let mut _borrower_rewards_in_ust = Decimal::from_str("0").unwrap();  
- 
-            match borrower_rewards_in_ust_to_string(tasks.clone(),  10).await.as_ref() {
-                "--" => {
-                    return "--".to_string();
-                },
-                e => {  
-                    _borrower_rewards_in_ust = Decimal::from_str(e).unwrap();
-                }
-            } 
+
+            let mut borrower_rewards_in_ust = decimal_or_return!(borrower_rewards_in_ust_to_string(tasks.clone(),  10).await.as_ref());
 
             let mut loan_amount = Decimal::from_str("0").unwrap();  
 
-            let mut _borrow_limit = Decimal::from_str("0").unwrap(); 
-
-            match borrow_limit_to_string(tasks.clone(), 10).await.as_ref() {
-                "--" => {
-                    return "--".to_string();
-                },
-                e => { 
-                    _borrow_limit = Decimal::from_str(e).unwrap();
-                    let max_ltv = Decimal::from_str("0.6").unwrap(); 
-                    _collateral_value = _borrow_limit.checked_div(max_ltv).unwrap(); 
-                }
-            }
+            let borrow_limit = decimal_or_return!(borrow_limit_to_string(tasks.clone(), 10).await.as_ref());
+            let max_ltv = Decimal::from_str("0.6").unwrap(); 
+            _collateral_value = borrow_limit.checked_div(max_ltv).unwrap(); 
+             
 
             if "loan_amount"==field_amount {
- 
-                match  borrower_loan_amount_to_string(tasks.clone(),  10).await.as_ref() {
-                    "--" => {
-                        return "--".to_string();
-                    },
-                    e => {  
-                        loan_amount = Decimal::from_str(e).unwrap();
-                    }
-                } 
+                loan_amount = decimal_or_return!(borrower_loan_amount_to_string(tasks.clone(), 10).await.as_ref()); 
             }else if "target_ltv"==field_amount {
-
-                match get_meta_data_maybe_or_await_task(&tasks,"trigger_percentage").await {
-                    Ok(response_result) => { 
-                        loan_amount = _borrow_limit.checked_mul(Decimal::from_str(response_result.as_str()).unwrap()).unwrap();             
-                    },
-                    Err(_) => {
-                        return "--".to_string();
-                    }
-                }
+                let trigger_percentage = decimal_or_return!(trigger_percentage_to_string(tasks.clone(),10).await.as_ref());
+                loan_amount = borrow_limit.checked_mul(trigger_percentage).unwrap();
             }
-            let mut _distribution_apr = Decimal::from_str("0").unwrap(); 
-        
-            match distribution_apr_to_string(tasks.clone(),  10).await.as_ref() {
-                "--" => {
-                    return "--".to_string();
-                },
-                e => { 
-                    // removing % symbol
-                    let mut chars = e.chars(); 
-                    chars.next_back(); 
-                    _distribution_apr = Decimal::from_str(chars.as_str()).unwrap().checked_div(Decimal::from_str("100").unwrap()).unwrap(); 
-                }
-            }
-
-            let mut _staking_apy = Decimal::from_str("0").unwrap(); 
-        
-            match staking_apy_to_string(tasks.clone(),  10).await.as_ref() {
-                "--" => {
-                    return "--".to_string();
-                },
-                e => { 
-                    // removing % symbol
-                    let mut chars = e.chars(); 
-                    chars.next_back(); 
-                    _staking_apy = Decimal::from_str(chars.as_str()).unwrap().checked_div(Decimal::from_str("100").unwrap()).unwrap(); 
-                }
-            }
-
-            let mut _transaction_fee = Decimal::from_str("0").unwrap(); 
-        
-            match estimate_anchor_protocol_tx_fee_claim_and_stake(tasks.clone(),  10).await.as_ref() {
-                "--" => {
-                    return "--".to_string();
-                },
-                e => {  
-                    _transaction_fee = Decimal::from_str(e).unwrap();
-                }
-            }
+            let distribution_apr = percent_decimal_or_return!(distribution_apr_to_string(tasks.clone(),  10).await.as_ref()); 
+            let staking_apy = percent_decimal_or_return!(staking_apy_to_string(tasks.clone(),  10).await.as_ref()); 
+            let transaction_fee = decimal_or_return!(estimate_anchor_protocol_tx_fee_claim_and_stake(tasks.clone(),  10).await.as_ref());
+            
             
             let mut _optimal_time_to_wait: Option<Decimal> = None; 
             let mut _optimal_anc_ust_value: Option<Decimal> = None;
@@ -396,12 +276,12 @@ pub async fn estimate_anchor_protocol_next_claim_and_stake_tx(tasks: Arc<RwLock<
   
             let one_year_equals_this_many_time_frames = Decimal::new(365*24,0);
            
-            let anc_dist_returns_per_timeframe = _distribution_apr.checked_div(one_year_equals_this_many_time_frames).unwrap();
+            let anc_dist_returns_per_timeframe = distribution_apr.checked_div(one_year_equals_this_many_time_frames).unwrap();
             let anc_dist_returns_per_time_frame_in_ust = loan_amount.checked_mul(anc_dist_returns_per_timeframe).unwrap(); 
             
-            let anc_staking_returns_per_timeframe = _staking_apy.checked_div(one_year_equals_this_many_time_frames).unwrap();
+            let anc_staking_returns_per_timeframe = staking_apy.checked_div(one_year_equals_this_many_time_frames).unwrap();
 
-            let claim_and_stake_gas_fee = Decimal::from_str("-1").unwrap().checked_mul(_transaction_fee).unwrap();
+            let claim_and_stake_gas_fee = Decimal::from_str("-1").unwrap().checked_mul(transaction_fee).unwrap();
             
             let mut max_value: Option<Decimal> = None;
             let mut max_index: Option<Decimal> = None;
@@ -444,7 +324,7 @@ pub async fn estimate_anchor_protocol_next_claim_and_stake_tx(tasks: Arc<RwLock<
             _total_returns_in_ust = value;
 
             let _optimal_time_to_wait = _optimal_time_to_wait.unwrap().checked_mul(Decimal::new(60*60,0));
-            let time_to_wait_already_passed = _borrower_rewards_in_ust
+            let time_to_wait_already_passed = borrower_rewards_in_ust
                                                 .checked_mul(Decimal::new(60*60,0)).unwrap()
                                                 .checked_div(anc_dist_returns_per_time_frame_in_ust);
 
@@ -498,19 +378,10 @@ pub async fn estimate_anchor_protocol_next_claim_and_stake_tx(tasks: Arc<RwLock<
 
 }
  
-
-
 pub async fn estimate_anchor_protocol_tx_fee_claim_and_stake(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
-  let tx_fee_claim_rewards = estimate_anchor_protocol_tx_fee(tasks.clone(), "anchor_protocol_txs_claim_rewards","fee_amount_adjusted".to_owned(),false,10).await;   
-  let tx_fee_stake_rewards = estimate_anchor_protocol_tx_fee(tasks.clone(), "anchor_protocol_txs_staking","fee_amount_adjusted".to_owned(),false,10).await;   
-
-  if tx_fee_claim_rewards.as_str() == "--" || tx_fee_stake_rewards.as_str() == "--" {
-    return "--".to_string();
-  }
-
-  let tx_fee_claim_rewards = Decimal::from_str(tx_fee_claim_rewards.as_str()).unwrap();
-  let tx_fee_stake_rewards = Decimal::from_str(tx_fee_stake_rewards.as_str()).unwrap();
-
+  let tx_fee_claim_rewards = decimal_or_return!(estimate_anchor_protocol_tx_fee(tasks.clone(), "anchor_protocol_txs_claim_rewards","fee_amount_adjusted".to_owned(),false,10).await.as_ref());   
+  let tx_fee_stake_rewards = decimal_or_return!(estimate_anchor_protocol_tx_fee(tasks.clone(), "anchor_protocol_txs_staking","fee_amount_adjusted".to_owned(),false,10).await.as_ref());   
+  
   return tx_fee_claim_rewards.checked_add(tx_fee_stake_rewards).unwrap()
                              .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
                              .to_string();
@@ -556,8 +427,6 @@ pub async fn estimate_anchor_protocol_tx_fee(tasks: Arc<RwLock<HashMap<String, M
             let mut avg_fee_amount_adjusted_without_stability_fee = Decimal::from_str("0").unwrap();
             // estimate_fee_amount = avg_gas_adjustment * avg_gas_used;
             for entry in result {
- 
-
                 let stability_tax = entry.amount.checked_mul(tax_rate).unwrap();
                 let mut fee_amount_without_stability_fee = Decimal::from_str("0").unwrap();
                 if stability_tax < tax_cap_uusd {
@@ -665,136 +534,42 @@ pub async fn estimate_anchor_protocol_tx_fee(tasks: Arc<RwLock<HashMap<String, M
         }
     }
 }
-
-
 pub async fn apy_on_collateral_by(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, amount_field: &str, apr_field: &str, digits_rounded_to: u32) -> String { 
-
-    let mut _collateral_value = Decimal::from_str("0").unwrap();  
-    let mut _borrow_limit = Decimal::from_str("0").unwrap(); 
-
-    match borrow_limit_to_string(tasks.clone(), 10).await.as_ref() {
-        "--" => {
-            return "--".to_string();
-        },
-        e => { 
-            _borrow_limit = Decimal::from_str(e).unwrap();
-            let max_ltv = Decimal::from_str("0.6").unwrap(); 
-            _collateral_value = _borrow_limit.checked_div(max_ltv).unwrap(); 
-        }
-    }
-
-    let mut _loan_amount = Decimal::from_str("0").unwrap();  
+ 
+    let borrow_limit = decimal_or_return!(borrow_limit_to_string(tasks.clone(), 10).await.as_ref());
+    let max_ltv = Decimal::from_str("0.6").unwrap(); 
+    
+    let collateral_value = borrow_limit.checked_div(max_ltv).unwrap(); 
+          
+    let mut loan_amount = Decimal::from_str("0").unwrap();  
 
     if amount_field == "loan_amount" {
-        match  borrower_loan_amount_to_string(tasks.clone(),  10).await.as_ref() {
-            "--" => {
-                return "--".to_string();
-            },
-            e => {  
-                _loan_amount = Decimal::from_str(e).unwrap();
-            }
-        }
+        loan_amount = decimal_or_return!(borrower_loan_amount_to_string(tasks.clone(), 10).await.as_ref()); 
+
     }else if amount_field == "deposit_amount" {
-        match borrower_ust_deposited_to_string(tasks.clone(),false, 10).await.as_ref() {
-            "--" => {
-                return "--".to_string();
-            }, 
-            e => { 
-                _loan_amount = Decimal::from_str(e).unwrap();             
-            }
-        }
+        loan_amount = decimal_or_return!(borrower_ust_deposited_to_string(tasks.clone(),false, 10).await.as_ref()); 
+
     }else if amount_field == "target_ltv" { 
-        match get_meta_data_maybe_or_await_task(&tasks,"trigger_percentage").await {
-            Ok(response_result) => { 
-                _loan_amount = _borrow_limit.checked_mul(Decimal::from_str(response_result.as_str()).unwrap()).unwrap();             
-            },
-            Err(_) => {
-                return "--".to_string();
-            }
-        }
+        loan_amount = decimal_or_return!(trigger_percentage_to_string(tasks.clone(),10).await.as_ref());
     }
 
     let mut apr = Decimal::from_str("0").unwrap();
 
     if "net_apr" == apr_field { 
-
-        let mut _net_apr = Decimal::from_str("0").unwrap(); 
-        
-        match net_apr_to_string(tasks.clone(),  10).await.as_ref() {
-            "--" => {
-                return "--".to_string();
-            },
-            e => { 
-                // removing % symbol
-                let mut chars = e.chars(); 
-                chars.next_back(); 
-                _net_apr = Decimal::from_str(chars.as_str()).unwrap(); 
-            }
-        }
-
-        let mut _earn_apr = Decimal::from_str("0").unwrap(); 
-        
-        match earn_apr_to_string(tasks.clone(),  10).await.as_ref() {
-            "--" => {
-                return "--".to_string();
-            },
-            e => { 
-                // removing % symbol
-                let mut chars = e.chars(); 
-                chars.next_back(); 
-                _earn_apr = Decimal::from_str(chars.as_str()).unwrap(); 
-            }
-        }
-        apr = _net_apr.checked_add(_earn_apr).unwrap();
-    }else if "earn_apr" == apr_field {
-        let mut _earn_apr = Decimal::from_str("0").unwrap(); 
-        
-        match earn_apr_to_string(tasks.clone(),  10).await.as_ref() {
-            "--" => {
-                return "--".to_string();
-            },
-            e => { 
-                // removing % symbol
-                let mut chars = e.chars(); 
-                chars.next_back(); 
-                _earn_apr = Decimal::from_str(chars.as_str()).unwrap(); 
-            }
-        }
-        apr = _earn_apr;
+        let net_apr = percent_decimal_or_return!(net_apr_to_string(tasks.clone(),  10).await.as_ref()); 
+        let earn_apr = percent_decimal_or_return!(earn_apr_to_string(tasks.clone(),  10).await.as_ref()); 
+        apr = net_apr.checked_add(earn_apr).unwrap();
+    }else if "earn_apr" == apr_field { 
+        apr = percent_decimal_or_return!(earn_apr_to_string(tasks.clone(),  10).await.as_ref());
     }else if "borrow_apr"== apr_field {
-        let mut _borrow_apr = Decimal::from_str("0").unwrap(); 
-        
-        match borrow_apr_to_string(tasks.clone(),  10).await.as_ref() {
-            "--" => {
-                return "--".to_string();
-            },
-            e => { 
-                // removing % symbol
-                let mut chars = e.chars(); 
-                chars.next_back(); 
-                _borrow_apr = Decimal::from_str(chars.as_str()).unwrap(); 
-            }
-        }
-        apr = _borrow_apr;
+        apr = percent_decimal_or_return!(borrow_apr_to_string(tasks.clone(),  10).await.as_ref());
     }else if "distribution_apr" == apr_field {
-        let mut _distribution_apr = Decimal::from_str("0").unwrap(); 
-        
-        match distribution_apr_to_string(tasks.clone(),  10).await.as_ref() {
-            "--" => {
-                return "--".to_string();
-            },
-            e => { 
-                // removing % symbol
-                let mut chars = e.chars(); 
-                chars.next_back(); 
-                _distribution_apr = Decimal::from_str(chars.as_str()).unwrap(); 
-            }
-        }
-        apr = _distribution_apr;
+        apr = percent_decimal_or_return!(distribution_apr_to_string(tasks.clone(),  10).await.as_ref());
     }
 
-
-    match apr.checked_mul(_loan_amount).unwrap().checked_div(_collateral_value) {
+    match apr
+            .checked_mul(Decimal::from_str("100").unwrap()).unwrap()
+            .checked_mul(loan_amount).unwrap().checked_div(collateral_value) {
         None => { 
             return "--".to_string();
         },
@@ -866,13 +641,8 @@ pub async fn anchor_claim_and_stake_transaction_gas_fees_ratio_to_string(tasks: 
 
     _pending_rewards = _pending_rewards.checked_mul(_exchange_rate).unwrap();
 
-    let anchor_protocol_tx_fee = estimate_anchor_protocol_tx_fee_claim_and_stake(tasks.clone(),  10).await;
 
-    if anchor_protocol_tx_fee.as_str() == "--" {
-        return "--".to_string();
-    }
-
-    let anchor_protocol_tx_fee = Decimal::from_str(anchor_protocol_tx_fee.as_str()).unwrap();             
+    let anchor_protocol_tx_fee = decimal_or_return!(estimate_anchor_protocol_tx_fee_claim_and_stake(tasks.clone(),  10).await.as_ref());    
       
     match anchor_protocol_tx_fee.checked_div(_pending_rewards){
         None => {
@@ -1011,8 +781,6 @@ pub async fn borrower_ltv_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPro
 
 }
 
-
-
 pub async fn borrower_ust_deposited_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, as_micro: bool, digits_rounded_to: u32) -> String { 
     let mut _balance = Decimal::from_str("0").unwrap();
     match get_data_maybe_or_await_task(&tasks,"balance").await {
@@ -1122,8 +890,6 @@ pub async fn borrow_apr_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromi
             }
         }      
 }
-
-
 pub async fn anything_to_err(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: &str) -> String { 
      
         match get_data_maybe_or_meta_data_maybe(&tasks,key).await {
@@ -1135,8 +901,6 @@ pub async fn anything_to_err(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>
             }
         } 
 }
-
-
 pub async fn net_apr_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
         // utilisationRatio = stablecoinsLent / stablecoinsDeposited
         // borrowRate = utilisationRatio * interestMultiplier + baseRate
@@ -1302,43 +1066,16 @@ pub async fn utilization_ratio_to_string(tasks: Arc<RwLock<HashMap<String, Maybe
 
 }
 
-
 pub async fn estimate_anchor_protocol_auto_repay_tx_fee(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
      
-
     // does include gas_adjustment
-    let mut _fee_to_redeem_stable = Decimal::from_str("0").unwrap();
-    match estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_redeem_stable","fee_amount_adjusted".to_owned(),false,10).await.as_ref() {
-            "--" => {
-                return "--".to_string();
-            },
-            e => { 
-                 _fee_to_redeem_stable = Decimal::from_str(e).unwrap(); 
-            }
-    }
+    let mut fee_to_redeem_stable = decimal_or_return!(estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_redeem_stable","fee_amount_adjusted".to_owned(),false,10).await.as_ref());
     // does include gas_adjustment
-    let mut _anchor_protocol_txs_repay_stable = Decimal::from_str("0").unwrap();
-    match estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_repay_stable","avg_fee_amount_adjusted_without_stability_fee".to_owned(),false,10).await.as_ref() {
-            "--" => {
-                return "--".to_string();
-            },
-            e => { 
-                 _anchor_protocol_txs_repay_stable = Decimal::from_str(e).unwrap(); 
-            }
-    }
+    let mut anchor_protocol_txs_repay_stable = decimal_or_return!(estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_repay_stable","avg_fee_amount_adjusted_without_stability_fee".to_owned(),false,10).await.as_ref());
     // min(to_repay * tax_rate , tax_cap)
-    let mut _stability_tax = Decimal::from_str("0").unwrap();
-    match calculate_repay_plan(tasks.clone(),"stability_tax",10).await.as_ref() {
-            "--" => {
-                return "--".to_string();
-            },
-            e => { 
-                 _stability_tax = Decimal::from_str(e).unwrap(); 
-            }
-    }
+    let mut stability_tax = decimal_or_return!(calculate_repay_plan(tasks.clone(),"stability_tax",10).await.as_ref());
 
-    return _fee_to_redeem_stable.checked_add(_anchor_protocol_txs_repay_stable).unwrap()
-                                .checked_add(_stability_tax).unwrap()
+    return fee_to_redeem_stable.checked_add(anchor_protocol_txs_repay_stable).unwrap()
+                                .checked_add(stability_tax).unwrap()
                                 .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero).to_string();
-
 }

@@ -27,15 +27,22 @@ pub async fn tax_rate_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise
     }
 }
 
-pub async fn uusd_tax_cap_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
+pub async fn uusd_tax_cap_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,as_micro:bool, digits_rounded_to: u32) -> String { 
     match get_data_maybe_or_await_task(&tasks,"tax_caps").await {
         Ok(response_result) => { 
             let vec_tax_caps = &response_result.as_tax_caps().unwrap().result;
             for tax_cap in vec_tax_caps {
                 if tax_cap.denom == "uusd".to_string() {
-                    return Decimal::from_str(tax_cap.tax_cap.as_str()).unwrap()
-                    .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
-                    .to_string();     
+                    if as_micro {
+                        return Decimal::from_str(tax_cap.tax_cap.as_str()).unwrap()
+                        .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
+                        .to_string();     
+                    }else {
+                        return Decimal::from_str(tax_cap.tax_cap.as_str()).unwrap()
+                        .checked_div(Decimal::from_str("1000000").unwrap()).unwrap()  
+                        .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
+                        .to_string();    
+                    }
                 }
             }                   
         },
@@ -56,6 +63,60 @@ pub async fn min_ust_balance_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOr
                     .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
                     .to_string();  
             }
+            return Decimal::from_str(response_result.as_str()).unwrap()
+                    .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
+                    .to_string();             
+        },
+        Err(_) => {
+            return "--".to_string();
+        }
+    }
+}
+
+
+pub async fn gas_adjustment_preference_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
+    match get_meta_data_maybe_or_await_task(&tasks,"gas_adjustment_preference").await {
+        Ok(response_result) => { 
+            return Decimal::from_str(response_result.as_str()).unwrap()
+                    .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
+                    .to_string();             
+        },
+        Err(_) => {
+            return "--".to_string();
+        }
+    }
+}
+
+pub async fn max_gas_adjustment_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
+    match get_meta_data_maybe_or_await_task(&tasks,"max_gas_adjustment").await {
+        Ok(response_result) => { 
+            return Decimal::from_str(response_result.as_str()).unwrap()
+                    .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
+                    .to_string();             
+        },
+        Err(_) => {
+            return "--".to_string();
+        }
+    }
+}
+
+pub async fn target_percentage_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
+    match get_meta_data_maybe_or_await_task(&tasks,"target_percentage").await {
+        Ok(response_result) => { 
+            return Decimal::from_str(response_result.as_str()).unwrap()
+                    .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
+                    .to_string();             
+        },
+        Err(_) => {
+            return "--".to_string();
+        }
+    }
+}
+
+
+pub async fn trigger_percentage_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
+    match get_meta_data_maybe_or_await_task(&tasks,"trigger_percentage").await {
+        Ok(response_result) => { 
             return Decimal::from_str(response_result.as_str()).unwrap()
                     .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
                     .to_string();             
