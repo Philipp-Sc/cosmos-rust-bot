@@ -152,8 +152,8 @@ async fn main() -> anyhow::Result<()> {
         /* Load user settings */
 
         let user_settings: UserSettings = UserSettings {
-            trigger_percentage: Decimal::from_str("0.5").unwrap(),  // 1 -> 60%
-            target_percentage: Decimal::from_str("0.4").unwrap(),  // 1 -> 60%
+            trigger_percentage: Decimal::from_str("0.9").unwrap(), // 0.7 -> 42%, 0.8 -> 48%, 0.9 -> 54%, 1 -> 60%
+            target_percentage: Decimal::from_str("0.72").unwrap(),  // 0.7 -> 42%, 0.8 -> 48%, 0.9 -> 54%, 1 -> 60%
             max_tx_fee: Decimal::from_str("5").unwrap(),
             max_gas_adjustment: Decimal::from_str("1.67").unwrap(),
             gas_adjustment_preference: Decimal::from_str("1.2").unwrap(),
@@ -522,76 +522,67 @@ pub async fn anchor_account_auto_repay(tasks: &Arc<RwLock<HashMap<String, MaybeO
         return;
     }
     let repay_status = repay_status.unwrap();
-    add_string_to_display(new_display,*offset,format!("{}{}","   [Auto Repay]    left to trigger:                 ".truecolor(75,219,75), repay_status.yellow())).await.ok(); 
+    add_string_to_display(new_display,*offset,format!("{}{}","   [Auto Repay]                left to trigger:                 ".truecolor(75,219,75), repay_status.yellow())).await.ok(); 
     *offset += 1;
 
     let repay_amount = calculate_repay_amount(tasks.clone(),false,2).await; 
-    add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay]    repay amount:                    ".truecolor(75,219,75), format!("{} UST",repay_amount).yellow())).await.ok(); 
+    add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay]                to repay:                        ".truecolor(75,219,75), format!("{} UST",repay_amount).yellow())).await.ok(); 
     *offset += 1; 
-
-
+/*
     let available_to_repay = min_ust_balance_to_string(tasks.clone(),false,2).await;
-    add_string_to_display(new_display,*offset,format!("{}{}","\n\n\n   [Auto Repay]    min. allowed balance:            ".truecolor(75,219,75), format!("{} UST",available_to_repay).yellow())).await.ok(); 
+    add_string_to_display(new_display,*offset,format!("{}{}","\n\n\n   [Auto Repay UST]                account limit:                   ".truecolor(75,219,75), format!("{} UST",available_to_repay).yellow())).await.ok(); 
     *offset += 1;
  
     let available_to_repay = calculate_repay_plan(tasks.clone(),"ust_available_to_repay",2).await;
-    add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay]    liquid UST:                      ".truecolor(75,219,75), format!("{} UST",available_to_repay).yellow())).await.ok(); 
+    add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay UST]                available UST:                   ".truecolor(75,219,75), format!("{} UST",available_to_repay).yellow())).await.ok(); 
     *offset += 1;
-  
-    let more_funds_required = calculate_repay_plan(tasks.clone(),"more_funds_required",2).await;
-    add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay]    additional funds required:       ".truecolor(75,219,75), more_funds_required.yellow())).await.ok(); 
-    *offset += 1;
-    
-    let available_in_deposit = calculate_repay_plan(tasks.clone(),"available_in_deposit",2).await;
-    add_string_to_display(new_display,*offset,format!("{}{}","\n\n   [Auto Repay]    liquid aUST value:               ".truecolor(75,219,75), format!("{} UST",available_in_deposit).yellow())).await.ok(); 
-    *offset += 1;
-
-    let sufficient_funds_to_repay = calculate_repay_plan(tasks.clone(),"sufficient_funds_to_repay",2).await;
-    add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay]    sufficient funds to repay:       ".truecolor(75,219,75), sufficient_funds_to_repay.yellow())).await.ok(); 
-    *offset += 1;
-    
+*/
     let to_withdraw_from_account = calculate_repay_plan(tasks.clone(),"to_withdraw_from_account",2).await;
-    
-    add_string_to_display(new_display,*offset,format!("{}{}","\n\n   [Auto Repay]    to withdraw from account:        ".truecolor(75,219,75), format!("{} UST",to_withdraw_from_account).yellow())).await.ok(); 
-    *offset += 1;
-    let to_withdraw_from_deposit = calculate_repay_plan(tasks.clone(),"to_withdraw_from_deposit",2).await;
-    add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay]    to withdraw from deposit:        ".truecolor(75,219,75), format!("{} UST",to_withdraw_from_deposit).yellow())).await.ok(); 
+    add_string_to_display(new_display,*offset,format!("{}{}","\n\n   [Auto Repay UST]            amount:                          ".truecolor(75,219,75), format!("{} UST",to_withdraw_from_account).yellow())).await.ok(); 
     *offset += 1;
 
-    let to_repay = calculate_repay_plan(tasks.clone(),"to_repay",2).await;
-    add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay]    available to repay:              ".truecolor(75,219,75), format!("{} UST",to_repay).yellow())).await.ok(); 
+/*
+    let available_in_deposit = calculate_repay_plan(tasks.clone(),"available_in_deposit",2).await;
+    add_string_to_display(new_display,*offset,format!("{}{}","\n\n   [Auto Repay Redeem]         max amount:                      ".truecolor(75,219,75), format!("{} UST",available_in_deposit).yellow())).await.ok(); 
     *offset += 1;
- 
-    // does include gas_adjustment
+*/
+    let to_withdraw_from_deposit = calculate_repay_plan(tasks.clone(),"to_withdraw_from_deposit",2).await;
+    add_string_to_display(new_display,*offset,format!("{}{}","\n\n   [Auto Repay Redeem]         amount:                          ".truecolor(75,219,75), format!("{} UST",to_withdraw_from_deposit).yellow())).await.ok(); 
+    *offset += 1;
+
+    // does include gas_adjustment 
     let fee_to_redeem_stable = estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_redeem_stable","fee_amount_adjusted".to_owned(),false,2).await;
-    add_string_to_display(new_display,*offset,format!("{}{}","\n\n   [Auto Repay]    est. fee redeem stable:          ".truecolor(75,219,75), format!("{} UST",fee_to_redeem_stable).yellow())).await.ok(); 
+    add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay Redeem]         est. fee:                        ".truecolor(75,219,75), format!("{} UST",fee_to_redeem_stable).yellow())).await.ok(); 
     *offset += 1;
+
+
  
+    let to_repay = calculate_repay_plan(tasks.clone(),"to_repay",2).await;
+    add_string_to_display(new_display,*offset,format!("{}{}","\n\n   [Auto Repay]                repay:                           ".truecolor(75,219,75), format!("{} UST",to_repay).yellow())).await.ok(); 
+    *offset += 1;
+
     // does include gas_adjustment
     let anchor_protocol_txs_deposit_stable = estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_repay_stable","avg_fee_amount_adjusted_without_stability_fee".to_owned(),false,2).await;
-    add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay]    est. fee repay stable:           ".truecolor(75,219,75), format!("{} UST",anchor_protocol_txs_deposit_stable).yellow())).await.ok(); 
+    add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay]                est. fee:                        ".truecolor(75,219,75), format!("{} UST",anchor_protocol_txs_deposit_stable).yellow())).await.ok(); 
     *offset += 1;
 
     // min(to_repay * tax_rate , tax_cap)
     let anchor_protocol_txs_deposit_stable = calculate_repay_plan(tasks.clone(),"stability_tax",2).await;
-    add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay]    est. stability fee:              ".truecolor(75,219,75), format!("{} UST",anchor_protocol_txs_deposit_stable).yellow())).await.ok(); 
+    add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay]                est. stability fee:              ".truecolor(75,219,75), format!("{} UST",anchor_protocol_txs_deposit_stable).yellow())).await.ok(); 
     *offset += 1;
 
-    
+    let total_amount = calculate_repay_plan(tasks.clone(),"total_amount",2).await;
+    add_string_to_display(new_display,*offset,format!("{}{}","\n\n   [Auto Repay Transaction]    amount:                          ".truecolor(75,219,75), format!("{} UST",total_amount).yellow())).await.ok(); 
+    *offset += 1;
     // total fee
     let anchor_protocol_txs_deposit_stable = estimate_anchor_protocol_auto_repay_tx_fee(tasks.clone(),2).await;
-    add_string_to_display(new_display,*offset,format!("{}{}","\n\n   [Auto Repay]    est. transaction fee:            ".truecolor(75,219,75), format!("{} UST",anchor_protocol_txs_deposit_stable).yellow())).await.ok(); 
+    add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay Transaction]    est. fee:                        ".truecolor(75,219,75), format!("{} UST",anchor_protocol_txs_deposit_stable).yellow())).await.ok(); 
     *offset += 1;
-
-    // TODO: select max of the two estimates.
-    // substract est. tx fee from repay amount. 
-    add_string_to_display(new_display,*offset,format!("{}","\n\n   [Auto Repay]    substracting est. transaction fee from repay amount to maintain minimum allowed balance".truecolor(75,219,75))).await.ok(); 
-    *offset += 1;
-
-
+ 
     let anchor_reedem_stable_tx = anchor_reedem_stable(tasks.clone(), wallet_seed_phrase,true).await;
-    add_string_to_display(new_display,*offset,format!("{}{}","\n\n   [Auto Repay]    est. transaction fee (LCD):      ".truecolor(75,219,75), format!("{}",anchor_reedem_stable_tx).yellow())).await.ok(); 
+    add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay Transaction]    est. fee (LCD):                  ".truecolor(75,219,75), format!("{}",anchor_reedem_stable_tx).yellow())).await.ok(); 
     *offset += 1;
+
 
 
 /* for auto borrow 

@@ -3,7 +3,6 @@
 pub mod view;
 use secstr::*;
 
-
 use rust_decimal::Decimal;
 use core::str::FromStr;
 

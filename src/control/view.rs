@@ -60,87 +60,156 @@ pub fn timestamp_now_to_string() -> String {
  
 pub async fn calculate_repay_plan(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, field: &str, digits_rounded_to: u32) -> String {
 
-    let mut ust_amount_liquid = decimal_or_return!(terra_balance_to_string(tasks.clone(),"uusd",false,digits_rounded_to).await.as_ref());
+    let mut ust_amount_liquid = decimal_or_return!(terra_balance_to_string(tasks.clone(),"uusd",false,10).await.as_ref());
     
-    let min_ust_balance = decimal_or_return!(min_ust_balance_to_string(tasks.clone(),false,digits_rounded_to).await.as_ref());
+    let min_ust_balance = decimal_or_return!(min_ust_balance_to_string(tasks.clone(),false,10).await.as_ref());
     ust_amount_liquid = ust_amount_liquid.checked_sub(min_ust_balance).unwrap();  
  
     if field == "ust_available_to_repay" {
-        return ust_amount_liquid.to_string();
+        return ust_amount_liquid.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();;
     }
 
-    let repay_amount = decimal_or_return!(calculate_repay_amount(tasks.clone(),false,digits_rounded_to).await.as_ref());
+    let repay_amount = decimal_or_return!(calculate_repay_amount(tasks.clone(),false,10).await.as_ref());
     
     let zero = Decimal::from_str("0").unwrap();
     let further_funds_needed = ust_amount_liquid.checked_sub(repay_amount).unwrap() < zero;
 
     if field == "more_funds_required" {
-        return further_funds_needed.to_string();
+        return further_funds_needed.to_string();;
     }
     
-    let a_ust_deposit_liquid = decimal_or_return!(borrower_ust_deposited_to_string(tasks.clone(),false,digits_rounded_to).await.as_ref());
+    let a_ust_deposit_liquid = decimal_or_return!(borrower_ust_deposited_to_string(tasks.clone(),false,10).await.as_ref());
 
     if field == "available_in_deposit" {
-        return a_ust_deposit_liquid.to_string();
+        return a_ust_deposit_liquid.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();;
     }
 
     let sufficient_funds_available = a_ust_deposit_liquid.checked_add(ust_amount_liquid).unwrap().checked_sub(repay_amount).unwrap() >= zero;
 
     if field == "sufficient_funds_to_repay" {
-        return sufficient_funds_available.to_string();
+        return sufficient_funds_available.to_string();;
     } 
 
     let mut to_withdraw_from_account = Decimal::from_str("0").unwrap();
     let mut to_withdraw_from_deposit = Decimal::from_str("0").unwrap();
 
+    let fee_to_redeem_stable = decimal_or_return!(estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_redeem_stable","fee_amount_adjusted".to_owned(),false,10).await.as_ref());
+   
+        // if enough funds available the fee_to_redeem_stable will be compensated by withdrawing more.
+        // else the fee_to_redeem_stable needs to be paid by the resulting amount, less UST will repay the loan.
+
+    let mut reduce_repay_amount_by_fee = false;
+    let mut remove_fee_from_to_repay = false;
+
+    let mut ust_amount_leftover = Decimal::from_str("0").unwrap();
+    let mut a_ust_amount_leftover = Decimal::from_str("0").unwrap();
+
     if ust_amount_liquid >= repay_amount || (ust_amount_liquid > zero && a_ust_deposit_liquid <= zero) { 
 
-        // case only use UST balance
-        // either because UST balance is sufficient or because there are still UST available but no aUST to withdraw.
+        // case 1 only need to use UST balance.
+        // case 2 only can use UST balance. 
         to_withdraw_from_account = repay_amount;  
 
-    }else if a_ust_deposit_liquid > zero  { 
-        // case use both UST balance and aUST withdrawal
-        // there are still UST available and aUST to withdraw.
-
-        // also matches case only use aUST withdrawal 
-        if ust_amount_liquid > zero {
-            to_withdraw_from_account = ust_amount_liquid;  
+        let leftover = ust_amount_liquid.checked_sub(repay_amount).unwrap();
+        if ust_amount_leftover < leftover {
+            ust_amount_leftover = leftover;
         }
 
-        let a_ust_liquidity_needed = repay_amount.checked_sub(ust_amount_liquid).unwrap();
-        if a_ust_liquidity_needed <= a_ust_deposit_liquid {
-            to_withdraw_from_deposit = a_ust_liquidity_needed;
-        }else{ 
+    }else if a_ust_deposit_liquid > zero  { 
+        // case 3 need to use aUST deposit in addition to any UST balance.
+        if ust_amount_liquid > zero {
+            // use all available UST
+            to_withdraw_from_account = ust_amount_liquid;  
+        }
+        // else case 4 only use aUST withdrawal
+
+        let a_ust_demand = repay_amount
+                .checked_sub(ust_amount_liquid).unwrap()     // case 3 or 4
+                .checked_add(fee_to_redeem_stable).unwrap(); // include fee to be able to use aUST
+
+        if a_ust_demand <= a_ust_deposit_liquid {           // possibly still have aUST leftover
+            to_withdraw_from_deposit = a_ust_demand;
+            a_ust_amount_leftover = a_ust_deposit_liquid.checked_sub(a_ust_demand).unwrap();
+            remove_fee_from_to_repay = true;  /* fee is not repaid, not part of to_repay */
+        }else{                                              // not enough aUST available
             to_withdraw_from_deposit = a_ust_deposit_liquid; 
+            reduce_repay_amount_by_fee = true;              
+            // fee_to_redeem_stable could not added on top. 
+            // the fee_to_redeem_stable needs to paid by the resulting amount, less UST will repay the loan. 
+            // roughly maintaining the account balance at the set limit.
+       
         }
     }
 
+    let mut to_repay = to_withdraw_from_account.checked_add(to_withdraw_from_deposit).unwrap();
+    
+    if remove_fee_from_to_repay || reduce_repay_amount_by_fee {
+        to_repay = to_repay.checked_sub(fee_to_redeem_stable).unwrap();
+    } 
+
+    let uusd_tax_cap = decimal_or_return!(uusd_tax_cap_to_string(tasks.clone(),false,10).await.as_ref());
+    let tax_rate = decimal_or_return!(tax_rate_to_string(tasks.clone(),10).await.as_ref());
+        
+    let mut stability_tax = to_repay.checked_mul(tax_rate).unwrap();
+    if stability_tax > uusd_tax_cap {
+        stability_tax = uusd_tax_cap;
+    }
+  
+    let anchor_protocol_txs_repay_stable = decimal_or_return!(estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_repay_stable","avg_fee_amount_adjusted_without_stability_fee".to_owned(),false,10).await.as_ref());
+    
+    let mut fee_to_repay_stable = anchor_protocol_txs_repay_stable.checked_add(stability_tax).unwrap();
+
+    if ust_amount_leftover > zero {
+        if fee_to_repay_stable <= ust_amount_leftover {
+            to_withdraw_from_account = to_withdraw_from_account.checked_add(fee_to_repay_stable).unwrap();
+            fee_to_repay_stable = Decimal::from_str("0").unwrap();
+            ust_amount_leftover = ust_amount_leftover.checked_sub(fee_to_repay_stable).unwrap();
+        }else {
+            to_withdraw_from_account = to_withdraw_from_account.checked_add(ust_amount_leftover).unwrap();
+            fee_to_repay_stable = fee_to_repay_stable.checked_sub(ust_amount_leftover).unwrap();
+            ust_amount_leftover = Decimal::from_str("0").unwrap();
+        }
+    }
+    if a_ust_amount_leftover > zero && fee_to_repay_stable > zero {
+        if fee_to_repay_stable <= a_ust_amount_leftover {
+            to_withdraw_from_deposit = to_withdraw_from_deposit.checked_add(fee_to_repay_stable).unwrap();
+            fee_to_repay_stable = Decimal::from_str("0").unwrap();
+            a_ust_amount_leftover = a_ust_amount_leftover.checked_sub(fee_to_repay_stable).unwrap();
+        }else{
+            to_withdraw_from_deposit = to_withdraw_from_deposit.checked_add(a_ust_amount_leftover).unwrap();
+            fee_to_repay_stable = fee_to_repay_stable.checked_sub(a_ust_amount_leftover).unwrap();
+            a_ust_amount_leftover = Decimal::from_str("0").unwrap();
+        }
+    }
+    if fee_to_repay_stable > zero {  // analog to reduce_repay_amount_by_fee
+        // fee_to_repay_stable could not added on top. 
+        // the fee_to_repay_stable needs to paid by the resulting amount, less UST will repay the loan. 
+        // roughly maintaining the account balance at the set limit.
+        to_repay = to_repay.checked_sub(fee_to_repay_stable).unwrap();
+    }
+
+    let total_amount = to_withdraw_from_account.checked_add(to_withdraw_from_deposit).unwrap();
+    
+
+    if field == "total_amount" { 
+        return total_amount.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();
+    }  
     if field == "to_withdraw_from_account" { 
-        return to_withdraw_from_account.to_string();
+        return to_withdraw_from_account.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();
     }  
     if field == "to_withdraw_from_deposit" { 
-        return to_withdraw_from_deposit.to_string();
+        return to_withdraw_from_deposit.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();
     } 
-    let to_repay = to_withdraw_from_account.checked_add(to_withdraw_from_deposit).unwrap();
-
     if field == "to_repay" { 
-        return to_repay.to_string();
+        return to_repay.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();
     }  
-    let uusd_tax_cap = decimal_or_return!(uusd_tax_cap_to_string(tasks.clone(),false,10).await.as_ref());
-
     if field == "max_stability_tax" {
         return uusd_tax_cap.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();
     }
     if field == "stability_tax" {
-        let tax_rate = decimal_or_return!(tax_rate_to_string(tasks.clone(),10).await.as_ref());
-        
-        let tx = to_repay.checked_mul(tax_rate).unwrap();
-        if tx > uusd_tax_cap {
-            return uusd_tax_cap.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();
-        }
-        return tx.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();
+        return stability_tax.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();
     }
+
     return "--".to_string();
 }
 
