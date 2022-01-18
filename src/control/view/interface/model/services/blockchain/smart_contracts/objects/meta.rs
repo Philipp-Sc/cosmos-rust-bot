@@ -16,6 +16,7 @@ use terra_rust_api::messages::Message;
 
 use secp256k1::Secp256k1;
 use rust_decimal::Decimal; 
+use anyhow::anyhow;
 
 fn anchor_repay_stable_msg(wallet_acc_address: &str, coin_amount: Decimal) -> anyhow::Result<Message> {
 		let contract = get_contract("anchorprotocol","mmMarket"); 
@@ -72,7 +73,7 @@ fn anchor_governance_stake_msg(wallet_acc_address: &str, coin_amount: Decimal) -
 
 
 
-pub async fn anchor_redeem_and_repay_stable_tx(mnemonics: &str, coin_amount_redeem: Decimal,coin_amount_repay: Decimal, gas_price_uusd: Decimal, max_tx_fee: Decimal, gas_adjustment: Decimal, max_tx_fee_setting: Decimal, only_estimate: bool) -> anyhow::Result<String>{
+pub async fn anchor_redeem_and_repay_stable_tx(mnemonics: &str, coin_amount_redeem: Decimal,coin_amount_repay: Decimal, gas_price_uusd: Decimal, max_tx_fee: Decimal, gas_adjustment: Decimal, only_estimate: bool) -> anyhow::Result<String>{
 
 		let secp = Secp256k1::new();
         let from_key = PrivateKey::from_words(&secp,mnemonics,0,0)?;
@@ -85,12 +86,17 @@ pub async fn anchor_redeem_and_repay_stable_tx(mnemonics: &str, coin_amount_rede
 
         let res = estimate_messages(&from_account,messages,gas_price_uusd,gas_adjustment).await?;
 
-    	estimate_to_gas_opts(res,only_estimate,max_tx_fee,max_tx_fee_setting)?;
+    	match estimate_to_gas_opts(res,only_estimate,max_tx_fee) {
+            Err(err) => {
+                return Err(anyhow!(format!("{:?} (gas_adjustment: {})",err,gas_adjustment)));
+            }
+            Ok(_) => {}
+        };
     	Ok("".to_string())
 
 }
 
-pub async fn anchor_reedem_stable_tx(mnemonics: &str, coin_amount_redeem: Decimal, gas_price_uusd: Decimal, max_tx_fee: Decimal, gas_adjustment: Decimal, max_tx_fee_setting: Decimal, only_estimate: bool) -> anyhow::Result<String>{
+pub async fn anchor_reedem_stable_tx(mnemonics: &str, coin_amount_redeem: Decimal, gas_price_uusd: Decimal, max_tx_fee: Decimal, gas_adjustment: Decimal, only_estimate: bool) -> anyhow::Result<String>{
 		let secp = Secp256k1::new();
         let from_key = PrivateKey::from_words(&secp,mnemonics,0,0)?;
         let from_public_key = from_key.public_key(&secp);
@@ -101,11 +107,38 @@ pub async fn anchor_reedem_stable_tx(mnemonics: &str, coin_amount_redeem: Decima
 
         let res = estimate_messages(&from_account,messages,gas_price_uusd,gas_adjustment).await?;
 
-    	estimate_to_gas_opts(res,only_estimate,max_tx_fee,max_tx_fee_setting)?;
+        match estimate_to_gas_opts(res,only_estimate,max_tx_fee) {
+            Err(err) => {
+                return Err(anyhow!(format!("{:?} (gas_adjustment: {})",err,gas_adjustment)));
+            },
+            Ok(_) => {}
+        };
     	Ok("".to_string())
 }
 
-pub async fn anchor_governance_claim_and_stake(mnemonics: &str, coin_amount: Decimal, gas_price_uusd: Decimal, max_tx_fee: Decimal, gas_adjustment: Decimal, max_tx_fee_setting: Decimal, only_estimate: bool) -> anyhow::Result<String>{
+pub async fn anchor_repay_stable_tx(mnemonics: &str, coin_amount_repay: Decimal, gas_price_uusd: Decimal, max_tx_fee: Decimal, gas_adjustment: Decimal, only_estimate: bool) -> anyhow::Result<String>{
+
+        let secp = Secp256k1::new();
+        let from_key = PrivateKey::from_words(&secp,mnemonics,0,0)?;
+        let from_public_key = from_key.public_key(&secp);
+        let from_account = from_public_key.account()?;
+ 
+        let mut messages = Vec::new();
+        messages.push(anchor_repay_stable_msg(&from_account,coin_amount_repay)?);
+
+        let res = estimate_messages(&from_account,messages,gas_price_uusd,gas_adjustment).await?;
+
+        match estimate_to_gas_opts(res,only_estimate,max_tx_fee) {
+            Err(err) => {
+                return Err(anyhow!(format!("{:?} (gas_adjustment: {})",err,gas_adjustment)));
+            }
+            Ok(_) => {}
+        };
+        Ok("".to_string())
+
+}
+
+pub async fn anchor_governance_claim_and_stake(mnemonics: &str, coin_amount: Decimal, gas_price_uusd: Decimal, max_tx_fee: Decimal, gas_adjustment: Decimal, only_estimate: bool) -> anyhow::Result<String>{
 	 	 
 	 	let secp = Secp256k1::new();
         let from_key = PrivateKey::from_words(&secp,mnemonics,0,0)?;
@@ -121,7 +154,7 @@ pub async fn anchor_governance_claim_and_stake(mnemonics: &str, coin_amount: Dec
 
         //let estimate_json = serde_json::to_string(&res.result); 
 		//{"fee":{"amount":[{"amount":"90462","denom":"uusd"}],"gas":"603080"}}
-		let gas_opts = estimate_to_gas_opts(res,only_estimate,max_tx_fee,max_tx_fee_setting)?; 
+		let gas_opts = estimate_to_gas_opts(res,only_estimate,max_tx_fee)?; 
 
 
 	 	let send_claim = anchor_governance_claim_msg(&from_account)?;
@@ -134,7 +167,7 @@ pub async fn anchor_governance_claim_and_stake(mnemonics: &str, coin_amount: Dec
 
 
 
-pub async fn anchor_governance_stake(mnemonics: &str, coin_amount: Decimal, gas_price_uusd: Decimal, max_tx_fee: Decimal, gas_adjustment: Decimal,  max_tx_fee_setting: Decimal, only_estimate: bool) -> anyhow::Result<String>{
+pub async fn anchor_governance_stake(mnemonics: &str, coin_amount: Decimal, gas_price_uusd: Decimal, max_tx_fee: Decimal, gas_adjustment: Decimal, only_estimate: bool) -> anyhow::Result<String>{
 		let secp = Secp256k1::new();
         let from_key = PrivateKey::from_words(&secp,mnemonics,0,0)?;
         let from_public_key = from_key.public_key(&secp);
@@ -149,7 +182,7 @@ pub async fn anchor_governance_stake(mnemonics: &str, coin_amount: Decimal, gas_
         //let estimate_json = serde_json::to_string(&res.result); 
 		//{"fee":{"amount":[{"amount":"90462","denom":"uusd"}],"gas":"603080"}}
 
-		let gas_opts = estimate_to_gas_opts(res,only_estimate,max_tx_fee,max_tx_fee_setting)?; 
+		let gas_opts = estimate_to_gas_opts(res,only_estimate,max_tx_fee)?; 
 
         let send_stake = anchor_governance_stake_msg(&from_account,coin_amount)?;
 
@@ -158,7 +191,7 @@ pub async fn anchor_governance_stake(mnemonics: &str, coin_amount: Decimal, gas_
         execute_messages(mnemonics,messages,gas_opts).await
 }
 
-pub async fn anchor_claim_rewards(mnemonics: &str, gas_price_uusd: Decimal, max_tx_fee: Decimal, gas_adjustment: Decimal,  max_tx_fee_setting: Decimal, only_estimate: bool) -> anyhow::Result<String>{
+pub async fn anchor_claim_rewards(mnemonics: &str, gas_price_uusd: Decimal, max_tx_fee: Decimal, gas_adjustment: Decimal, only_estimate: bool) -> anyhow::Result<String>{
 
 	 	let secp = Secp256k1::new();
         let from_key = PrivateKey::from_words(&secp,mnemonics,0,0)?;
@@ -174,7 +207,7 @@ pub async fn anchor_claim_rewards(mnemonics: &str, gas_price_uusd: Decimal, max_
         //let estimate_json = serde_json::to_string(&res.result); 
 		//{"fee":{"amount":[{"amount":"90462","denom":"uusd"}],"gas":"603080"}}
 
-		let gas_opts = estimate_to_gas_opts(res,only_estimate,max_tx_fee,max_tx_fee_setting)?; 
+		let gas_opts = estimate_to_gas_opts(res,only_estimate,max_tx_fee)?; 
 
 	 	let send_claim = anchor_governance_claim_msg(&from_account)?; 
 

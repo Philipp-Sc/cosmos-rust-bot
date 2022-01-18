@@ -66,7 +66,7 @@ pub async fn execute_messages(mnemonics: &str, messages: Vec<Message>, gas_opts:
 		 }
  }
 
- pub fn estimate_to_gas_opts(res: LCDResult<TxFeeResult>,only_estimate: bool, max_tx_fee: Decimal, max_tx_fee_setting: Decimal) -> anyhow::Result<GasOptions> {
+ pub fn estimate_to_gas_opts(res: LCDResult<TxFeeResult>,only_estimate: bool, max_tx_fee: Decimal) -> anyhow::Result<GasOptions> {
 
         let fees: Vec<Coin> = res.result.fee.amount; 
  
@@ -76,14 +76,15 @@ pub async fn execute_messages(mnemonics: &str, messages: Vec<Message>, gas_opts:
 
 		let tx_fee = Decimal::from_str(fees[0].amount.to_string().as_str())?;
 		let micro = Decimal::from_str("1000000").unwrap();
-		let tx_fee = tx_fee.checked_div(micro).unwrap();
+		let tx_fee = tx_fee.checked_div(micro).unwrap()
+					.round_dp_with_strategy(2, rust_decimal::RoundingStrategy::MidpointAwayFromZero);
 		let gas_limit = res.result.fee.gas;
 
         if only_estimate {
-			return Err(anyhow!(format!("tx fee: {} UST (gas limit: {})",tx_fee,gas_limit)));
+			return Err(anyhow!(format!("{} UST (gas limit: {})",tx_fee,gas_limit)));
         }
  
-        if fees[0].amount > max_tx_fee || fees[0].amount > max_tx_fee_setting {
+        if fees[0].amount > max_tx_fee {
 			return Err(anyhow!("Unexpected High Fee: {:?}",fees));
         }
         if fees[0].denom != "uusd" {

@@ -63,15 +63,17 @@ mod simple_user_input {
     }
 }  
 
-// TODO: Error handling. Every Unwrapp needs to be inspected.  
+// TODO: Error handling. Every Unwrapp needs to be inspected.
+// Some unwraps panic if the request fail or return an error.
+// To be fixed, but not urgent, since only the task panics, which has no bad side effect.  
 
 // TODO: Add UST peg stat.
 // TODO: Add config for usersettings
 
 // TODO: Show UST balance 
+// TODO: Auto Stake, display all the info.
 
 // TODO: Add auto repay functionality.
-
 // TODO: Have Logs when the bot did something stay for longer until the bot is stopped and limited by usersetting history length.
  
  #[tokio::main]
@@ -358,7 +360,12 @@ async fn main() -> anyhow::Result<()> {
             }
 
             if args_b.contains(&"anchor_auto_stake") {
-                lazy_anchor_account_auto_stake_rewards(&tasks, &wallet_seed_phrase, &new_display, &mut offset, is_test, is_first_run).await;
+                for t in lazy_anchor_account_auto_stake_rewards(&tasks, &wallet_seed_phrase, &new_display, &mut offset, is_test, is_first_run).await {
+                    if timestamps_display[t.0] == 064 || now - timestamps_display[t.0] > 1 {
+                        add_to_display(&new_display,t.0,Box::pin(t.1)).await.ok();
+                        timestamps_display[t.0] = now;
+                    } 
+                }
             }  
 
             if args_b.contains(&"anchor_auto_repay") {
@@ -584,7 +591,7 @@ pub async fn anchor_account_auto_repay(tasks: &Arc<RwLock<HashMap<String, MaybeO
     add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay Transaction]    est. fee:                        ".truecolor(75,219,75), format!("{} UST",anchor_protocol_txs_deposit_stable).yellow())).await.ok(); 
     *offset += 1;
  
-    let anchor_reedem_stable_tx = anchor_reedem_stable(tasks.clone(), wallet_seed_phrase,true).await;
+    let anchor_reedem_stable_tx = anchor_reedem_and_repay_stable(tasks.clone(), wallet_seed_phrase,true).await;
     add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay Transaction]    est. fee (LCD):                  ".truecolor(75,219,75), format!("{}",anchor_reedem_stable_tx).yellow())).await.ok(); 
     *offset += 1;
 
@@ -614,11 +621,46 @@ pub async fn anchor_account_auto_repay(tasks: &Arc<RwLock<HashMap<String, MaybeO
  
 }
  
-pub async fn lazy_anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_seed_phrase: &SecUtf8,  new_display: &Arc<RwLock<Vec<String>>>,offset: &mut usize, is_test: bool, is_first_run: bool) {
+pub async fn lazy_anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_seed_phrase: &SecUtf8,  new_display: &Arc<RwLock<Vec<String>>>,offset: &mut usize, is_test: bool, is_first_run: bool) -> Vec<(usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>)> {
      
-    add_string_to_display(new_display,*offset,"\n  **Anchor Protocol Auto Stake**\n\n".truecolor(75,219,75).to_string()).await.ok(); 
+    let mut anchor_view: Vec<(String,usize)> = Vec::new();
+    let mut anchor_tasks: Vec<(usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>)> = Vec::new();
+
+
+    anchor_view.push(("\n  **Anchor Protocol Auto Stake**\n\n".truecolor(75,219,75).to_string(),*offset)); 
     *offset += 1;
     
+    anchor_view.push((format!("{}{}","\n   [Auto Stake]".truecolor(75,219,75),"    next:              ".purple().to_string()),*offset));
+    *offset += 1;
+
+    // available to claim
+    // available to stake
+
+    // est fees.
+
+    anchor_view.push(("--".purple().to_string(),*offset));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"loan_amount","date_next",2)));
+    anchor_tasks.push(t);
+    *offset += 1;
+
+    anchor_view.push((format!("{}{}","\n   [Auto Stake UST]".truecolor(75,219,75),"    amount:           ".purple().to_string()),*offset));
+    *offset += 1;    
+
+    anchor_view.push(("--".purple().to_string(),*offset));
+    // substract min_ust_balance
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(terra_balance_to_string(tasks.clone(),"uusd",false,2)));
+    anchor_tasks.push(t);
+    *offset += 1;
+
+
+
+
+    if is_first_run {
+        add_view_to_display(&new_display, anchor_view).await.ok(); 
+    }
+
+    // show all stats as if now is now.
+
     let date_next_to_auto_claim_and_stake = match timeout(Duration::from_millis(100),estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"loan_amount","date_next",2)).await {
         Ok(result) => {
             result
@@ -627,20 +669,14 @@ pub async fn lazy_anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<S
             "--".to_string()
         }
     };
- 
-    add_string_to_display(new_display,*offset,format!("{}{}","   [Auto Stake]    next:        ".truecolor(75,219,75),date_next_to_auto_claim_and_stake.to_string().yellow())).await.ok(); 
-    *offset += 1;
-
-    //add_string_to_display(new_display,*offset,format!("{}{}","   [Auto Stake]    next:        ".truecolor(75,219,75),date_next_to_auto_claim_and_stake.to_string().yellow())).await.ok(); 
-    //*offset += 1;
-
-    // show all stats as if now is now.
 
     if date_next_to_auto_claim_and_stake == "now".to_string() {   
         anchor_account_auto_stake_rewards(&tasks, wallet_seed_phrase,new_display,offset,is_test).await;
 
         // trigger control logic to repay.
     }
+
+    return anchor_tasks;
 }
 
 async fn anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_seed_phrase: &SecUtf8, new_display: &Arc<RwLock<Vec<String>>>,offset: &mut usize, is_test: bool) {

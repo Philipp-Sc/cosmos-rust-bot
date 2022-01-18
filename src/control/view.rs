@@ -223,8 +223,6 @@ pub async fn calculate_repay_amount(tasks: Arc<RwLock<HashMap<String, MaybeOrPro
 
     //let trigger_percentage = decimal_or_return!(trigger_percentage_to_string(tasks.clone(),10).await.as_ref());
 
-
-
     let mut _borrow_limit =  Decimal::from_str("0").unwrap(); 
 
     match get_data_maybe_or_await_task(&tasks,"borrow_limit").await {
@@ -488,8 +486,7 @@ pub async fn estimate_anchor_protocol_tx_fee(tasks: Arc<RwLock<HashMap<String, M
         Ok(response_result) => { 
             let result = &response_result.as_transactions().unwrap().result;
             let mut avg_fee_amount = Decimal::from_str("0").unwrap();
-            let mut avg_gas_adjustment = Decimal::from_str("0").unwrap(); // gas_wanted * gas_adjustment = fee_amount
-            let mut avg_gas_adjustment_for_stability_fee_case = Decimal::from_str("0").unwrap(); 
+            let mut avg_gas_adjustment = Decimal::from_str("0").unwrap(); // gas_wanted * gas_adjustment = fee_amount 
             let mut avg_gas_used = Decimal::from_str("0").unwrap();
             let mut avg_gas_wanted = Decimal::from_str("0").unwrap();
             let mut avg_fee_amount_without_stability_fee = Decimal::from_str("0").unwrap();
@@ -503,14 +500,16 @@ pub async fn estimate_anchor_protocol_tx_fee(tasks: Arc<RwLock<HashMap<String, M
                 } else {                    
                     fee_amount_without_stability_fee = entry.fee_amount.checked_sub(tax_cap_uusd).unwrap();
                 }
+
+                // adjusted means the gas_adjustment is part of the fee_amount
                 avg_fee_amount_adjusted_without_stability_fee = avg_fee_amount_adjusted_without_stability_fee.checked_add(fee_amount_without_stability_fee).unwrap();
 
-                let gas_adjustment = entry.gas_wanted.checked_div(entry.gas_used).unwrap();
+                // we can not know the real gas adjustment, but this is a good guess
+                let gas_adjustment = entry.gas_wanted.checked_div(entry.gas_used).unwrap(); 
+                
+                // removing the gas_adjustment that was applied
                 fee_amount_without_stability_fee = fee_amount_without_stability_fee.checked_div(gas_adjustment).unwrap();
-                avg_gas_adjustment_for_stability_fee_case = avg_gas_adjustment_for_stability_fee_case.checked_add(gas_adjustment).unwrap();
-
                 avg_fee_amount_without_stability_fee = avg_fee_amount_without_stability_fee.checked_add(fee_amount_without_stability_fee).unwrap();
-                let gas_adjustment = entry.fee_amount.checked_div(entry.gas_wanted).unwrap(); 
 
                 avg_fee_amount = avg_fee_amount.checked_add(entry.fee_amount).unwrap();
                 avg_gas_adjustment = avg_gas_adjustment.checked_add(gas_adjustment).unwrap();
@@ -525,12 +524,11 @@ pub async fn estimate_anchor_protocol_tx_fee(tasks: Arc<RwLock<HashMap<String, M
                     avg_fee_amount_adjusted_without_stability_fee = avg_fee_amount_adjusted_without_stability_fee.checked_div(count_entries).unwrap();
                     avg_fee_amount_without_stability_fee = avg_fee_amount_without_stability_fee.checked_div(count_entries).unwrap();
                     avg_fee_amount = avg_fee_amount.checked_div(count_entries).unwrap();
-                    avg_gas_adjustment = avg_gas_adjustment.checked_div(gas_fees_uusd).unwrap().checked_div(count_entries).unwrap();
+                    avg_gas_adjustment = avg_gas_adjustment/*.checked_div(gas_fees_uusd).unwrap()*/.checked_div(count_entries).unwrap();
                     avg_gas_used = avg_gas_used.checked_div(count_entries).unwrap();
                     avg_gas_wanted = avg_gas_wanted.checked_div(count_entries).unwrap();
-                    avg_gas_adjustment_for_stability_fee_case = avg_gas_adjustment_for_stability_fee_case.checked_div(count_entries).unwrap();
                     let fee_amount_at_threshold = avg_gas_used.checked_mul(gas_fees_uusd).unwrap();
-                    let estimated_fee_amount = avg_gas_used.checked_mul(gas_fees_uusd).unwrap().checked_mul(avg_gas_adjustment).unwrap();
+                    let fee_amount_adjusted = avg_gas_used.checked_mul(gas_fees_uusd).unwrap().checked_mul(avg_gas_adjustment).unwrap();
                     
                     let mut micro = Decimal::from_str("1").unwrap();
                     if !as_micro {
@@ -565,12 +563,7 @@ pub async fn estimate_anchor_protocol_tx_fee(tasks: Arc<RwLock<HashMap<String, M
                             return avg_gas_adjustment
                               .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
                               .to_string();
-                        },
-                        "avg_gas_adjustment_for_stability_fee_case" => {
-                            return avg_gas_adjustment_for_stability_fee_case
-                              .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
-                              .to_string();
-                        },
+                        }, 
                         "avg_gas_used" => {
                             return avg_gas_used
                               .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
@@ -583,7 +576,7 @@ pub async fn estimate_anchor_protocol_tx_fee(tasks: Arc<RwLock<HashMap<String, M
                               .to_string();
                         },
                         "fee_amount_adjusted" => {
-                            return estimated_fee_amount
+                            return fee_amount_adjusted
                               .checked_div(micro).unwrap()
                               .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
                               .to_string();
