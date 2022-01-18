@@ -310,7 +310,7 @@ pub struct TXLog {
     pub raw_log: String, 
 }
  
-
+// TODO: timeout this function to prevent blocking in case of chaos
 pub async fn get_block_txs_deposit_stable_apy() -> anyhow::Result<ResponseResult> { 
 
     let latest_block = query_core_latest_block().await?;      
@@ -669,19 +669,19 @@ pub async fn get_block_txs_fee_data(key: &str) -> anyhow::Result<ResponseResult>
     while tx_data.len()<10 && start.elapsed().as_secs() < 60*3 && err_count < 2 {
         let mut next: anyhow::Result<String> = Ok("0".to_string());
         if key == "claim_rewards" {
-            next = get_txs_fee_data(temp_offset.as_str(),&mut tx_data,"terra1sepfj7s0aeg5967uxnfk4thzlerrsktkpelm5s","claim_rewards","claim_amount").await;
+            next = get_txs_fee_data(temp_offset.as_str(),&mut tx_data,get_contract("anchorprotocol","mmMarket").as_ref(),"claim_rewards","claim_amount").await;
         }
         if key == "staking" {
-            next = get_txs_fee_data(temp_offset.as_str(),&mut tx_data,"terra14z56l0fp2lsf86zy3hty2z47ezkhnthtr9yq76","staking","amount").await; 
+            next = get_txs_fee_data(temp_offset.as_str(),&mut tx_data,get_contract("anchorprotocol","ANC").as_ref(),"staking","amount").await; 
         }
         if key == "redeem_stable" {
-            next = get_txs_fee_data(temp_offset.as_str(),&mut tx_data,"terra1hzh9vpxhsk8253se0vv5jj6etdvxu3nv8z07zu","redeem_stable","redeem_amount").await; 
+            next = get_txs_fee_data(temp_offset.as_str(),&mut tx_data,get_contract("anchorprotocol","aTerra").as_ref(),"redeem_stable","redeem_amount").await; 
         }
         if key == "deposit_stable" {
-            next = get_txs_fee_data(temp_offset.as_str(),&mut tx_data,"terra1sepfj7s0aeg5967uxnfk4thzlerrsktkpelm5s","deposit_stable","deposit_amount").await; 
+            next = get_txs_fee_data(temp_offset.as_str(),&mut tx_data,get_contract("anchorprotocol","mmMarket").as_ref(),"deposit_stable","deposit_amount").await; 
         }
         if key == "repay_stable" {
-            next = get_txs_fee_data(temp_offset.as_str(),&mut tx_data,"terra1sepfj7s0aeg5967uxnfk4thzlerrsktkpelm5s","repay_stable","repay_amount").await; 
+            next = get_txs_fee_data(temp_offset.as_str(),&mut tx_data,get_contract("anchorprotocol","mmMarket").as_ref(),"repay_stable","repay_amount").await; 
         }
 
         if next.is_ok() {

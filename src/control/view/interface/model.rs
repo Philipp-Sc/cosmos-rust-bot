@@ -295,6 +295,24 @@ pub async fn get_meta_data_maybe_or_await_task(tasks: &Arc<RwLock<HashMap<String
     return keys;
   } 
 
+  pub async fn get_keys_of_failed_tasks<'a>(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, req: &'a [&str]) -> Vec<&'a str> {
+
+    let mut keys: Vec<&str> = Vec::new(); 
+        
+    for k in req {
+        // if the functions returns a value in the given time it is considered resolved.
+        match get_data_maybe_or_meta_data_maybe(tasks,k).await {
+            Err(msg) => {
+                if !msg.to_string().contains("Info"){
+                    keys.push(k);
+                }
+            },
+            Ok(_) => {}  
+        }
+    }
+    return keys;
+  } 
+
 pub async fn await_running_tasks(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, req: &[&str]) -> anyhow::Result<String> {
 
     for k in req { 

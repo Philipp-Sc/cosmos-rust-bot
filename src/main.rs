@@ -9,7 +9,7 @@ use core::str::FromStr;
 
 mod control;
 
-use control::view::interface::model::{UserSettings,MaybeOrPromise,requirements,get_keys_of_running_tasks,await_running_tasks,get_timestamps_of_resolved_tasks};
+use control::view::interface::model::{UserSettings,MaybeOrPromise,requirements,get_keys_of_running_tasks,get_keys_of_failed_tasks,await_running_tasks,get_timestamps_of_resolved_tasks};
  
 use control::view::interface::model::smart_contracts::meta::api::{get_from_account};
 
@@ -63,7 +63,8 @@ mod simple_user_input {
     }
 }  
 
-// TODO: Error handling. Every Unwrapp needs to be inspected. 
+// TODO: Error handling. Every Unwrapp needs to be inspected.  
+
 // TODO: Add UST peg stat.
 // TODO: Add config for usersettings
 
@@ -260,6 +261,7 @@ async fn main() -> anyhow::Result<()> {
 
         loop { 
             let req_unresolved = get_keys_of_running_tasks(&tasks,&req_keys).await;
+            let req_failed = get_keys_of_failed_tasks(&tasks, &req_keys).await;
 
             // waiting for unresolved tasks to catch up 
             if is_first_run { 
@@ -283,7 +285,7 @@ async fn main() -> anyhow::Result<()> {
                         break;
                     }
                 }  
-                if contains && !req_unresolved.contains(&req[i].0) && (req_resolved_timestamps[i]==0i64 || ((now - req_resolved_timestamps[i]) > req[i].1 as i64 )) { // unresolved requirements will not be refreshed.
+                if contains && !req_unresolved.contains(&req[i].0) && (req_failed.contains(&req[i].0) || req_resolved_timestamps[i]==0i64 || ((now - req_resolved_timestamps[i]) > req[i].1 as i64 )) { // unresolved requirements will not be refreshed.
                     req_to_update.push(req[i].0); 
                 }
                 if req_to_update.len()>num_cpus {
@@ -293,25 +295,30 @@ async fn main() -> anyhow::Result<()> {
 
            if is_debug {
                add_string_to_display(&new_display,1,format!(
-                    "{}{}{}{}{}{}{}\n\n{}\n{}",
+                    "{}{}{}{}{}{}{}{}{}\n\n{}\n{}\n{}\n\n",
                     timestamp_now_to_string().yellow(),
-                    " -  unresolved requirements: ".purple(),
-                    req_unresolved.len().to_string().red(),
-                    ", upcomming requirements: ".purple(),
-                    req_to_update.len().to_string().yellow(),
+                    " -  failed: ".purple(), 
+                    req_failed.len().to_string().red(),
+                    ", pending: ".purple(),
+                    req_unresolved.len().to_string().yellow(),
+                    ", waiting: ".purple(),
+                    req_to_update.len().to_string().purple(),
                     ", total requirements: ".to_string().purple(),
                     req_keys.len().to_string().purple(),
-                    format!("{:?}",req_unresolved).to_string().red(),
+                    format!("{:?}\n",req_failed).to_string().red(),
+                    format!("{:?}\n",req_unresolved).to_string().yellow(),
                     format!("{:?}",req_to_update).to_string().purple()
                     )).await.ok(); 
             }else{
                 add_string_to_display(&new_display,1,format!(
-                    "{}{}{}{}{}{}{}",
+                    "{}{}{}{}{}{}{}{}{}\n\n",
                     timestamp_now_to_string().yellow(),
-                    " -  unresolved requirements: ".purple(),
-                    req_unresolved.len().to_string().red(),
-                    ", upcomming requirements: ".purple(),
-                    req_to_update.len().to_string().yellow(),
+                    " -  failed: ".purple(), 
+                    req_failed.len().to_string().red(),
+                    ", pending: ".purple(),
+                    req_unresolved.len().to_string().yellow(),
+                    ", waiting: ".purple(),
+                    req_to_update.len().to_string().purple(),
                     ", total requirements: ".to_string().purple(),
                     req_keys.len().to_string().purple()
                     )).await.ok(); 
@@ -554,8 +561,6 @@ pub async fn anchor_account_auto_repay(tasks: &Arc<RwLock<HashMap<String, MaybeO
     let fee_to_redeem_stable = estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_redeem_stable","fee_amount_adjusted".to_owned(),false,2).await;
     add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay Redeem]         est. fee:                        ".truecolor(75,219,75), format!("{} UST",fee_to_redeem_stable).yellow())).await.ok(); 
     *offset += 1;
-
-
  
     let to_repay = calculate_repay_plan(tasks.clone(),"to_repay",2).await;
     add_string_to_display(new_display,*offset,format!("{}{}","\n\n   [Auto Repay]                repay:                           ".truecolor(75,219,75), format!("{} UST",to_repay).yellow())).await.ok(); 
@@ -608,41 +613,40 @@ pub async fn anchor_account_auto_repay(tasks: &Arc<RwLock<HashMap<String, MaybeO
     }
  
 }
-
+ 
 pub async fn lazy_anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_seed_phrase: &SecUtf8,  new_display: &Arc<RwLock<Vec<String>>>,offset: &mut usize, is_test: bool, is_first_run: bool) {
      
     add_string_to_display(new_display,*offset,"\n  **Anchor Protocol Auto Stake**\n\n".truecolor(75,219,75).to_string()).await.ok(); 
     *offset += 1;
-
-    if is_first_run {
-        add_string_to_display(new_display,*offset,format!("{}{}","   [Auto Stake]    next:        ".truecolor(75,219,75),"--".to_string().purple())).await.ok(); 
-    }
-  
-    // initial resolve may take some time.
-    // therefore timeout after 1s.
-    let date_next_to_auto_claim_and_stake = timeout(Duration::from_millis(100),estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"loan_amount","date_next",2)).await;
-    if date_next_to_auto_claim_and_stake.is_err() {
-        *offset += 2;
-        return;
-    }
-    let date_next_to_auto_claim_and_stake = date_next_to_auto_claim_and_stake.unwrap();
+    
+    let date_next_to_auto_claim_and_stake = match timeout(Duration::from_millis(100),estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"loan_amount","date_next",2)).await {
+        Ok(result) => {
+            result
+        },
+        Err(_) => {
+            "--".to_string()
+        }
+    };
  
     add_string_to_display(new_display,*offset,format!("{}{}","   [Auto Stake]    next:        ".truecolor(75,219,75),date_next_to_auto_claim_and_stake.to_string().yellow())).await.ok(); 
     *offset += 1;
 
+    //add_string_to_display(new_display,*offset,format!("{}{}","   [Auto Stake]    next:        ".truecolor(75,219,75),date_next_to_auto_claim_and_stake.to_string().yellow())).await.ok(); 
+    //*offset += 1;
+
+    // show all stats as if now is now.
+
     if date_next_to_auto_claim_and_stake == "now".to_string() {   
         anchor_account_auto_stake_rewards(&tasks, wallet_seed_phrase,new_display,offset,is_test).await;
-    }
- 
 
+        // trigger control logic to repay.
+    }
 }
 
 async fn anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_seed_phrase: &SecUtf8, new_display: &Arc<RwLock<Vec<String>>>,offset: &mut usize, is_test: bool) {
+ 
+        // like with auto repy print info out.
 
-    // check next time to auto stake
-    let date_next_to_auto_claim_and_stake = estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(), "loan_amount","date_next",2).await;
-    
-    if date_next_to_auto_claim_and_stake == "now".to_string() {
 
         // check for sufficient funds
         match terra_balance_to_string(tasks.clone(),"uusd",false,2).await.as_ref() {
@@ -696,11 +700,7 @@ async fn anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<String, Ma
         let result = anchor_governance_stake_balance(tasks.clone(), wallet_seed_phrase,true).await;
         display_add(format!("\n   [Auto Stake]   complete:    {:?}",result), 43 as usize,1 as usize); 
 */ 
-
-    }else {  
-        add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]    next:        ".truecolor(75,219,75),date_next_to_auto_claim_and_stake.to_string().yellow())).await.ok(); 
-        *offset += 1;
-    }
+ 
 
 }
 
