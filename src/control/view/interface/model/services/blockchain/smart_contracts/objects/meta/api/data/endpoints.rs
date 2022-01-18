@@ -1,3 +1,9 @@
+/*
+ * Only use APIs defined here.
+ *
+ */
+
+
 pub fn get_terra_fcd() -> String {
 	let terra_endpoint = "https://fcd.terra.dev";
 	terra_endpoint.to_string()

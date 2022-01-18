@@ -1,21 +1,9 @@
+/*
+ * Terra Contract Addresses
+ *
+ */
+
 use serde_json::json;
-  
-
-
-pub fn get_query_msg(tag: &str) -> String { 
-	let query_mgs = json!({"state": r#"{"state":{}}"#,
-						   "epoch_state": r#"{"epoch_state":{}}"#,
-						   "config": r#"{"config":{}}"#,
-						   "oracle_price": r#"{"price": {"base_asset": "my_cw20_contract_addr","quote_asset": "uusd"}}"#,
-	                       "simulation_native_tokens": r#"{"simulation":{"offer_asset":{"amount":"1000000","info":{"native_token":{"denom":"my_native_token"}}}}}"#,
-	                       "simulation_cw20_tokens": r#"{"simulation":{"offer_asset":{"amount":"1000000","info":{"token":{"contract_addr":"my_cw20_contract_addr"}}}}}"#,
-	                       "borrow_limit": r#"{"borrow_limit": {"borrower": "wallet_acc_address"}}"#,
-	                       "borrower_info": r#"{"borrower_info": {"borrower": "wallet_acc_address"}}"#,
-	                       "balance": r#"{"balance": {"address": "wallet_acc_address"}}"#,
-	                       "staker": r#"{"staker": {"address": "wallet_acc_address"}}"#
-						});
-	query_mgs[tag].to_string()
-}
 
 pub fn get_contract(source: &str, contract: &str) -> String {
 	let contracts = json!({

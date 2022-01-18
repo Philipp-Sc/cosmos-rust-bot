@@ -11,7 +11,7 @@ mod control;
 
 use control::view::interface::model::{UserSettings,MaybeOrPromise,requirements,get_keys_of_running_tasks,get_keys_of_failed_tasks,await_running_tasks,get_timestamps_of_resolved_tasks};
  
-use control::view::interface::model::smart_contracts::meta::api::{get_from_account};
+use control::view::interface::model::services::blockchain::smart_contracts::objects::meta::api::{get_from_account};
 
 use control::view::*;
 use control::view::interface::*;

@@ -1,18 +1,29 @@
-use rust_decimal::Decimal;
-//use core::str::FromStr;
+
+pub mod services;
+
+use rust_decimal::Decimal; 
   
  
 use serde::Deserialize;
 use serde::Serialize;
 
-pub mod smart_contracts;
 
-use smart_contracts::{ResponseResult};
-use smart_contracts::meta::api::{fetch_gas_price}; 
+use services::blockchain::smart_contracts::objects::{ResponseResult};
+use services::blockchain::smart_contracts::objects::meta::api::{fetch_gas_price, get_gas_price}; 
  
-use smart_contracts::{
+use services::{
+    query_api_distribution_apy,
+    query_api_gov_reward};
+
+
+use services::blockchain::{ 
     get_tax_rate,
     get_tax_caps,
+    blocks_per_year_query,
+    get_block_txs_deposit_stable_apy,
+    get_block_txs_fee_data};
+
+use services::blockchain::smart_contracts::{
     state_query_msg,
     epoch_state_query_msg,
     config_query_msg,
@@ -24,11 +35,6 @@ use smart_contracts::{
     anchor_protocol_borrower_info,
     anchor_protocol_balance,
     anchor_protocol_staker,
-    query_api_distribution_apy,
-    query_api_gov_reward,
-    blocks_per_year_query,
-    get_block_txs_deposit_stable_apy,
-    get_block_txs_fee_data,
     anchor_protocol_anc_balance,
     terra_balances};
 
@@ -329,12 +335,15 @@ pub async fn await_running_tasks(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
   */
  pub async fn requirements(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, user_settings: &UserSettings, req: &Vec<&str>) { 
           
-         let gas_prices = fetch_gas_price().await; 
-
-         if !gas_prices.response_status.unwrap().is_ok {
-            println!("WARNING: Using static gas_prices.");
-         } 
-
+         let gas_prices = match fetch_gas_price().await {
+            Ok(res) => {res},
+            Err(err) => {
+                println!("{}",err.to_string());
+                println!("WARNING: Using static gas_prices.");
+                get_gas_price()
+            },
+         };
+ 
          let mut map = tasks.write().await;
 
          for cmd in req {
@@ -366,7 +375,7 @@ pub async fn await_running_tasks(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
                     }
                     "borrow_limit" => {  
                         let wallet = user_settings.wallet_acc_address.to_owned();
-                        let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
+                        let gas_prices_copy = gas_prices.to_owned();
                         let handle = tokio::spawn(async move { 
                             {    
                                 
@@ -379,7 +388,7 @@ pub async fn await_running_tasks(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
                     },
                     "borrow_info" => {
                         let wallet = user_settings.wallet_acc_address.to_owned();
-                        let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
+                        let gas_prices_copy = gas_prices.to_owned();
                         let handle = tokio::spawn(async move { 
                             {    
                                 
@@ -392,7 +401,7 @@ pub async fn await_running_tasks(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
                     },
                     "balance" => {
                         let wallet = user_settings.wallet_acc_address.to_owned();
-                        let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
+                        let gas_prices_copy = gas_prices.to_owned();
                         let handle = tokio::spawn(async move { 
                             {    
                                 
@@ -417,7 +426,7 @@ pub async fn await_running_tasks(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
                     },
                     "anc_balance" => {
                         let wallet = user_settings.wallet_acc_address.to_owned();
-                        let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
+                        let gas_prices_copy = gas_prices.to_owned();
                         let handle = tokio::spawn(async move { 
                             {    
                                 
@@ -430,7 +439,7 @@ pub async fn await_running_tasks(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
                     },
                     "staker" => {
                         let wallet = user_settings.wallet_acc_address.to_owned();
-                        let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
+                        let gas_prices_copy = gas_prices.to_owned();
                         let handle = tokio::spawn(async move { 
                             {    
                                 
@@ -533,7 +542,7 @@ pub async fn await_running_tasks(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
                             map.insert("tax_caps".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
                     },
                     "gas_fees_uusd" => {                      
-                        map.insert("gas_fees_uusd".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Maybe {data: Ok(gas_prices.response.as_ref().unwrap().uusd.to_string().to_owned()), timestamp: Utc::now().timestamp()})));
+                        map.insert("gas_fees_uusd".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Maybe {data: Ok(gas_prices.uusd.to_string().to_owned()), timestamp: Utc::now().timestamp()})));
                     }, 
                     "trigger_percentage" => {     
                         map.insert("trigger_percentage".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Maybe {data: Ok(user_settings.trigger_percentage.to_string().to_owned()), timestamp: Utc::now().timestamp()})));
@@ -569,7 +578,7 @@ pub async fn await_running_tasks(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
                         // "state anchorprotocol mmMarket"
                         let second_copy = second.to_owned();
                         let third_copy = third.to_owned();
-                        let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
+                        let gas_prices_copy = gas_prices.to_owned();
                         let handle = tokio::spawn(async move { 
                             {    
                                 
@@ -583,7 +592,7 @@ pub async fn await_running_tasks(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
                         // "epoch_state anchorprotocol mmMarket"
                         let second_copy = second.to_owned();
                         let third_copy = third.to_owned();
-                        let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
+                        let gas_prices_copy = gas_prices.to_owned();
                         let handle = tokio::spawn(async move { 
                             {    
                                 
@@ -596,7 +605,7 @@ pub async fn await_running_tasks(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
                      "config" => {
                         let second_copy = second.to_owned();
                         let third_copy = third.to_owned();
-                        let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
+                        let gas_prices_copy = gas_prices.to_owned();
                         let handle = tokio::spawn(async move { 
                             {    
                                 
@@ -608,7 +617,7 @@ pub async fn await_running_tasks(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
                     },
                     "simulation_cw20" => {
                         let third_copy = third.to_owned();
-                        let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
+                        let gas_prices_copy = gas_prices.to_owned();
                         let handle = tokio::spawn(async move { 
                             {    
                                 
@@ -622,7 +631,7 @@ pub async fn await_running_tasks(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
                     "core_swap" => { 
                         let second_copy = second.to_owned();
                         let third_copy = third.to_owned();
-                        let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
+                        let gas_prices_copy = gas_prices.to_owned();
                         let handle = tokio::spawn(async move { 
                             {    
                                 
@@ -654,7 +663,7 @@ pub async fn await_running_tasks(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
                         let second_copy = second.to_owned();
                         let third_copy = third.to_owned();
                         let fourth_copy = fourth.to_owned();
-                        let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
+                        let gas_prices_copy = gas_prices.to_owned();
                         let handle = tokio::spawn(async move { 
                             {    
                                 
@@ -669,7 +678,7 @@ pub async fn await_running_tasks(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
                         let second_copy = second.to_owned();
                         let third_copy = third.to_owned();
                         let fourth_copy = fourth.to_owned();
-                        let gas_prices_copy = gas_prices.response.as_ref().unwrap().to_owned();
+                        let gas_prices_copy = gas_prices.to_owned();
                         let handle = tokio::spawn(async move { 
                             {    
                                 

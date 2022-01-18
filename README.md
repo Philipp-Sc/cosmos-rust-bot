@@ -104,6 +104,10 @@
 * Anchor Dashboard 2: `./terra-rust-bot -i anchor -a anchor_account -b anchor_auto_stake`
 * Auto Staking Only: `./terra-rust-bot -b anchor_auto_stake`
 
+## For Developers
+
+* You can use this repository to learn about the [Terra-Rust-API](https://crates.io/crates/terra-rust-api) or smart contracts. 
+* Start here: <a href="https://github.com/Philipp-Sc/terra-rust-bot/tree/main/src/control/view/model/services/">services</a>. 
 
 ## Similar projects
 - https://github.com/ALPAC-4/auto_repay

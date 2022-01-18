@@ -1,3 +1,8 @@
+/*
+ * terra-rust-api utilitiy functions to estimate/execute transactions.
+ *
+ */
+
 pub mod api;
 
 use api::{execute_messages,estimate_messages,estimate_to_gas_opts};

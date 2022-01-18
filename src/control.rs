@@ -6,7 +6,7 @@ use secstr::*;
 use rust_decimal::Decimal;
 use core::str::FromStr;
 
-use view::interface::model::smart_contracts::meta::{anchor_redeem_and_repay_stable_tx, anchor_claim_rewards,anchor_governance_stake,anchor_governance_claim_and_stake};
+use view::interface::model::services::blockchain::smart_contracts::objects::meta::{anchor_redeem_and_repay_stable_tx, anchor_claim_rewards,anchor_governance_stake,anchor_governance_claim_and_stake};
 use view::interface::model::{MaybeOrPromise,get_meta_data_maybe_or_await_task};
 
 use view::interface::*;
