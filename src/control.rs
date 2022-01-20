@@ -53,6 +53,15 @@ pub async fn anchor_reedem_and_repay_stable(tasks: Arc<RwLock<HashMap<String, Ma
 
     let gas_fees_uusd = decimal_or_return!(gas_price_to_string(tasks.clone(),10).await.as_ref());
 
+    match check_anchor_loan_status(tasks.clone(),2).await.as_ref() {
+	    	"repay due" => {},
+	    	_ => {
+	    		if !only_estimate {
+	    			return "waiting..".to_string();
+	    		}
+	    	}
+	};
+
     if to_withdraw_from_deposit > zero && to_repay > zero {
   
 
@@ -124,7 +133,6 @@ pub async fn anchor_reedem_and_repay_stable(tasks: Arc<RwLock<HashMap<String, Ma
 	            					 .checked_add(gas_adjustment_preference).unwrap()
 	            					 .checked_div(Decimal::from_str("2").unwrap()).unwrap();   
 
-
         match anchor_repay_stable_tx(wallet_seed_phrase.unsecure(), to_repay, gas_fees_uusd, max_tx_fee, max_gas_adjustment, only_estimate).await {
         	Ok(msg) => {
         		return msg;
@@ -134,8 +142,9 @@ pub async fn anchor_reedem_and_repay_stable(tasks: Arc<RwLock<HashMap<String, Ma
         	}
         }
 
+	}else {
+		return "nothing to repay".to_string();
 	}
-    format!("Doing nothing! {:?}",(exchange_rate,to_withdraw_from_deposit,to_repay,gas_fees_uusd))
 }
 
 

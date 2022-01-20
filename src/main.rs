@@ -71,11 +71,7 @@ mod simple_user_input {
 // TODO: Add config for usersettings
  
 // TODO: Auto Replenish: Always get the account balance a good bit above the limit.
-
-// TODO: Show UST balance 
-// TODO: Auto Stake, display all the info.
-
-// TODO: Add auto repay functionality.
+ 
 // TODO: Have Logs when the bot did something stay for longer until the bot is stopped and limited by usersetting history length.
  
  #[tokio::main]
@@ -278,10 +274,7 @@ async fn main() -> anyhow::Result<()> {
             let req_failed = get_keys_of_failed_tasks(&tasks, &req_keys_status).await;
 
             // waiting for unresolved tasks to catch up 
-            if is_first_run { 
-                // may take longer because of the number of threads spawned.
-                timeout(Duration::from_secs(60*2), await_running_tasks(&tasks, &req_keys)).await.ok();
-            } else if req_unresolved.len() >= num_cpus { 
+            if req_unresolved.len() >= num_cpus + args_b.len() { 
                 // anyway we need to have free threads to spawn more tasks
                 // useful to wait here
                 timeout(Duration::from_secs(30), await_running_tasks(&tasks, &req_keys)).await.ok();
@@ -302,7 +295,7 @@ async fn main() -> anyhow::Result<()> {
                 if contains && !req_unresolved.contains(&req[i].0) && (req_failed.contains(&req[i].0) || req_resolved_timestamps[i]==0i64 || ((now - req_resolved_timestamps[i]) > req[i].1 as i64 )) { // unresolved requirements will not be refreshed.
                     req_to_update.push(req[i].0); 
                 }
-                if req_to_update.len()>num_cpus {
+                if req_to_update.len()>num_cpus + args_b.len(){
                     break;
                 }
             } 
@@ -382,7 +375,14 @@ async fn main() -> anyhow::Result<()> {
             }  
 
             if args_b.contains(&"anchor_auto_repay") {
-                anchor_account_auto_repay(&tasks, &wallet_seed_phrase, &new_display, &mut offset, is_test, is_first_run).await;
+                let anchor_auto_repay = lazy_anchor_account_auto_repay(&tasks, &wallet_seed_phrase, &new_display, &mut offset, is_test, is_first_run).await;
+                for t in anchor_auto_repay {
+                    if timestamps_display[t.0] == 0i64 || now - timestamps_display[t.0] > 1i64 { 
+                        try_add_to_display(&new_display,t.0,Box::pin(t.1)).await.ok();
+                        timestamps_display[t.0] = now;
+                    }  
+                }  
+                
             }   
 
             display_all_errors(&tasks, &*req_unresolved ,&new_display, &mut offset).await;
@@ -491,7 +491,6 @@ pub async fn add_format_to_result(prefix: String,suffix: String, f: Pin<Box<dyn 
     return format!("{}{}{}",prefix,f.await,suffix);
 }
 
-
 pub async fn add_to_display(new_display: &Arc<RwLock<Vec<String>>>, index: usize, result: Option<String>) -> anyhow::Result<()> {
     
     if let Some(succ) = result {
@@ -543,28 +542,38 @@ pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromis
 }
 /**
  * Anchor Auto Repay requires that the account balance has sufficient funds.
- * Auto Repay tries to replenish the account if possible. 
+ * Anchor Auto Repay tries to be net neutral regarding the UST account balance.
  * WARNING: In some edge cases the account balance still can fall bellow the limit.
- * 
  * */
 
- pub async fn anchor_account_auto_repay(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_seed_phrase: &Arc<SecUtf8>,  new_display: &Arc<RwLock<Vec<String>>>,offset: &mut usize, is_test: bool, is_first_run: bool) {
+ pub async fn lazy_anchor_account_auto_repay(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_seed_phrase: &Arc<SecUtf8>,  new_display: &Arc<RwLock<Vec<String>>>,offset: &mut usize, is_test: bool, is_first_run: bool) -> Vec<(usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>)>  {
 
-    add_string_to_display(new_display,*offset,"\n  **Anchor Protocol Auto Repay**\n\n".truecolor(75,219,75).to_string()).await.ok(); 
+    let mut anchor_view: Vec<(String,usize)> = Vec::new();
+    let mut anchor_tasks: Vec<(usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>)> = Vec::new();
+
+    anchor_view.push(("\n  **Anchor Protocol Auto Repay**\n\n".truecolor(75,219,75).to_string(),*offset)); 
     *offset += 1;
 
-    let repay_status = timeout(Duration::from_millis(100),check_anchor_loan_status(tasks.clone(),2)).await;
-    if repay_status.is_err() {
-        *offset += 15;
-        return;
-    }
-    let repay_status = repay_status.unwrap();
-    add_string_to_display(new_display,*offset,format!("{}{}","   [Auto Repay]                left to trigger:                 ".truecolor(75,219,75), repay_status.yellow())).await.ok(); 
+    anchor_view.push((format!("{}{}","\n\n   [Auto Repay]".truecolor(75,219,75),"                    left to trigger:          ".purple().to_string()),*offset));
+    *offset += 1;
+ 
+    anchor_view.push(("--".purple().to_string(),*offset));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(check_anchor_loan_status(tasks.clone(),2)));
+    anchor_tasks.push(t);
     *offset += 1;
 
-    let repay_amount = calculate_repay_amount(tasks.clone(),false,2).await; 
-    add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay]                to repay:                        ".truecolor(75,219,75), format!("{} UST",repay_amount).yellow())).await.ok(); 
-    *offset += 1; 
+
+    anchor_view.push((format!("{}{}","\n   [Auto Repay]".truecolor(75,219,75),"                    to repay:                 ".purple().to_string()),*offset));
+    *offset += 1;
+ 
+    anchor_view.push(("--".purple().to_string(),*offset));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(calculate_repay_amount(tasks.clone(),false,2)));
+    anchor_tasks.push(t);
+    *offset += 1;
+
+    anchor_view.push((" UST".purple().to_string(),*offset));
+    *offset += 1;
+
 /*
     let available_to_repay = min_ust_balance_to_string(tasks.clone(),false,2).await;
     add_string_to_display(new_display,*offset,format!("{}{}","\n\n\n   [Auto Repay UST]                account limit:                   ".truecolor(75,219,75), format!("{} UST",available_to_repay).yellow())).await.ok(); 
@@ -574,8 +583,15 @@ pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromis
     add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay UST]                available UST:                   ".truecolor(75,219,75), format!("{} UST",available_to_repay).yellow())).await.ok(); 
     *offset += 1;
 */
-    let to_withdraw_from_account = calculate_repay_plan(tasks.clone(),"to_withdraw_from_account",2).await;
-    add_string_to_display(new_display,*offset,format!("{}{}","\n\n   [Auto Repay UST]            amount:                          ".truecolor(75,219,75), format!("{} UST",to_withdraw_from_account).yellow())).await.ok(); 
+    anchor_view.push((format!("{}{}","\n\n   [Auto Repay UST]".truecolor(75,219,75),"                amount:                   ".purple().to_string()),*offset));
+    *offset += 1;
+ 
+    anchor_view.push(("--".purple().to_string(),*offset));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(calculate_repay_plan(tasks.clone(),"to_withdraw_from_account",2)));
+    anchor_tasks.push(t);
+    *offset += 1;
+
+    anchor_view.push((" UST".purple().to_string(),*offset));
     *offset += 1;
 
 /*
@@ -583,42 +599,110 @@ pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromis
     add_string_to_display(new_display,*offset,format!("{}{}","\n\n   [Auto Repay Redeem]         max amount:                      ".truecolor(75,219,75), format!("{} UST",available_in_deposit).yellow())).await.ok(); 
     *offset += 1;
 */
-    let to_withdraw_from_deposit = calculate_repay_plan(tasks.clone(),"to_withdraw_from_deposit",2).await;
-    add_string_to_display(new_display,*offset,format!("{}{}","\n\n   [Auto Repay Redeem]         amount:                          ".truecolor(75,219,75), format!("{} UST",to_withdraw_from_deposit).yellow())).await.ok(); 
+    anchor_view.push((format!("{}{}","\n   [Auto Repay Redeem]".truecolor(75,219,75),"             amount:                   ".purple().to_string()),*offset));
+    *offset += 1;
+ 
+    anchor_view.push(("--".purple().to_string(),*offset));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(calculate_repay_plan(tasks.clone(),"to_withdraw_from_deposit",2)));
+    anchor_tasks.push(t);
+    *offset += 1;
+
+    anchor_view.push((" UST".purple().to_string(),*offset));
     *offset += 1;
 
     // does include gas_adjustment 
-    let fee_to_redeem_stable = estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_redeem_stable","fee_amount_adjusted".to_owned(),false,2).await;
-    add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay Redeem]         est. fee:                        ".truecolor(75,219,75), format!("{} UST",fee_to_redeem_stable).yellow())).await.ok(); 
+    anchor_view.push((format!("{}{}","\n   [Auto Repay Redeem]".truecolor(75,219,75),"             est. fee:                 ".purple().to_string()),*offset));
     *offset += 1;
  
-    let to_repay = calculate_repay_plan(tasks.clone(),"to_repay",2).await;
-    add_string_to_display(new_display,*offset,format!("{}{}","\n\n   [Auto Repay]                repay:                           ".truecolor(75,219,75), format!("{} UST",to_repay).yellow())).await.ok(); 
+    anchor_view.push(("--".purple().to_string(),*offset));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_redeem_stable","fee_amount_adjusted".to_owned(),false,2)));
+    anchor_tasks.push(t);
+    *offset += 1;
+
+    anchor_view.push((" UST".purple().to_string(),*offset));
+    *offset += 1;
+ 
+    anchor_view.push((format!("{}{}","\n\n   [Auto Repay]".truecolor(75,219,75),"                    repay:                    ".purple().to_string()),*offset));
+    *offset += 1;
+ 
+    anchor_view.push(("--".purple().to_string(),*offset));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_redeem_stable","fee_amount_adjusted".to_owned(),false,2)));
+    anchor_tasks.push(t);
+    *offset += 1;
+
+    anchor_view.push((" UST".purple().to_string(),*offset));
     *offset += 1;
 
     // does include gas_adjustment
-    let anchor_protocol_txs_deposit_stable = estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_repay_stable","avg_fee_amount_adjusted_without_stability_fee".to_owned(),false,2).await;
-    add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay]                est. fee:                        ".truecolor(75,219,75), format!("{} UST",anchor_protocol_txs_deposit_stable).yellow())).await.ok(); 
+    anchor_view.push((format!("{}{}","\n   [Auto Repay]".truecolor(75,219,75),"                    est. fee:                 ".purple().to_string()),*offset));
+    *offset += 1;
+ 
+    anchor_view.push(("--".purple().to_string(),*offset));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_repay_stable","avg_fee_amount_adjusted_without_stability_fee".to_owned(),false,2)));
+    anchor_tasks.push(t);
+    *offset += 1;
+
+    anchor_view.push((" UST".purple().to_string(),*offset));
     *offset += 1;
 
     // min(to_repay * tax_rate , tax_cap)
-    let anchor_protocol_txs_deposit_stable = calculate_repay_plan(tasks.clone(),"stability_tax",2).await;
-    add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay]                est. stability fee:              ".truecolor(75,219,75), format!("{} UST",anchor_protocol_txs_deposit_stable).yellow())).await.ok(); 
-    *offset += 1;
-
-    let total_amount = calculate_repay_plan(tasks.clone(),"total_amount",2).await;
-    add_string_to_display(new_display,*offset,format!("{}{}","\n\n   [Auto Repay Transaction]    amount:                          ".truecolor(75,219,75), format!("{} UST",total_amount).yellow())).await.ok(); 
-    *offset += 1;
-    // total fee
-    let anchor_protocol_txs_deposit_stable = estimate_anchor_protocol_auto_repay_tx_fee(tasks.clone(),2).await;
-    add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay Transaction]    est. fee:                        ".truecolor(75,219,75), format!("{} UST",anchor_protocol_txs_deposit_stable).yellow())).await.ok(); 
+    anchor_view.push((format!("{}{}","\n   [Auto Repay]".truecolor(75,219,75),"                    est. stability fee:       ".purple().to_string()),*offset));
     *offset += 1;
  
-    let anchor_reedem_stable_tx = anchor_reedem_and_repay_stable(tasks.clone(), wallet_seed_phrase.clone(),true).await;
-    add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay Transaction]    est. fee (LCD):                  ".truecolor(75,219,75), format!("{}",anchor_reedem_stable_tx).yellow())).await.ok(); 
+    anchor_view.push(("--".purple().to_string(),*offset));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(calculate_repay_plan(tasks.clone(),"stability_tax",2)));
+    anchor_tasks.push(t);
     *offset += 1;
 
+    anchor_view.push((" UST".purple().to_string(),*offset));
+    *offset += 1;
 
+    anchor_view.push((format!("{}{}","\n\n   [Auto Repay Transaction]".truecolor(75,219,75),"        amount:                   ".purple().to_string()),*offset));
+    *offset += 1;
+ 
+    anchor_view.push(("--".purple().to_string(),*offset));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(calculate_repay_plan(tasks.clone(),"total_amount",2)));
+    anchor_tasks.push(t);
+    *offset += 1;
+
+    anchor_view.push((" UST".purple().to_string(),*offset));
+    *offset += 1;
+
+    // total fee
+    anchor_view.push((format!("{}{}","\n   [Auto Repay Transaction]".truecolor(75,219,75),"        est. fee:                 ".purple().to_string()),*offset));
+    *offset += 1;
+ 
+    anchor_view.push(("--".purple().to_string(),*offset));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(estimate_anchor_protocol_auto_repay_tx_fee(tasks.clone(),2)));
+    anchor_tasks.push(t);
+    *offset += 1;
+
+    anchor_view.push((" UST".purple().to_string(),*offset));
+    *offset += 1;
+
+    let mut field = "result:  ";
+
+    if is_test {
+        field = "estimate:";
+    }
+
+    anchor_view.push((format!("{}{}","\n\n   [Auto Repay]".truecolor(75,219,75),format!("                    {}                 ",field.purple())),*offset));
+    *offset += 1;
+
+    anchor_view.push(("--".purple().to_string(),*offset));
+    
+    // function able to execute auto repay, therefore registering it as task to run concurrently. 
+    let important_task: Pin<Box<dyn Future<Output = String> + Send + 'static>> = Box::pin(anchor_reedem_and_repay_stable(tasks.clone(), wallet_seed_phrase.clone(),is_test));
+    // TODO: make this a user settings.
+    let timeout_duration = 60u64;
+    let block_duration_after_resolve = 10i64;
+    try_register_function(&tasks,"anchor_auto_repay".to_owned(),important_task,timeout_duration, block_duration_after_resolve).await;  
+          
+    // display task here
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(await_function(tasks.clone(),"anchor_auto_repay".to_owned())));
+    anchor_tasks.push(t);
+    *offset += 1;
+  
 
 /* for auto borrow 
     let anchor_protocol_txs_deposit_stable = estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_deposit_stable","fee_amount_adjusted".to_owned(),false,2).await;
@@ -634,16 +718,13 @@ pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromis
     add_string_to_display(new_display,*offset,format!("{}{}","\n\n\n   [Auto Repay]    UST balance after repay:            ".truecolor(75,219,75), format!("{} UST",available_to_repay).yellow())).await.ok(); 
     *offset += 1;
 */
-    if repay_status == "repay".to_string() {
 
-        // 
-        // TODO: check if balance bellow limit.
-         
-         // estimate function
 
-         // control
-         // repay function.
+    if is_first_run {
+        add_view_to_display(&new_display, anchor_view).await.ok(); 
     }
+
+    return anchor_tasks;
  
 }
 
