@@ -9,7 +9,7 @@ use core::str::FromStr;
 
 mod control;
 
-use control::view::interface::model::{UserSettings,MaybeOrPromise,requirements,get_keys_of_running_tasks,get_keys_of_failed_tasks,await_running_tasks,get_timestamps_of_resolved_tasks};
+use control::view::interface::model::{UserSettings,MaybeOrPromise,requirements,try_register_function,await_function,get_keys_of_running_tasks,get_keys_of_failed_tasks,await_running_tasks,get_timestamps_of_resolved_tasks};
  
 use control::view::interface::model::services::blockchain::smart_contracts::objects::meta::api::{get_from_account};
 
@@ -69,6 +69,8 @@ mod simple_user_input {
 
 // TODO: Add UST peg stat.
 // TODO: Add config for usersettings
+ 
+// TODO: Auto Replenish: Always get the account balance a good bit above the limit.
 
 // TODO: Show UST balance 
 // TODO: Auto Stake, display all the info.
@@ -149,8 +151,11 @@ async fn main() -> anyhow::Result<()> {
                 wallet_acc_address = get_input("Enter your wallet address (press Enter to skip):").to_string();
                 println!("{esc}c", esc = 27 as char); 
             } 
-
         }
+
+        // Arc allows multiple references to the same object,
+        // to potentially spawn multiple tasks with access to the seed phrase, while not revealing the string.
+        let wallet_seed_phrase = Arc::new(wallet_seed_phrase);
 
         /* Load user settings */
 
@@ -240,8 +245,15 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
         }
+        let mut req_keys_status = req_keys.clone();
+        for bot_tasks in &args_b {
+            req_keys_status.push(bot_tasks);
+        }
+
+        let req_keys_status = &*req_keys_status;
         let req_keys = &*req_keys; 
         let req = &*req_new;
+
 
         /* Display */
         // object that stores the terminal output
@@ -262,8 +274,8 @@ async fn main() -> anyhow::Result<()> {
         let mut is_first_run: bool = true;
 
         loop { 
-            let req_unresolved = get_keys_of_running_tasks(&tasks,&req_keys).await;
-            let req_failed = get_keys_of_failed_tasks(&tasks, &req_keys).await;
+            let req_unresolved = get_keys_of_running_tasks(&tasks,&req_keys_status).await;
+            let req_failed = get_keys_of_failed_tasks(&tasks, &req_keys_status).await;
 
             // waiting for unresolved tasks to catch up 
             if is_first_run { 
@@ -336,36 +348,37 @@ async fn main() -> anyhow::Result<()> {
  
             if args_i.contains(&"market") {        
                 for t in display_market_info(&tasks, &new_display, &mut offset, is_first_run).await {
-                    if timestamps_display[t.0] == 064 || now - timestamps_display[t.0] > 1 {
-                        add_to_display(&new_display,t.0,Box::pin(t.1)).await.ok();
+                    if timestamps_display[t.0] == 0i64 || now - timestamps_display[t.0] > 1i64 {
+                        try_add_to_display(&new_display,t.0,Box::pin(t.1)).await.ok();
                         timestamps_display[t.0] = now;
                     }
                 }
             }
             if args_i.contains(&"anchor") {        
                 for t in display_anchor_info(&tasks, &new_display, &mut offset, is_first_run).await {
-                    if timestamps_display[t.0] == 064 || now - timestamps_display[t.0] > 1 {
-                        add_to_display(&new_display,t.0,Box::pin(t.1)).await.ok();
+                    if timestamps_display[t.0] == 0i64 || now - timestamps_display[t.0] > 1i64 {
+                        try_add_to_display(&new_display,t.0,Box::pin(t.1)).await.ok();
                         timestamps_display[t.0] = now;
                     } 
                 }
             }
             if args_a.contains(&"anchor_account") {        
                 for t in display_anchor_account(&tasks, &new_display, &mut offset, is_first_run).await {
-                    if timestamps_display[t.0] == 064 || now - timestamps_display[t.0] > 1 {
-                        add_to_display(&new_display,t.0,Box::pin(t.1)).await.ok();
+                    if timestamps_display[t.0] == 0i64 || now - timestamps_display[t.0] > 1i64 {
+                        try_add_to_display(&new_display,t.0,Box::pin(t.1)).await.ok();
                         timestamps_display[t.0] = now;
                     } 
                 }
             }
 
             if args_b.contains(&"anchor_auto_stake") {
-                for t in lazy_anchor_account_auto_stake_rewards(&tasks, &wallet_seed_phrase, &new_display, &mut offset, is_test, is_first_run).await {
-                    if timestamps_display[t.0] == 064 || now - timestamps_display[t.0] > 1 {
-                        add_to_display(&new_display,t.0,Box::pin(t.1)).await.ok();
+                let anchor_auto_stake = lazy_anchor_account_auto_stake_rewards(&tasks, &wallet_seed_phrase, &new_display, &mut offset, is_test, is_first_run).await;
+                for t in anchor_auto_stake {
+                    if timestamps_display[t.0] == 0i64 || now - timestamps_display[t.0] > 1i64 { 
+                        try_add_to_display(&new_display,t.0,Box::pin(t.1)).await.ok();
                         timestamps_display[t.0] = now;
-                    } 
-                }
+                    }  
+                }                    
             }  
 
             if args_b.contains(&"anchor_auto_repay") {
@@ -478,16 +491,20 @@ pub async fn add_format_to_result(prefix: String,suffix: String, f: Pin<Box<dyn 
     return format!("{}{}{}",prefix,f.await,suffix);
 }
 
-pub async fn add_to_display(new_display: &Arc<RwLock<Vec<String>>>, index: usize, f: Pin<Box<dyn Future<Output = String> + Send + 'static >>) -> anyhow::Result<()> {
+
+pub async fn add_to_display(new_display: &Arc<RwLock<Vec<String>>>, index: usize, result: Option<String>) -> anyhow::Result<()> {
     
-    let result = timeout(Duration::from_millis(100), f).await?;   
-    { 
-        let mut vector =  new_display.write().await; /*
-        let rg = rand::thread_rng().gen_range(55..100);
-        let b = rand::thread_rng().gen_range(225..255);   */
-        *vector.get_mut(index).unwrap() = format!("{}",result.truecolor(77, 77, 237));
-    }  
+    if let Some(succ) = result {
+        let mut vector =  new_display.write().await;
+        *vector.get_mut(index).unwrap() = format!("{}",succ.truecolor(77, 77, 237));
+    }
     Ok(())
+}
+
+pub async fn try_add_to_display(new_display: &Arc<RwLock<Vec<String>>>, index: usize, f: Pin<Box<dyn Future<Output = String> + Send + 'static >>) -> anyhow::Result<()> {
+    
+    let result = timeout(Duration::from_millis(100), f).await;   
+    add_to_display(new_display,index,result.ok()).await
 }
 
 pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, req: &[&str], new_display: &Arc<RwLock<Vec<String>>> ,offset: &mut usize) {
@@ -524,8 +541,14 @@ pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromis
     add_view_to_display(&new_display, error_view).await.ok(); 
 
 }
+/**
+ * Anchor Auto Repay requires that the account balance has sufficient funds.
+ * Auto Repay tries to replenish the account if possible. 
+ * WARNING: In some edge cases the account balance still can fall bellow the limit.
+ * 
+ * */
 
-pub async fn anchor_account_auto_repay(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_seed_phrase: &SecUtf8,  new_display: &Arc<RwLock<Vec<String>>>,offset: &mut usize, is_test: bool, is_first_run: bool) {
+ pub async fn anchor_account_auto_repay(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_seed_phrase: &Arc<SecUtf8>,  new_display: &Arc<RwLock<Vec<String>>>,offset: &mut usize, is_test: bool, is_first_run: bool) {
 
     add_string_to_display(new_display,*offset,"\n  **Anchor Protocol Auto Repay**\n\n".truecolor(75,219,75).to_string()).await.ok(); 
     *offset += 1;
@@ -591,7 +614,7 @@ pub async fn anchor_account_auto_repay(tasks: &Arc<RwLock<HashMap<String, MaybeO
     add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay Transaction]    est. fee:                        ".truecolor(75,219,75), format!("{} UST",anchor_protocol_txs_deposit_stable).yellow())).await.ok(); 
     *offset += 1;
  
-    let anchor_reedem_stable_tx = anchor_reedem_and_repay_stable(tasks.clone(), wallet_seed_phrase,true).await;
+    let anchor_reedem_stable_tx = anchor_reedem_and_repay_stable(tasks.clone(), wallet_seed_phrase.clone(),true).await;
     add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay Transaction]    est. fee (LCD):                  ".truecolor(75,219,75), format!("{}",anchor_reedem_stable_tx).yellow())).await.ok(); 
     *offset += 1;
 
@@ -612,6 +635,9 @@ pub async fn anchor_account_auto_repay(tasks: &Arc<RwLock<HashMap<String, MaybeO
     *offset += 1;
 */
     if repay_status == "repay".to_string() {
+
+        // 
+        // TODO: check if balance bellow limit.
          
          // estimate function
 
@@ -620,8 +646,12 @@ pub async fn anchor_account_auto_repay(tasks: &Arc<RwLock<HashMap<String, MaybeO
     }
  
 }
- 
-pub async fn lazy_anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_seed_phrase: &SecUtf8,  new_display: &Arc<RwLock<Vec<String>>>,offset: &mut usize, is_test: bool, is_first_run: bool) -> Vec<(usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>)> {
+
+/**
+ * Anchor Auto Stake requires that the account balance has sufficient funds.
+ * WARNING: It will not replenish the account balance. 
+ * */
+pub async fn lazy_anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_seed_phrase: &Arc<SecUtf8>,  new_display: &Arc<RwLock<Vec<String>>>,offset: &mut usize, is_test: bool, is_first_run: bool) -> Vec<(usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>)> {
      
     let mut anchor_view: Vec<(String,usize)> = Vec::new();
     let mut anchor_tasks: Vec<(usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>)> = Vec::new();
@@ -629,117 +659,138 @@ pub async fn lazy_anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<S
 
     anchor_view.push(("\n  **Anchor Protocol Auto Stake**\n\n".truecolor(75,219,75).to_string(),*offset)); 
     *offset += 1;
-    
-    anchor_view.push((format!("{}{}","\n   [Auto Stake]".truecolor(75,219,75),"    next:              ".purple().to_string()),*offset));
+
+    anchor_view.push((format!("{}{}","\n\n   [Auto Stake UST]".truecolor(75,219,75),"         balance:           ".purple().to_string()),*offset));
+    *offset += 1;
+ 
+    anchor_view.push(("--".purple().to_string(),*offset));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(terra_balance_to_string(tasks.clone(),"uusd",false,2)));
+    anchor_tasks.push(t);
     *offset += 1;
 
-    // available to claim
-    // available to stake
+    anchor_view.push((format!("{}{}","\n\n   [Auto Stake Gov]".truecolor(75,219,75),"         balance:           ".purple().to_string()),*offset));
+    *offset += 1;
+ 
+    anchor_view.push(("--".purple().to_string(),*offset));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(borrower_anc_deposited_to_string(tasks.clone(),false,4)));
+    anchor_tasks.push(t);
+    *offset += 1;
 
-    // est fees.
+    anchor_view.push((" ANC".purple().to_string(),*offset));
+    *offset += 1;
+ 
+    anchor_view.push((format!("{}{}","\n   [Auto Stake Gov]".truecolor(75,219,75),"         staked:            ".purple().to_string()),*offset));
+    *offset += 1;
+
+    anchor_view.push(("--".purple().to_string(),*offset));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(anc_staked_balance_in_ust_to_string(tasks.clone(),4)));
+    anchor_tasks.push(t);
+    *offset += 1;
+
+    anchor_view.push((" UST  (=".purple().to_string(),*offset));
+    *offset += 1;
+
+    anchor_view.push(("--".purple().to_string(),*offset));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(anc_staked_balance_to_string(tasks.clone(),4)));
+    anchor_tasks.push(t);
+    *offset += 1;
+
+    anchor_view.push((" ANC)\n".purple().to_string(),*offset));
+    *offset += 1;
+    
+    anchor_view.push((format!("{}{}","\n   [Auto Stake Rewards]".truecolor(75,219,75),"     amount:            ".purple().to_string()),*offset));
+    *offset += 1;
+
+    anchor_view.push(("--".purple().to_string(),*offset));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(borrower_rewards_in_ust_to_string(tasks.clone(),  2)));
+    anchor_tasks.push(t);
+    *offset += 1;
+
+    anchor_view.push((" UST".purple().to_string(),*offset));
+    *offset += 1;
+ 
+    anchor_view.push((format!("{}{}","\n   [Auto Stake Rewards]".truecolor(75,219,75),"     target:            ".purple().to_string()),*offset));
+    *offset += 1;
+
+    anchor_view.push(("--".purple().to_string(),*offset));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"loan_amount","value_next",2)));
+    anchor_tasks.push(t);
+    *offset += 1;
+
+    anchor_view.push((" UST".purple().to_string(),*offset));
+    *offset += 1;
+
+    anchor_view.push((format!("{}{}","\n   [Auto Stake]".truecolor(75,219,75),"             next:              ".purple().to_string()),*offset));
+    *offset += 1;
 
     anchor_view.push(("--".purple().to_string(),*offset));
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"loan_amount","date_next",2)));
     anchor_tasks.push(t);
     *offset += 1;
 
-    anchor_view.push((format!("{}{}","\n   [Auto Stake UST]".truecolor(75,219,75),"    amount:           ".purple().to_string()),*offset));
-    *offset += 1;    
+    // est fees.
+    anchor_view.push((format!("{}{}","\n\n   [Auto Stake Claim Tx]".truecolor(75,219,75),"    est. fee:          ".purple().to_string()),*offset));
+    *offset += 1;
 
     anchor_view.push(("--".purple().to_string(),*offset));
-    // substract min_ust_balance
-    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(terra_balance_to_string(tasks.clone(),"uusd",false,2)));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(estimate_anchor_protocol_tx_fee(tasks.clone(), "anchor_protocol_txs_claim_rewards","fee_amount_adjusted".to_owned(),false,2)));
     anchor_tasks.push(t);
     *offset += 1;
 
+    anchor_view.push((" UST".purple().to_string(),*offset));
+    *offset += 1;
 
+    anchor_view.push((format!("{}{}","\n   [Auto Stake Stake Tx]".truecolor(75,219,75),"    est. fee:          ".purple().to_string()),*offset));
+    *offset += 1;
 
+    anchor_view.push(("--".purple().to_string(),*offset));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(estimate_anchor_protocol_tx_fee(tasks.clone(), "anchor_protocol_txs_staking","fee_amount_adjusted".to_owned(),false,2)));
+    anchor_tasks.push(t);
+    *offset += 1;
+
+    anchor_view.push((" UST".purple().to_string(),*offset));
+    *offset += 1;
+
+    anchor_view.push((format!("{}{}","\n   [Auto Stake Tx]".truecolor(75,219,75),"          est. fee:          ".purple().to_string()),*offset));
+    *offset += 1;
+
+    anchor_view.push(("--".purple().to_string(),*offset));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(estimate_anchor_protocol_tx_fee_claim_and_stake(tasks.clone(),2)));
+    anchor_tasks.push(t);
+    *offset += 1;
+
+    anchor_view.push((" UST".purple().to_string(),*offset));
+    *offset += 1;
+    
+    let mut field = "result:  ";
+
+    if is_test {
+        field = "estimate:";
+    }
+
+    anchor_view.push((format!("{}{}","\n\n   [Auto Stake]".truecolor(75,219,75),format!("             {}          ",field.purple())),*offset));
+    *offset += 1;
+
+    anchor_view.push(("--".purple().to_string(),*offset));
+    
+    // function able to execute auto stake, therefore registering it as task to run concurrently. 
+    let important_task: Pin<Box<dyn Future<Output = String> + Send + 'static>> = Box::pin(anchor_borrow_claim_and_stake_rewards(tasks.clone(), wallet_seed_phrase.clone(),is_test));
+    // TODO: make this a user settings.
+    let timeout_duration = 60u64;
+    let block_duration_after_resolve = 30i64;
+    try_register_function(&tasks,"anchor_auto_stake".to_owned(),important_task,timeout_duration, block_duration_after_resolve).await;  
+          
+    // display task here
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(await_function(tasks.clone(),"anchor_auto_stake".to_owned())));
+    anchor_tasks.push(t);
+    *offset += 1;
 
     if is_first_run {
         add_view_to_display(&new_display, anchor_view).await.ok(); 
-    }
-
-    // show all stats as if now is now.
-
-    let date_next_to_auto_claim_and_stake = match timeout(Duration::from_millis(100),estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"loan_amount","date_next",2)).await {
-        Ok(result) => {
-            result
-        },
-        Err(_) => {
-            "--".to_string()
-        }
-    };
-
-    if date_next_to_auto_claim_and_stake == "now".to_string() {   
-        anchor_account_auto_stake_rewards(&tasks, wallet_seed_phrase,new_display,offset,is_test).await;
-
-        // trigger control logic to repay.
-    }
+    }     
 
     return anchor_tasks;
 }
-
-async fn anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_seed_phrase: &SecUtf8, new_display: &Arc<RwLock<Vec<String>>>,offset: &mut usize, is_test: bool) {
- 
-        // like with auto repy print info out.
-
-
-        // check for sufficient funds
-        match terra_balance_to_string(tasks.clone(),"uusd",false,2).await.as_ref() {
-            "--" => {
-                add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]".truecolor(75,219,75),"    error:       Loading UST account balance failed".red())).await.ok(); 
-                *offset += 1;
-                return;
-            },
-            "0" => {
-                add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]".truecolor(75,219,75),"    error:       insufficient funds".red())).await.ok(); 
-                *offset += 1;
-                return; 
-            },
-            e => {
-                match min_ust_balance_to_string(tasks.clone(),false,2).await.as_ref() {
-                    "--" => {
-                        add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]".truecolor(75,219,75),"    error:       minimum UST balance undefined".red())).await.ok(); 
-                        *offset += 1;
-                        return; 
-                    },
-                    m => {
-                        let balance = Decimal::from_str(e).unwrap();
-                        println!("{}",e);
-                        let min_balance = Decimal::from_str(m).unwrap();
-                        if balance <= min_balance {
-                            add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]".truecolor(75,219,75),"    error:       insufficient funds: minimum UST balance reached".red())).await.ok(); 
-                            *offset += 1;
-                            return; 
-                        }
-                    }
-                }
-            }
-        } 
-
-        add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]    estimate:    ".truecolor(75,219,75),"--".to_string().yellow())).await.ok(); 
-        let result = anchor_borrow_claim_and_stake_rewards(tasks.clone(), wallet_seed_phrase,true).await; 
-        add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]    estimate:    ".truecolor(75,219,75),result.to_string().yellow())).await.ok(); 
-        *offset += 1;
-
-        if !is_test {
-            add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]    result:      ".truecolor(75,219,75),"--".to_string().yellow())).await.ok(); 
-            let result = anchor_borrow_claim_and_stake_rewards(tasks.clone(), wallet_seed_phrase,false).await; 
-            add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Stake]    result:      ".truecolor(75,219,75),result.to_string().yellow())).await.ok(); 
-            *offset += 1;
-
-        }
-/*
-        let result = anchor_borrow_claim_rewards(tasks.clone(), wallet_seed_phrase,true).await;
-        display_add(format!("\n   [Auto Stake]   complete:    {:?}",result), 43 as usize,1 as usize); 
-   
-        let result = anchor_governance_stake_balance(tasks.clone(), wallet_seed_phrase,true).await;
-        display_add(format!("\n   [Auto Stake]   complete:    {:?}",result), 43 as usize,1 as usize); 
-*/ 
- 
-
-}
-
 
 pub async fn display_anchor_account(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>,  new_display: &Arc<RwLock<Vec<String>>>,offset: &mut usize,is_first_run: bool) -> Vec<(usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>)> {
 

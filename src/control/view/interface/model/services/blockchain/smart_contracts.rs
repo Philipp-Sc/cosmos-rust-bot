@@ -144,7 +144,12 @@ pub async fn anchor_protocol_borrower_limit(wallet_acc_address: String, gas_pric
 }
 pub async fn anchor_protocol_borrower_info(wallet_acc_address: String, gas_prices: GasPrices) ->  anyhow::Result<ResponseResult> {
     // https://docs.anchorprotocol.com/smart-contracts/money-market/market#borrowerinforesponse
-    let query = r#"{"borrower_info": {"borrower": "wallet_acc_address"}}"#.replace("wallet_acc_address", &wallet_acc_address); 
+    /**
+     * Gets information for the specified borrower. 
+     * Returns an interest-and-reward-accrued value if block_height field is filled. 
+     * Returns the stored (no interest / reward accrued) state if not filled. **This seems not to be the case anymore**
+     * */
+    let query = r#"{"borrower_info": {"borrower": "wallet_acc_address", "block_height": 1}}"#.replace("wallet_acc_address", &wallet_acc_address); 
     let contract_addr = get_contract("anchorprotocol","mmMarket");
     
     let res: String = get_fcd_or_lcd_query(&contract_addr,&query,&gas_prices).await?;

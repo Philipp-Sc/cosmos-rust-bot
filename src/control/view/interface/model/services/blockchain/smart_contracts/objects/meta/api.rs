@@ -74,18 +74,20 @@ pub async fn execute_messages(mnemonics: &str, messages: Vec<Message>, gas_opts:
         	return Err(anyhow!("Unexpected Fee Estimate. fees.len() = {:?}",fees.len()));
         }
 
-		let tx_fee = Decimal::from_str(fees[0].amount.to_string().as_str())?;
 		let micro = Decimal::from_str("1000000").unwrap();
-		let tx_fee = tx_fee.checked_div(micro).unwrap()
+		
+		let tx_fee = Decimal::from_str(fees[0].amount.to_string().as_str())?
+					.checked_div(micro).unwrap()
 					.round_dp_with_strategy(2, rust_decimal::RoundingStrategy::MidpointAwayFromZero);
+		
 		let gas_limit = res.result.fee.gas;
 
         if only_estimate {
 			return Err(anyhow!(format!("{} UST (gas limit: {})",tx_fee,gas_limit)));
         }
  
-        if fees[0].amount > max_tx_fee {
-			return Err(anyhow!("Unexpected High Fee: {:?}",fees));
+        if tx_fee > max_tx_fee {
+			return Err(anyhow!("Unexpected High Fee: {:?} (max_tx_fee: {})",fees,max_tx_fee));
         }
         if fees[0].denom != "uusd" {
 			return Err(anyhow!("Unexpected Fee Denom: {:?}",fees));        	

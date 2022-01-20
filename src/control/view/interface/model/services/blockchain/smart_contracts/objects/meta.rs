@@ -89,7 +89,7 @@ pub async fn anchor_redeem_and_repay_stable_tx(mnemonics: &str, coin_amount_rede
     	match estimate_to_gas_opts(res,only_estimate,max_tx_fee) {
             Err(err) => {
                 return Err(anyhow!(format!("{:?} (gas_adjustment: {})",err,gas_adjustment)));
-            }
+            },
             Ok(_) => {}
         };
     	Ok("".to_string())
@@ -131,7 +131,7 @@ pub async fn anchor_repay_stable_tx(mnemonics: &str, coin_amount_repay: Decimal,
         match estimate_to_gas_opts(res,only_estimate,max_tx_fee) {
             Err(err) => {
                 return Err(anyhow!(format!("{:?} (gas_adjustment: {})",err,gas_adjustment)));
-            }
+            },
             Ok(_) => {}
         };
         Ok("".to_string())
@@ -154,8 +154,12 @@ pub async fn anchor_governance_claim_and_stake(mnemonics: &str, coin_amount: Dec
 
         //let estimate_json = serde_json::to_string(&res.result); 
 		//{"fee":{"amount":[{"amount":"90462","denom":"uusd"}],"gas":"603080"}}
-		let gas_opts = estimate_to_gas_opts(res,only_estimate,max_tx_fee)?; 
-
+		let gas_opts = match estimate_to_gas_opts(res,only_estimate,max_tx_fee) {
+            Err(err) => {
+                return Err(anyhow!(format!("{:?} (gas_adjustment: {})",err,gas_adjustment)));
+            },
+            Ok(e) => {e}
+        };
 
 	 	let send_claim = anchor_governance_claim_msg(&from_account)?;
         let send_stake = anchor_governance_stake_msg(&from_account,coin_amount)?;
@@ -182,7 +186,12 @@ pub async fn anchor_governance_stake(mnemonics: &str, coin_amount: Decimal, gas_
         //let estimate_json = serde_json::to_string(&res.result); 
 		//{"fee":{"amount":[{"amount":"90462","denom":"uusd"}],"gas":"603080"}}
 
-		let gas_opts = estimate_to_gas_opts(res,only_estimate,max_tx_fee)?; 
+		let gas_opts = match estimate_to_gas_opts(res,only_estimate,max_tx_fee) {
+            Err(err) => {
+                return Err(anyhow!(format!("{:?} (gas_adjustment: {})",err,gas_adjustment)));
+            },
+            Ok(e) => {e}
+        };
 
         let send_stake = anchor_governance_stake_msg(&from_account,coin_amount)?;
 
@@ -207,7 +216,12 @@ pub async fn anchor_claim_rewards(mnemonics: &str, gas_price_uusd: Decimal, max_
         //let estimate_json = serde_json::to_string(&res.result); 
 		//{"fee":{"amount":[{"amount":"90462","denom":"uusd"}],"gas":"603080"}}
 
-		let gas_opts = estimate_to_gas_opts(res,only_estimate,max_tx_fee)?; 
+		let gas_opts = match estimate_to_gas_opts(res,only_estimate,max_tx_fee) {
+            Err(err) => {
+                return Err(anyhow!(format!("{:?} (gas_adjustment: {})",err,gas_adjustment)));
+            },
+            Ok(e) => {e}
+        };
 
 	 	let send_claim = anchor_governance_claim_msg(&from_account)?; 
 

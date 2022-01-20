@@ -55,6 +55,8 @@ use tokio::time::timeout;
 
 use chrono::{Utc};
 
+use core::pin::Pin;
+use core::future::Future;
 
 pub enum MaybeOrPromise { 
     Data(QueryData),
@@ -326,7 +328,42 @@ pub async fn await_running_tasks(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
     }
     Ok("finished".to_string())
 } 
-  
+   
+pub async fn try_register_function(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: String, f: Pin<Box<dyn Future<Output = String> + Send + 'static >>, timeout_duration: u64, block_duration_after_resolve: i64) {
+
+    let mut does_not_exist = false;
+ 
+    match tasks.read().await.get(&key) {
+        Some(_) => {}, 
+        None => {
+            does_not_exist = true;
+        }
+    }
+
+    let req: [&str; 1] = [&key];
+    let timestamp = get_timestamps_of_resolved_tasks(tasks,&req).await[0];
+    let now = Utc::now().timestamp();
+
+    if does_not_exist || (timestamp > 0i64 && now - timestamp >= block_duration_after_resolve) {
+        let handle = tokio::spawn(async move {   
+                let result = timeout(Duration::from_secs(timeout_duration), f).await.unwrap_or("timeout".to_string());                   
+                Ok(ResponseResult::Text(result))
+        });
+        let mut map = tasks.write().await;
+        map.insert(key, MaybeOrPromise::Data(QueryData::Task(handle))); 
+    }
+}
+
+pub async fn await_function(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: String) -> String {
+   match get_data_maybe_or_await_task(&tasks,&key).await {
+        Ok(succ) => {
+            return succ.as_text().unwrap().to_string();
+        },
+        Err(err) => {
+            return err.to_string();
+        }
+     }
+}
   /*
   * all required queries are triggered here in async fashion
   *
