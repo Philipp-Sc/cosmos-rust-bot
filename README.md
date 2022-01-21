@@ -23,27 +23,47 @@
 
 
 ## What 
-
-* Market Dashboard
-
- <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/development/terra-rust-bot_v0.1_terra.png" width="280">
  
+### Anchor Auto Stake Rewards
+
+ `./terra-rust-bot -b anchor_auto_stake -d test dev` (read only)
  
-* Anchor Dashboard  
 
+ `./terra-rust-bot -b anchor_auto_stake -d dev` 
 
- <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/development/terra-rust-bot_v0.1_anchor.png" width="1180">
+ <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/development/terra-rust-bot_v0.2_auto_stake.png" width="380">
   
  
-* Anchor Auto Stake Rewards
+### Anchor Auto Loan Repay 
 
 
- <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/development/terra-rust-bot_v0.1_auto_stake.png" width="280">
+ `./terra-rust-bot -b anchor_auto_repay -d test dev` (read only)
+ 
+ 
+ `./terra-rust-bot -b anchor_auto_repay -d dev` 
+
+
+ <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/development/terra-rust-bot_v0.2_anchor_auto_repay.png" width="380">
   
+### Anchor Auto Borrow (comming soon)
+### Anchor Auto Replenish (not yet implemented)
+### Anchor Auto Exchange Rewards (not yet implemented)
+
+### Market Dashboard 
+
+`./terra-rust-bot -i market` (general information)
+
+<img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/development/terra-rust-bot_v0.1_terra.png" width="280">
  
-* Anchor Auto Loan Repay 
  
-* Anchor Auto Exchange Rewards (not yet implemented)
+### <a href="https://github.com/Philipp-Sc/terra-rust-bot/blob/development/terra-rust-bot_v0.1_anchor.png"> Anchor Dashboard </a>
+
+
+`./terra-rust-bot -i anchor` (genereal information)
+
+
+`./terra-rust-bot -i anchor -a anchor_account` (for account specific information)
+  
 
 ## How
 
@@ -88,23 +108,10 @@
 
 * `-i` show **info** dashboards for `market` or `anchor`. Example: `-i market anchor`. 
 * `-a` show **account** dashboards for `anchor_account`.  Example: `-a anchor_account`. (Requires wallet address)
-* `-b` enable **bot** for `anchor_auto_staking.`  Example: `-b anchor_auto_staking`. (Requires seed phrase)
+* `-b` enable **bot** for `anchor_auto_staking.`  Example: `-b anchor_auto_stake`. (Requires seed phrase)
+* `-b` enable **bot** for `anchor_auto_repay.`  Example: `-b anchor_auto_repay`. (Requires seed phrase)
 * `-d` enable additional development/debugging output. Currently `test` and `dev` are available. `test` will only simulate or estimate transaction fees. `dev` will output additional information to show what is happening in the background.   Example: `-d test dev`.
 
-
-
-## Examples
-
-* For the **Market Dashboard** run `./terra-rust-bot -i market`.
-* For the **Anchor Dashboard** run `./terra-rust-bot -i anchor`.
-* If you want to see your account specific data add  `-a anchor_account`.
-* If you want to have Auto Staking add `-b anchor_auto_staking`
-
-* Example: `./terra-rust-bot -i market anchor -a anchor_account`
-* Market Dashboard: `./terra-rust-bot -i market`
-* Anchor Dashboard 1: `./terra-rust-bot -i anchor -a anchor_account`
-* Anchor Dashboard 2: `./terra-rust-bot -i anchor -a anchor_account -b anchor_auto_stake`
-* Auto Staking Only: `./terra-rust-bot -b anchor_auto_stake`
 
  
 ## Similar projects
