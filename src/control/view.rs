@@ -2,7 +2,12 @@
 
 pub mod interface;
 
-use interface::model::{MaybeOrPromise,get_data_maybe_or_meta_data_maybe,get_data_maybe_or_await_task,get_meta_data_maybe_or_await_task};  
+use interface::model::{
+    MaybeOrPromise,
+    get_data_maybe_or_meta_data_maybe,
+    get_data_maybe_or_await_task,
+    get_meta_data_maybe_or_await_task,
+    get_meta_data_maybe};  
 
 use interface::*;
 
@@ -56,6 +61,18 @@ pub fn timestamp_now_to_string() -> String {
     let dt = Utc::now();//.timestamp()
     let now = dt.format("%d/%m/%y %H:%M:%S");
     return now.to_string();              
+}
+
+pub async fn get_past_transaction_logs(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, field: &str) -> String {
+   match get_meta_data_maybe(&tasks, field).await {
+        Ok(maybe) => {
+            return format!("tx: {:?}, timestamp: {}",maybe.data, maybe.timestamp);
+        },
+        Err(err) => {
+            // no previous transaction, free to continue.
+            return "--".to_string();
+        }
+   }
 }
  
 pub async fn calculate_repay_plan(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, field: &str, digits_rounded_to: u32) -> String {

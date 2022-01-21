@@ -72,8 +72,10 @@ mod simple_user_input {
  
 // TODO: Auto Replenish: Always get the account balance a good bit above the limit.
  
-// TODO: Have Logs when the bot did something stay for longer until the bot is stopped and limited by usersetting history length.
- 
+// TODO: Optimize TX Fee estimate query functions.
+// FIX Compiler warnings
+
+
  #[tokio::main]
 async fn main() -> anyhow::Result<()> {
 
@@ -162,7 +164,6 @@ async fn main() -> anyhow::Result<()> {
             max_gas_adjustment: Decimal::from_str("1.67").unwrap(),
             gas_adjustment_preference: Decimal::from_str("1.2").unwrap(),
             min_ust_balance: Decimal::from_str("10").unwrap(),  
-            // to not run out of UST to pay for transaction fees the bot will always try to maintain the set minimum UST balance.
             wallet_acc_address: wallet_acc_address,  
         };
         // todo: read and override user settings from json file, if exists.
@@ -208,8 +209,8 @@ async fn main() -> anyhow::Result<()> {
         ("borrow_limit", fast, vec!["anchor_account","anchor_auto_stake","anchor_auto_repay"]),
         ("borrow_info", fast, vec!["anchor_account","anchor_auto_stake","anchor_auto_repay"]),
         ("balance", fast, vec!["anchor_account","anchor_auto_repay"]),
-        ("anc_balance", fast, vec!["anchor_account"]),
-        ("staker", fast, vec!["anchor_account"]),
+        ("anc_balance", fast, vec!["anchor_account","anchor_auto_stake"]),
+        ("staker", fast, vec!["anchor_account","anchor_auto_stake"]),
         ("blocks_per_year", slow, vec!["market","anchor","anchor_account"]), 
         ("earn_apy", slow, vec!["anchor","anchor_account"]),
         /* <meta data> */ 
@@ -385,8 +386,10 @@ async fn main() -> anyhow::Result<()> {
                 
             }   
 
+            display_all_logs(&tasks ,&new_display, &mut offset, &args_b).await;
+            
             display_all_errors(&tasks, &*req_unresolved ,&new_display, &mut offset).await;
-            // todo: only write logs when special event (Errors, or TX).
+            
             // todo: can write display to a log file.  
 
             if is_first_run {
@@ -506,6 +509,45 @@ pub async fn try_add_to_display(new_display: &Arc<RwLock<Vec<String>>>, index: u
     add_to_display(new_display,index,result.ok()).await
 }
 
+pub async fn display_all_logs(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, new_display: &Arc<RwLock<Vec<String>>> ,offset: &mut usize, args_b: &Vec<&str>) {
+   
+    if args_b.len() == 0 {
+        return;
+    }
+
+    let mut log_view: Vec<(String,usize)> = Vec::new();
+
+    log_view.push(("\n\n  **Logs**\n\n".yellow().to_string(),*offset));
+    *offset += 1;
+  
+    // latest_transaction
+    // anchor_redeem_and_repay_stable
+    // anchor_governance_claim_and_stake
+    
+    if args_b.contains(&"anchor_auto_repay") {
+
+        let auto_repay = get_past_transaction_logs(tasks.clone(),"anchor_redeem_and_repay_stable").await;
+
+        log_view.push((format!("{}{}","\n   [Auto Repay]            ".yellow(), auto_repay.yellow()),*offset));
+        *offset += 1;
+
+    }
+
+    if args_b.contains(&"anchor_auto_stake") {
+
+        let auto_stake = get_past_transaction_logs(tasks.clone(),"anchor_governance_claim_and_stake").await;
+
+        log_view.push((format!("{}{}","\n   [Auto Stake]            ".yellow(), auto_stake.yellow()),*offset)); 
+        *offset += 1;
+
+    }
+    log_view.push(("\n".to_string(),*offset));
+    *offset += 1;
+
+    add_view_to_display(&new_display, log_view).await.ok(); 
+}
+
+
 pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, req: &[&str], new_display: &Arc<RwLock<Vec<String>>> ,offset: &mut usize) {
    
     let mut error_view: Vec<(String,usize)> = Vec::new();
@@ -538,12 +580,17 @@ pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromis
     }
 
     add_view_to_display(&new_display, error_view).await.ok(); 
-
 }
 /**
  * Anchor Auto Repay requires that the account balance has sufficient funds.
  * Anchor Auto Repay tries to be net neutral regarding the UST account balance.
- * WARNING: In some edge cases the account balance still can fall bellow the limit.
+ * Info: In some edge cases the account balance still can fall bellow the limit.
+ * 
+ * All the requirements specified by the tag "anchor_auto_repay" are mostly loaded concurrently.
+ * Each requirement has it's own refresh time (fast=10s) 
+ * There are no guarantees that they resolve in time (in 10s).
+ * Anchor Auto Repay non blocking waits for unresolved requirements to be fulfilled.
+ * 
  * */
 
  pub async fn lazy_anchor_account_auto_repay(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_seed_phrase: &Arc<SecUtf8>,  new_display: &Arc<RwLock<Vec<String>>>,offset: &mut usize, is_test: bool, is_first_run: bool) -> Vec<(usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>)>  {
@@ -692,10 +739,18 @@ pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromis
     anchor_view.push(("--".purple().to_string(),*offset));
     
     // function able to execute auto repay, therefore registering it as task to run concurrently. 
-    let important_task: Pin<Box<dyn Future<Output = String> + Send + 'static>> = Box::pin(anchor_reedem_and_repay_stable(tasks.clone(), wallet_seed_phrase.clone(),is_test));
-    // TODO: make this a user settings.
-    let timeout_duration = 60u64;
-    let block_duration_after_resolve = 10i64;
+    let important_task: Pin<Box<dyn Future<Output = String> + Send + 'static>> = Box::pin(anchor_redeem_and_repay_stable(tasks.clone(), wallet_seed_phrase.clone(),is_test));
+    let timeout_duration = 120u64;  /* if task hangs for some reason (awaiting data, performaing estimate, broadcasting transaction) then timeout */
+    
+    let mut block_duration_after_resolve = 1i64;
+    /* a small duration is optimal, since the data is already there */
+    /* only issue is if there just was a transaction, this is handled by ensuring that the relevant data is recent enough.*/
+
+    if is_test {
+        // each call executes an estimate, therefore have higher delay to not spam estimates.
+        // since test mode does not perform transactions, there is no downside by doing this.
+        block_duration_after_resolve = 30i64;
+    }
     try_register_function(&tasks,"anchor_auto_repay".to_owned(),important_task,timeout_duration, block_duration_after_resolve).await;  
           
     // display task here
@@ -730,7 +785,7 @@ pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromis
 
 /**
  * Anchor Auto Stake requires that the account balance has sufficient funds.
- * WARNING: It will not replenish the account balance. 
+ * Info: It will not replenish the account balance. 
  * */
 pub async fn lazy_anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_seed_phrase: &Arc<SecUtf8>,  new_display: &Arc<RwLock<Vec<String>>>,offset: &mut usize, is_test: bool, is_first_run: bool) -> Vec<(usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>)> {
      
@@ -856,9 +911,16 @@ pub async fn lazy_anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<S
     
     // function able to execute auto stake, therefore registering it as task to run concurrently. 
     let important_task: Pin<Box<dyn Future<Output = String> + Send + 'static>> = Box::pin(anchor_borrow_claim_and_stake_rewards(tasks.clone(), wallet_seed_phrase.clone(),is_test));
-    // TODO: make this a user settings.
-    let timeout_duration = 60u64;
-    let block_duration_after_resolve = 30i64;
+    let timeout_duration = 120u64;
+    let mut block_duration_after_resolve = 10i64;
+    /* a small duration is optimal, since the data is already there */
+    /* only issue is if there just was a transaction, this is handled by ensuring that the relevant data is recent enough.*/
+
+    if is_test {
+        // each call executes an estimate, therefore have higher delay to not spam estimates.
+        // since test mode does not perform transactions, there is no downside by doing this.
+        block_duration_after_resolve = 30i64;
+    }
     try_register_function(&tasks,"anchor_auto_stake".to_owned(),important_task,timeout_duration, block_duration_after_resolve).await;  
           
     // display task here

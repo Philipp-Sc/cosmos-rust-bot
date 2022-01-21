@@ -265,6 +265,27 @@ pub async fn get_meta_data_maybe_or_await_task(tasks: &Arc<RwLock<HashMap<String
         
  }
 
+
+pub async fn get_meta_data_maybe(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>,key: &str) -> anyhow::Result<Maybe<String>> { 
+ 
+        let map = tasks.read().await; 
+        let res = map.get(key).ok_or(anyhow!("Error: key does not exist"))?;
+
+        if let MaybeOrPromise::MetaData(MetaData::Maybe(maybe)) = res {
+            match &maybe.data {
+                Ok(n) => {
+                    return Ok(Maybe {data: Ok(n.clone()), timestamp: maybe.timestamp});
+                },
+                Err(e) => {
+                    return Ok(Maybe {data: Err(anyhow!(e.to_string())), timestamp: maybe.timestamp});
+                }
+            } 
+        } 
+        return Err(anyhow!("Unexpected Error: Unreachable point reached."));
+        
+ }
+
+
   pub async fn get_timestamps_of_resolved_tasks(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, req: &[&str]) -> Vec<i64> {
 
     let mut keys: Vec<i64> = Vec::new(); 
@@ -280,6 +301,33 @@ pub async fn get_meta_data_maybe_or_await_task(tasks: &Arc<RwLock<HashMap<String
             },
             Err(_) => { 
                 keys.push(0i64);
+            }
+         }
+    }
+    return keys;
+  } 
+
+    pub async fn get_oldest_timestamps_of_resolved_tasks(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, req: &[&str]) -> i64 {
+
+    let mut keys: i64 = Utc::now().timestamp();
+        
+    for k in req {
+         // if the functions returns a value in the given time it is considered resolved.
+         match timeout(Duration::from_millis(100), get_timestamp_or_await_task(tasks,k)).await {
+            Ok(Ok(timestamp)) => { 
+                if timestamp < keys {
+                    keys = timestamp;
+                } 
+            },
+            Ok(Err(_)) => {
+                if 0i64 < keys {
+                    keys = 0i64;
+                } 
+            },
+            Err(_) => { 
+                if 0i64 < keys {
+                    keys = 0i64;
+                } 
             }
          }
     }
@@ -328,6 +376,11 @@ pub async fn await_running_tasks(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
     }
     Ok("finished".to_string())
 } 
+
+pub async fn register_value(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: String, value: String) {
+    let mut map = tasks.write().await;
+    map.insert(key,MaybeOrPromise::MetaData(MetaData::Maybe(Maybe {data: Ok(value), timestamp: Utc::now().timestamp()})));
+}
    
 pub async fn try_register_function(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: String, f: Pin<Box<dyn Future<Output = String> + Send + 'static >>, timeout_duration: u64, block_duration_after_resolve: i64) {
 
