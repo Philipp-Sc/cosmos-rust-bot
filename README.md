@@ -5,6 +5,8 @@
 
 > :warning: You will need to provide your **seed phrase** to let the bot create and sign transactions.
 
+> :warning: Terra-rust-bot will not save your seed phrase, make sure you do not lose your seed phrase.
+
 > :arrow_right: Terra-rust-bot can be used without a seed phrase, in that case you need to provide your **wallet address**.
 
 > :arrow_right: No security audit has been performed.
@@ -69,17 +71,20 @@
 
  **Configue terra-rust-bot.json**
 
- * trigger_percentage: at which point you want to repay (1 equals a LTV of 60%).
- * borrow_percentage: at which point you want to borrow (1 equals a LTV of 60%).
- * target_percentage: the LTV do you want to maintain (1 equals a LTV of 60%).
- * max_tx_fee: the maximum UST amount you want to spend per transaction per fee.
- * max_gas_adjustment: the maximum gas_adjustment you are willing to use.
- * gas_adjustment_preference: has an influence on the gas_adjustment you end up with.
- * min_ust_balance: the minimum UST balance, if below this value no further transactions will be made.
- * wallet_acc_address: if empty you may be asked at runtime to provide a wallet address.
+ > :warning: If this file does not exist hard coded values from the terra-rust-bot implementation are used.
+ > :arrow_right: This file needs to be in the working directory, from where you execute the command to run terra-rust-bot.
+
+ * `trigger_percentage:` at which point you want to repay (1 equals a LTV of 60%).
+ * `borrow_percentage:` at which point you want to borrow (1 equals a LTV of 60%).
+ * `target_percentage:` the LTV do you want to maintain (1 equals a LTV of 60%).
+ * `max_tx_fee:` the maximum UST amount you want to spend per transaction per fee.
+ * `max_gas_adjustment:` the maximum gas_adjustment you are willing to use.
+ * `gas_adjustment_preference:` has an influence on the gas_adjustment you end up with.
+ * `min_ust_balance:` the minimum UST balance, if below this value no further transactions will be made.
+ * `wallet_acc_address:` if empty you may be asked at runtime to provide a wallet address.
 
 
- **Select & Run**
+ **Provide command line arguments and run**
 
  * `./terra-rust-bot -b anchor_auto_stake -d test dev` (read only, remove `test` to let the bot sign transactions)
 
