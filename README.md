@@ -72,6 +72,7 @@
  **Configue terra-rust-bot.json**
 
  > :warning: If this file does not exist hard coded values from the terra-rust-bot implementation are used.
+ 
  > :arrow_right: This file needs to be in the working directory, from where you execute the command to run terra-rust-bot.
 
  * `trigger_percentage:` at which point you want to repay (1 equals a LTV of 60%).
