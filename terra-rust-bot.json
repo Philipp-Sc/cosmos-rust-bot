@@ -1,0 +1,10 @@
+{
+            "trigger_percentage": "0.9",
+            "target_percentage": "0.9",
+            "borrow_percentage": "0.8",
+            "max_tx_fee": "5",
+            "max_gas_adjustment": "1.67",
+            "gas_adjustment_preference": "1.2" ,
+            "min_ust_balance": "10" ,
+            "wallet_acc_address": ""
+}

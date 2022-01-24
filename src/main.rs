@@ -2,7 +2,6 @@ use secstr::*;
 
 use std::env;
 
-
 use rust_decimal::Decimal;
 use core::str::FromStr;
 //use std::convert::TryFrom;
@@ -45,6 +44,7 @@ use simple_user_input::get_input;
 
 
 use chrono::{Utc};
+use std::fs;
 
 extern crate num_cpus;
 
@@ -70,17 +70,52 @@ mod simple_user_input {
 // TODO: Add UST peg stat.
 // TODO: Add config for usersettings
  
+
+// TODO: Auto Borrow 
+// TODO: log into a text file instead of the screen.
+
+
 // TODO: Auto Replenish: Always get the account balance a good bit above the limit.
- 
-// TODO: Optimize TX Fee estimate query functions.
+// TODO: Anchor Liquidation Bot
+
+
+// TODO: Optimize TX Fee estimate query functions. !!
 // FIX Compiler warnings
 
 
  #[tokio::main]
 async fn main() -> anyhow::Result<()> {
 
+        /* Load user settings */
 
-        let mut wallet_acc_address = "".to_string();  
+        let mut terra_rust_bot_json_loaded = "terra-rust-bot.json not loaded";
+
+        let mut user_settings: UserSettings = UserSettings {
+            trigger_percentage: Decimal::from_str("0.9").unwrap(),  
+            target_percentage: Decimal::from_str("0.72").unwrap(),   
+            borrow_percentage: Decimal::from_str("0.5").unwrap(),   
+            max_tx_fee: Decimal::from_str("5").unwrap(),
+            max_gas_adjustment: Decimal::from_str("1.67").unwrap(),
+            gas_adjustment_preference: Decimal::from_str("1.2").unwrap(),
+            min_ust_balance: Decimal::from_str("10").unwrap(),  
+            wallet_acc_address: "".to_string(),  
+        };
+
+        match fs::read_to_string("./terra-rust-bot.json") {
+            Ok(file) => {
+                user_settings = match serde_json::from_str(&file) {
+                    Ok(res) => {
+                        terra_rust_bot_json_loaded="terra-rust-bot.json loaded.";
+                        res
+                    },
+                    Err(err) => {println!("{:?}",err);user_settings}
+                }
+            },
+            Err(err) => {
+                println!("{:?}",err);
+                // use hard coded values.
+            }
+        }
 
         /* Load arguments */
 
@@ -102,7 +137,7 @@ async fn main() -> anyhow::Result<()> {
                 last_item = x;
             }else{
                 if &args[last_item] == "-w" {
-                    wallet_acc_address = format!("{}",&args[x]);
+                    user_settings.wallet_acc_address = format!("{}",&args[x]);
                 }
                 if &args[last_item] == "-i" {
                     args_i.push(&args[x]);
@@ -129,45 +164,25 @@ async fn main() -> anyhow::Result<()> {
         let is_test = *&is_test;
         let is_debug = *&is_debug;
 
-        /* Get wallet seed phrase */
-
-        println!("{esc}c", esc = 27 as char); // clear terminal
+        /* Get wallet details */
 
         let mut wallet_seed_phrase = SecUtf8::from("".to_string());
 
-        if wallet_acc_address.len()==0 {
-
-            if args_b.len() > 0 {
-                wallet_seed_phrase = SecUtf8::from(get_input("Enter your seed phrase (press Enter to skip):").to_string());
-                // https://github.com/unrelentingtech/secstr
-                println!("{esc}c", esc = 27 as char);  
-                wallet_acc_address = get_from_account(wallet_seed_phrase.unsecure()).unwrap_or("".to_string());
-            } 
-
-            /* Get wallet address */
-            if (args_a.len() > 0 || args_b.len() > 0) && wallet_acc_address.len()==0 {
-                wallet_acc_address = get_input("Enter your wallet address (press Enter to skip):").to_string();
-                println!("{esc}c", esc = 27 as char); 
+        if args_b.len() > 0 && !is_test { // ** seed phrase needed **
+            wallet_seed_phrase = SecUtf8::from(get_input("Enter your seed phrase (press Enter to skip):").to_string());
+            // https://github.com/unrelentingtech/secstr
+            println!("{esc}c", esc = 27 as char);  
+            user_settings.wallet_acc_address = get_from_account(wallet_seed_phrase.unsecure()).unwrap_or("".to_string());
+        }else if user_settings.wallet_acc_address.len()==0 { /* ask for wallet address */
+            if (args_a.len() > 0 || args_b.len() > 0) { // if wallet address is needed.
+                    user_settings.wallet_acc_address = get_input("Enter your wallet address (press Enter to skip):").to_string();
+                    println!("{esc}c", esc = 27 as char); 
             } 
         }
 
         // Arc allows multiple references to the same object,
         // to potentially spawn multiple tasks with access to the seed phrase, while not revealing the string.
         let wallet_seed_phrase = Arc::new(wallet_seed_phrase);
-
-        /* Load user settings */
-
-        let user_settings: UserSettings = UserSettings {
-            trigger_percentage: Decimal::from_str("0.9").unwrap(), // 0.7 -> 42%, 0.8 -> 48%, 0.9 -> 54%, 1 -> 60%
-            target_percentage: Decimal::from_str("0.72").unwrap(),  // 0.7 -> 42%, 0.8 -> 48%, 0.9 -> 54%, 1 -> 60%
-            max_tx_fee: Decimal::from_str("5").unwrap(),
-            max_gas_adjustment: Decimal::from_str("1.67").unwrap(),
-            gas_adjustment_preference: Decimal::from_str("1.2").unwrap(),
-            min_ust_balance: Decimal::from_str("10").unwrap(),  
-            wallet_acc_address: wallet_acc_address,  
-        };
-        // todo: read and override user settings from json file, if exists.
-
  
         // note: around every 6s a new block is generated. 
         let fast: i32 = 10;      // 10s for short lived information
@@ -176,7 +191,7 @@ async fn main() -> anyhow::Result<()> {
 
         // (key, target_refresh_time, dependency_tag)
         let req = vec![
-        ("terra_balances", fast, vec!["anchor_auto_stake","anchor_auto_repay"]),
+        ("terra_balances", fast, vec!["anchor_auto_stake","anchor_auto_repay","anchor_auto_borrow"]),
         /* <market_info> */
         /* core_tokens */
         ("core_swap uusd usdr", fast, vec!["market"]),
@@ -188,7 +203,7 @@ async fn main() -> anyhow::Result<()> {
         ("simulation anchorprotocol uluna terraswapblunaLunaPair",fast, vec!["market","anchor_account"]),
         ("state anchorprotocol bLunaHub", fast, vec!["market","anchor_account"]),
         ("simulation_cw20 anchorprotocol ANC terraswapAncUstPair", fast, vec!["market","anchor_account","anchor_auto_stake"]),
-        ("epoch_state anchorprotocol mmMarket", fast, vec!["anchor","market","anchor_account","anchor_auto_repay"]),
+        ("epoch_state anchorprotocol mmMarket", fast, vec!["anchor","market","anchor_account","anchor_auto_repay","anchor_auto_borrow"]),
         /* nexus_tokens */
         ("simulation_cw20 nexusprotocol nLunaToken Psi-nLuna_Pair", fast, vec!["market"]),
         ("simulation_cw20 nexusprotocol PsiToken Psi-UST_Pair", fast, vec!["market"]),
@@ -206,30 +221,32 @@ async fn main() -> anyhow::Result<()> {
         ("config anchorprotocol mmInterestModel", fast, vec!["anchor","anchor_account"]),
         //("config anchorprotocol collector",every_minute),
         /* <anchor_protocol account> */ 
-        ("borrow_limit", fast, vec!["anchor_account","anchor_auto_stake","anchor_auto_repay"]),
-        ("borrow_info", fast, vec!["anchor_account","anchor_auto_stake","anchor_auto_repay"]),
-        ("balance", fast, vec!["anchor_account","anchor_auto_repay"]),
+        ("borrow_limit", fast, vec!["anchor_account","anchor_auto_stake","anchor_auto_repay","anchor_auto_borrow"]),
+        ("borrow_info", fast, vec!["anchor_account","anchor_auto_stake","anchor_auto_repay","anchor_auto_borrow"]),
+        ("balance", fast, vec!["anchor_account","anchor_auto_repay","anchor_auto_borrow"]),
         ("anc_balance", fast, vec!["anchor_account","anchor_auto_stake"]),
         ("staker", fast, vec!["anchor_account","anchor_auto_stake"]),
         ("blocks_per_year", slow, vec!["market","anchor","anchor_account"]), 
         ("earn_apy", slow, vec!["anchor","anchor_account"]),
         /* <meta data> */ 
-        /* <from settings> */ 
         ("anchor_protocol_txs_claim_rewards", slow, vec!["anchor","anchor_account","anchor_auto_stake"]), 
         ("anchor_protocol_txs_staking", slow, vec!["anchor","anchor_account","anchor_auto_stake"]), 
         ("anchor_protocol_txs_redeem_stable", slow, vec!["anchor_auto_repay"]), 
-        ("anchor_protocol_txs_deposit_stable", slow, vec!["anchor_auto_repay"]), 
+        ("anchor_protocol_txs_deposit_stable", slow, vec!["anchor_auto_borrow"]), 
+        ("anchor_protocol_txs_borrow_stable", slow, vec!["anchor_auto_borrow"]), 
         ("anchor_protocol_txs_repay_stable", slow, vec!["anchor_auto_repay"]), 
         ("trigger_percentage", fast, vec!["anchor_account","anchor_auto_repay"]),
-        ("target_percentage", fast, vec!["anchor_auto_repay"]),
-        ("max_gas_adjustment", fast, vec!["anchor_account","anchor_auto_stake","anchor_auto_repay"]),
-        ("gas_adjustment_preference",fast, vec!["anchor_account","anchor_auto_stake","anchor_auto_repay"]),
-        ("min_ust_balance", fast, vec!["anchor_account","anchor_auto_stake","anchor_auto_repay"]),
-        ("max_tx_fee", fast, vec!["anchor_auto_stake","anchor_auto_repay"]),
+        /* <from settings> */ 
+        ("target_percentage", fast, vec!["anchor_auto_repay","anchor_auto_borrow"]),
+        ("borrow_percentage", fast, vec!["anchor_auto_borrow"]),
+        ("max_gas_adjustment", fast, vec!["anchor_account","anchor_auto_stake","anchor_auto_repay","anchor_auto_borrow"]),
+        ("gas_adjustment_preference",fast, vec!["anchor_account","anchor_auto_stake","anchor_auto_repay","anchor_auto_borrow"]),
+        ("min_ust_balance", fast, vec!["anchor_account","anchor_auto_stake","anchor_auto_repay","anchor_auto_borrow"]),
+        ("max_tx_fee", fast, vec!["anchor_auto_stake","anchor_auto_repay","anchor_auto_borrow"]),
         /* <from gas_prices>*/
-        ("gas_fees_uusd", medium, vec!["market","anchor","anchor_account","anchor_auto_stake","anchor_auto_repay"]),
-        ("tax_rate", medium, vec!["anchor_auto_repay"]),
-        ("tax_caps", medium, vec!["anchor_auto_repay"]),
+        ("gas_fees_uusd", medium, vec!["market","anchor","anchor_account","anchor_auto_stake","anchor_auto_repay","anchor_auto_borrow"]),
+        ("tax_rate", medium, vec!["anchor_auto_repay","anchor_auto_borrow"]),
+        ("tax_caps", medium, vec!["anchor_auto_repay","anchor_auto_borrow"]),
         ]; 
         let mut req_new = Vec::new();
         let mut req_keys: Vec<&str> = Vec::new();  
@@ -259,7 +276,7 @@ async fn main() -> anyhow::Result<()> {
         // using timestamps to update each slot with a short delay.
         let mut timestamps_display: Vec<i64> = vec![0i64; display_slots];
 
-        add_string_to_display(&new_display, 0, format!("{esc}c", esc = 27 as char)).await.ok();
+        add_string_to_display(&new_display, 0, format!("{}\n\n",terra_rust_bot_json_loaded.truecolor(77, 77, 237))).await.ok();
         let _display_loop = print_to_terminal(&new_display,false); 
 
         let num_cpus = num_cpus::get();
@@ -385,7 +402,16 @@ async fn main() -> anyhow::Result<()> {
                 }  
                 
             }   
-
+            if args_b.contains(&"anchor_auto_borrow") {
+                let anchor_auto_borrow = lazy_anchor_account_auto_borrow(&tasks, &wallet_seed_phrase, &new_display, &mut offset, is_test, is_first_run).await;
+                for t in anchor_auto_borrow {
+                    if timestamps_display[t.0] == 0i64 || now - timestamps_display[t.0] > 1i64 { 
+                        try_add_to_display(&new_display,t.0,Box::pin(t.1)).await.ok();
+                        timestamps_display[t.0] = now;
+                    }  
+                }  
+                
+            }   
             display_all_logs(&tasks ,&new_display, &mut offset, &args_b).await;
             
             display_all_errors(&tasks, &*req_unresolved ,&new_display, &mut offset).await;
@@ -452,8 +478,10 @@ pub fn print_to_terminal(new_display: &Arc<RwLock<Vec<String>>>, once: bool) -> 
                 println!("{}",display_clone.read().await.join("")); 
             }else{ 
                 loop {
-                    println!("{}",display_clone.read().await.join("")); 
-                    thread::sleep(time::Duration::from_millis(50));
+                    let new_line = format!("{esc}c", esc = 27 as char);
+                    let line = format!("{}{}",new_line,display_clone.read().await.join(""));
+                    fs::write("./terra-rust-bot-display.txt", &line).ok(); 
+                    thread::sleep(time::Duration::from_millis(16));
                 }
             }
             Ok(())
@@ -605,7 +633,7 @@ pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromis
     *offset += 1;
  
     anchor_view.push(("--".purple().to_string(),*offset));
-    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(check_anchor_loan_status(tasks.clone(),2)));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(check_anchor_loan_status(tasks.clone(),"repay",2)));
     anchor_tasks.push(t);
     *offset += 1;
 
@@ -614,7 +642,7 @@ pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromis
     *offset += 1;
  
     anchor_view.push(("--".purple().to_string(),*offset));
-    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(calculate_repay_amount(tasks.clone(),false,2)));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(calculate_amount(tasks.clone(),"repay",false,2)));
     anchor_tasks.push(t);
     *offset += 1;
 
@@ -757,23 +785,155 @@ pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromis
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(await_function(tasks.clone(),"anchor_auto_repay".to_owned())));
     anchor_tasks.push(t);
     *offset += 1;
+
+    if is_first_run {
+        add_view_to_display(&new_display, anchor_view).await.ok(); 
+    }
+
+    return anchor_tasks;
+ 
+}
+
+
+ pub async fn lazy_anchor_account_auto_borrow(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_seed_phrase: &Arc<SecUtf8>,  new_display: &Arc<RwLock<Vec<String>>>,offset: &mut usize, is_test: bool, is_first_run: bool) -> Vec<(usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>)>  {
+
+    let mut anchor_view: Vec<(String,usize)> = Vec::new();
+    let mut anchor_tasks: Vec<(usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>)> = Vec::new();
+
+    anchor_view.push(("\n  **Anchor Protocol Auto Borrow**\n\n".truecolor(75,219,75).to_string(),*offset)); 
+    *offset += 1;
+
+    anchor_view.push((format!("{}{}","\n\n   [Auto Borrow]".truecolor(75,219,75),"                    left to trigger:          ".purple().to_string()),*offset));
+    *offset += 1;
+ 
+    anchor_view.push(("--".purple().to_string(),*offset));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(check_anchor_loan_status(tasks.clone(),"borrow",2)));
+    anchor_tasks.push(t);
+    *offset += 1;
+
+
+    anchor_view.push((format!("{}{}","\n   [Auto Borrow]".truecolor(75,219,75),"                    to borrow:                ".purple().to_string()),*offset));
+    *offset += 1;
+ 
+    anchor_view.push(("--".purple().to_string(),*offset));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(calculate_amount(tasks.clone(),"borrow",false,2)));
+    anchor_tasks.push(t);
+    *offset += 1;
+
+    anchor_view.push((" UST".purple().to_string(),*offset));
+    *offset += 1;
+
+    // does include gas_adjustment
+    anchor_view.push((format!("{}{}","\n   [Auto Borrow]".truecolor(75,219,75),"                    est. fee:                 ".purple().to_string()),*offset));
+    *offset += 1;
+ 
+    anchor_view.push(("--".purple().to_string(),*offset));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_borrow_stable","avg_fee_amount_adjusted_without_stability_fee".to_owned(),false,2)));
+    anchor_tasks.push(t);
+    *offset += 1;
+
+    anchor_view.push((" UST".purple().to_string(),*offset));
+    *offset += 1;
+ 
+     // min(to_repay * tax_rate , tax_cap)
+    anchor_view.push((format!("{}{}","\n   [Auto Borrow]".truecolor(75,219,75),"                    est. stability fee:       ".purple().to_string()),*offset));
+    *offset += 1;
+ 
+    anchor_view.push(("--".purple().to_string(),*offset));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(calculate_borrow_plan(tasks.clone(),"stability_tax_borrow",2)));
+    anchor_tasks.push(t);
+    *offset += 1;
+
+    anchor_view.push((" UST".purple().to_string(),*offset));
+    *offset += 1;
+
+
+    anchor_view.push((format!("{}{}","\n\n   [Auto Borrow]".truecolor(75,219,75),"                    to deposit:               ".purple().to_string()),*offset));
+    *offset += 1;
+ 
+    anchor_view.push(("--".purple().to_string(),*offset));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(calculate_borrow_plan(tasks.clone(),"to_deposit",2)));
+    anchor_tasks.push(t);
+    *offset += 1;
+
+    anchor_view.push((" UST".purple().to_string(),*offset));
+    *offset += 1;
+
+    // does include gas_adjustment
+    anchor_view.push((format!("{}{}","\n   [Auto Borrow Deposit]".truecolor(75,219,75),"            est. fee:                 ".purple().to_string()),*offset));
+    *offset += 1;
+ 
+    anchor_view.push(("--".purple().to_string(),*offset));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_deposit_stable","avg_fee_amount_adjusted_without_stability_fee".to_owned(),false,2)));
+    anchor_tasks.push(t);
+    *offset += 1;
+
+    anchor_view.push((" UST".purple().to_string(),*offset));
+    *offset += 1;
+
+    // min(to_repay * tax_rate , tax_cap)
+    // TODO: reduce borrow_amount, for deposit, because that is what we do. current way overestimates stability fee, anyway its zero now.
+    anchor_view.push((format!("{}{}","\n   [Auto Borrow Deposit]".truecolor(75,219,75),"            est. stability fee:       ".purple().to_string()),*offset));
+    *offset += 1;
+ 
+    anchor_view.push(("--".purple().to_string(),*offset));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(calculate_borrow_plan(tasks.clone(),"stability_tax_deposit",2)));
+    anchor_tasks.push(t);
+    *offset += 1;
+
+    anchor_view.push((" UST".purple().to_string(),*offset));
+    *offset += 1;
+
+    // total fee
+    anchor_view.push((format!("{}{}","\n\n   [Auto Borrow Transaction]".truecolor(75,219,75),"        est. fee:                 ".purple().to_string()),*offset));
+    *offset += 1;
+ 
+    anchor_view.push(("--".purple().to_string(),*offset));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(estimate_anchor_protocol_auto_borrow_tx_fee(tasks.clone(),2)));
+    anchor_tasks.push(t);
+    *offset += 1;
+
+    anchor_view.push((" UST".purple().to_string(),*offset));
+    *offset += 1;
+
+
+ 
+
+ /*
+  
+    let mut field = "result:  ";
+
+    if is_test {
+        field = "estimate:";
+    }
+
+    anchor_view.push((format!("{}{}","\n\n   [Auto Borrow]".truecolor(75,219,75),format!("                    {}                 ",field.purple())),*offset));
+    *offset += 1;
+
+    anchor_view.push(("--".purple().to_string(),*offset));
+    
+    // function able to execute auto repay, therefore registering it as task to run concurrently. 
+    let important_task: Pin<Box<dyn Future<Output = String> + Send + 'static>> = Box::pin(anchor_redeem_and_repay_stable(tasks.clone(), wallet_seed_phrase.clone(),is_test));
+    let timeout_duration = 120u64;  /* if task hangs for some reason (awaiting data, performaing estimate, broadcasting transaction) then timeout */
+    
+    let mut block_duration_after_resolve = 1i64;
+    /* a small duration is optimal, since the data is already there */
+    /* only issue is if there just was a transaction, this is handled by ensuring that the relevant data is recent enough.*/
+
+    if is_test {
+        // each call executes an estimate, therefore have higher delay to not spam estimates.
+        // since test mode does not perform transactions, there is no downside by doing this.
+        block_duration_after_resolve = 30i64;
+    }
+    try_register_function(&tasks,"anchor_auto_borrow".to_owned(),important_task,timeout_duration, block_duration_after_resolve).await;  
+          
+    // display task here
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(await_function(tasks.clone(),"anchor_auto_borrow".to_owned())));
+    anchor_tasks.push(t);
+    *offset += 1;
   
 
-/* for auto borrow 
-    let anchor_protocol_txs_deposit_stable = estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_deposit_stable","fee_amount_adjusted".to_owned(),false,2).await;
-    add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay]    1fee to deposit stablecoin:    ".truecolor(75,219,75), anchor_protocol_txs_deposit_stable.yellow())).await.ok(); 
-    *offset += 1;
-
-    let anchor_protocol_txs_deposit_stable = estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_deposit_stable","avg_fee_amount_without_stability_fee".to_owned(),false,2).await;
-    add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay]    2fee to deposit stablecoin:    ".truecolor(75,219,75), anchor_protocol_txs_deposit_stable.yellow())).await.ok(); 
-    *offset += 1;
 */
-/*
-    let available_to_repay = min_ust_balance_to_string(tasks.clone(),2).await;
-    add_string_to_display(new_display,*offset,format!("{}{}","\n\n\n   [Auto Repay]    UST balance after repay:            ".truecolor(75,219,75), format!("{} UST",available_to_repay).yellow())).await.ok(); 
-    *offset += 1;
-*/
-
 
     if is_first_run {
         add_view_to_display(&new_display, anchor_view).await.ok(); 
@@ -935,6 +1095,7 @@ pub async fn lazy_anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<S
     return anchor_tasks;
 }
 
+
 pub async fn display_anchor_account(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>,  new_display: &Arc<RwLock<Vec<String>>>,offset: &mut usize,is_first_run: bool) -> Vec<(usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>)> {
 
 
@@ -944,6 +1105,9 @@ pub async fn display_anchor_account(tasks: &Arc<RwLock<HashMap<String, MaybeOrPr
 
     anchor_view.push(("\n  **Anchor Protocol Account**\n".truecolor(75,219,75).to_string(),*offset)); 
     *offset += 1;
+
+    //anchor_view.push((format!("{}{}","\n   [Liquidation Queue]".truecolor(75,219,75),"    withdrawals:             ".purple().to_string()),*offset));
+    //*offset += 1;
 
     anchor_view.push((format!("{}{}","\n   [Borrow]".truecolor(75,219,75),"    loan amount:             ".purple().to_string()),*offset));
     *offset += 1;

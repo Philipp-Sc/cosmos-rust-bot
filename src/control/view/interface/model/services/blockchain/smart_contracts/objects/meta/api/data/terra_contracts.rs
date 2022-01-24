@@ -50,7 +50,9 @@ pub fn get_contract(source: &str, contract: &str) -> String {
 							    "ANC": "terra14z56l0fp2lsf86zy3hty2z47ezkhnthtr9yq76",
 							    "airdrop": "terra146ahqn6d3qgdvmj8cj96hh03dzmeedhsf0kxqm",
 							    "investor_vesting": "terra1pm54pmw3ej0vfwn3gtn6cdmaqxt0x37e9jt0za",
-							    "team_vesting": "terra10evq9zxk2m86n3n3xnpw28jpqwp628c6dzuq42"
+							    "team_vesting": "terra10evq9zxk2m86n3n3xnpw28jpqwp628c6dzuq42",
+							    "Anchor Liquidation Queue":"terra1e25zllgag7j9xsun3me4stnye2pcg66234je3u",
+							    "Anchor bETH Token":"terra1dzhzukyezv0etz22ud940z7adyv7xgcjkahuun"
 							  },
 							"terraswap": { 
 							// https://docs.terraswap.io/docs/contract_resources/contract_addresses/

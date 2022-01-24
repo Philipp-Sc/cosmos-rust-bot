@@ -74,6 +74,59 @@ pub async fn get_past_transaction_logs(tasks: Arc<RwLock<HashMap<String, MaybeOr
         }
    }
 }
+
+ 
+pub async fn calculate_borrow_plan(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, field: &str, digits_rounded_to: u32) -> String {
+
+    let mut ust_amount_liquid = decimal_or_return!(terra_balance_to_string(tasks.clone(),"uusd",false,10).await.as_ref());
+    let min_ust_balance = decimal_or_return!(min_ust_balance_to_string(tasks.clone(),false,10).await.as_ref());
+    ust_amount_liquid = ust_amount_liquid.checked_sub(min_ust_balance).unwrap();  
+ 
+    if field == "ust_available_to_pay_fees" {
+        return ust_amount_liquid.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();;
+    }
+
+    let borrow_amount = decimal_or_return!(calculate_amount(tasks.clone(),"borrow",false,10).await.as_ref());
+
+    let uusd_tax_cap = decimal_or_return!(uusd_tax_cap_to_string(tasks.clone(),false,10).await.as_ref());
+    let tax_rate = decimal_or_return!(tax_rate_to_string(tasks.clone(),10).await.as_ref());
+        
+    let mut stability_tax = borrow_amount.checked_mul(tax_rate).unwrap();
+    if stability_tax > uusd_tax_cap {
+        stability_tax = uusd_tax_cap;
+    }
+
+    if field == "stability_tax_borrow" {
+        return stability_tax.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();
+    }
+
+    let borrow_stable_fee = decimal_or_return!(estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_borrow_stable","avg_fee_amount_adjusted_without_stability_fee".to_owned(),false,2).await.as_ref());
+    let deposit_stable_fee = decimal_or_return!(estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_deposit_stable","avg_fee_amount_adjusted_without_stability_fee".to_owned(),false,2).await.as_ref());
+
+    let mut to_deposit = borrow_amount
+        .checked_sub(borrow_stable_fee).unwrap()
+        .checked_sub(deposit_stable_fee).unwrap()
+        .checked_sub(stability_tax).unwrap();
+
+    let mut stability_tax = to_deposit.checked_mul(tax_rate).unwrap();
+    /* stability_tax is slightly overestimated, because it is not substracted from the to_deposit value in the first place.*/
+
+    if stability_tax > uusd_tax_cap {
+        stability_tax = uusd_tax_cap;
+    }
+    to_deposit = to_deposit.checked_sub(stability_tax).unwrap();
+    
+    if field == "stability_tax_deposit" {
+        return stability_tax.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();
+    }
+
+    if field == "to_deposit" {
+        return to_deposit.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();
+    }
+
+    return "--".to_string();
+
+}
  
 pub async fn calculate_repay_plan(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, field: &str, digits_rounded_to: u32) -> String {
 
@@ -86,7 +139,7 @@ pub async fn calculate_repay_plan(tasks: Arc<RwLock<HashMap<String, MaybeOrPromi
         return ust_amount_liquid.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();;
     }
 
-    let repay_amount = decimal_or_return!(calculate_repay_amount(tasks.clone(),false,10).await.as_ref());
+    let repay_amount = decimal_or_return!(calculate_amount(tasks.clone(),"repay",false,10).await.as_ref());
     
     let zero = Decimal::from_str("0").unwrap();
     let further_funds_needed = ust_amount_liquid.checked_sub(repay_amount).unwrap() < zero;
@@ -230,14 +283,14 @@ pub async fn calculate_repay_plan(tasks: Arc<RwLock<HashMap<String, MaybeOrPromi
     return "--".to_string();
 }
 
-pub async fn calculate_repay_amount(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,as_micro: bool, digits_rounded_to: u32) -> String {
+pub async fn calculate_amount(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: &str, as_micro: bool, digits_rounded_to: u32) -> String {
     /* Calculate the repay amount required based on the desired "target_percent" value from user config.
      * target_percent is where ltv will be at once repay is complete.
      */
 
-    let target_percent = decimal_or_return!(target_percentage_to_string(tasks.clone(),10).await.as_ref());
+    let target_percent = decimal_or_return!(target_percentage_to_string(tasks.clone(),10).await.as_ref()); 
     let zero =  Decimal::from_str("0").unwrap(); 
-
+ 
     //let trigger_percentage = decimal_or_return!(trigger_percentage_to_string(tasks.clone(),10).await.as_ref());
 
     let mut _borrow_limit =  Decimal::from_str("0").unwrap(); 
@@ -275,8 +328,14 @@ pub async fn calculate_repay_amount(tasks: Arc<RwLock<HashMap<String, MaybeOrPro
         micro = Decimal::from_str("1000000").unwrap();                
     }
 
-    if difference_to_adjust > zero {
+    if difference_to_adjust > zero && key == "repay" {
         return difference_to_adjust
+                .checked_div(micro).unwrap()
+                .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();
+
+    }else if difference_to_adjust < zero && key == "borrow" {
+        return difference_to_adjust
+                .checked_mul(Decimal::from_str("-1").unwrap()).unwrap()
                 .checked_div(micro).unwrap()
                 .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();
 
@@ -285,11 +344,15 @@ pub async fn calculate_repay_amount(tasks: Arc<RwLock<HashMap<String, MaybeOrPro
     }
 }
 
-pub async fn check_anchor_loan_status(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String {
+pub async fn check_anchor_loan_status(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,key: &str, digits_rounded_to: u32) -> String {
  
     let zero =  Decimal::from_str("0").unwrap(); 
 
-    let trigger_percentage = decimal_or_return!(trigger_percentage_to_string(tasks.clone(),10).await.as_ref());
+    let trigger_percentage = match key {
+        "repay" => {decimal_or_return!(trigger_percentage_to_string(tasks.clone(),10).await.as_ref())},
+        "borrow" => {decimal_or_return!(borrow_percentage_to_string(tasks.clone(),10).await.as_ref())},
+        &_ => {return "Invalid key".to_string();}
+    };
 
     let mut _borrow_limit =  Decimal::from_str("0").unwrap(); 
 
@@ -319,10 +382,14 @@ pub async fn check_anchor_loan_status(tasks: Arc<RwLock<HashMap<String, MaybeOrP
 
     let current_percent = _loan_amount.checked_div(_borrow_limit).unwrap();
 
-    let left_to_trigger = trigger_percentage.checked_sub(current_percent).unwrap();
+    let left_to_trigger = match key {
+        "repay" => {trigger_percentage.checked_sub(current_percent).unwrap()},
+        "borrow" => {current_percent.checked_sub(trigger_percentage).unwrap()},
+        &_ => {return "Invalid key".to_string();}
+    };
 
     if left_to_trigger <= zero {
-        return "repay due".to_string();
+        return format!("{} due",key);
     }
 
     return format!("{}%",left_to_trigger.checked_mul(Decimal::from_str("100").unwrap()).unwrap()
@@ -1157,5 +1224,25 @@ pub async fn estimate_anchor_protocol_auto_repay_tx_fee(tasks: Arc<RwLock<HashMa
 
     return fee_to_redeem_stable.checked_add(anchor_protocol_txs_repay_stable).unwrap()
                                 .checked_add(stability_tax).unwrap()
+                                .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero).to_string();
+}
+
+pub async fn estimate_anchor_protocol_auto_borrow_tx_fee(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
+     
+    // does include gas_adjustment
+    let mut anchor_protocol_txs_borrow_stable = decimal_or_return!(estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_borrow_stable","avg_fee_amount_adjusted_without_stability_fee".to_owned(),false,10).await.as_ref());
+    // min(to_repay * tax_rate , tax_cap)
+    let mut stability_tax_borrow = decimal_or_return!(calculate_borrow_plan(tasks.clone(),"stability_tax_borrow",10).await.as_ref());
+    // does include gas_adjustment
+    let mut anchor_protocol_txs_deposit_stable = decimal_or_return!(estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_deposit_stable","avg_fee_amount_adjusted_without_stability_fee".to_owned(),false,10).await.as_ref());
+    // min(to_repay * tax_rate , tax_cap)
+    // TODO: reduce this fee, anyway now zero. 
+    let mut stability_tax_deposit = decimal_or_return!(calculate_borrow_plan(tasks.clone(),"stability_tax_deposit",10).await.as_ref());
+
+    return anchor_protocol_txs_borrow_stable
+                                .checked_add(stability_tax_borrow).unwrap()
+                                .checked_add(anchor_protocol_txs_deposit_stable).unwrap()
+                                .checked_add(stability_tax_deposit).unwrap()
+                                .checked_add(stability_tax_borrow).unwrap()
                                 .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero).to_string();
 }

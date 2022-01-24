@@ -81,6 +81,9 @@ pub async fn get_block_txs_fee_data(key: &str) -> anyhow::Result<ResponseResult>
         if key == "repay_stable" {
             next = get_txs_fee_data(temp_offset.as_str(),&mut tx_data,get_contract("anchorprotocol","mmMarket").as_ref(),"repay_stable","repay_amount").await; 
         }
+        if key == "borrow_stable" {
+           next = get_txs_fee_data(temp_offset.as_str(),&mut tx_data,get_contract("anchorprotocol","mmMarket").as_ref(),"borrow_stable","borrow_amount").await; 
+        }
 
         if next.is_ok() {
             temp_offset = next.unwrap();
@@ -143,6 +146,9 @@ fn get_tx_log(entry: &Value, account: &str, query_msg: &str, amount_field: &str)
             )
         || (query_msg=="repay_stable" &&
             msg[0].get("value").ok_or(anyhow!("no value"))?.get("execute_msg").ok_or(anyhow!("no execute_msg"))?.get("repay_stable") != None
+            )
+        || (query_msg=="borrow_stable" &&
+            msg[0].get("value").ok_or(anyhow!("no value"))?.get("execute_msg").ok_or(anyhow!("no execute_msg"))?.get("borrow_stable") != None
             )
         ) && msg[0].get("value").ok_or(anyhow!("no value"))?.get("contract").ok_or(anyhow!("no contract"))? == account
     {

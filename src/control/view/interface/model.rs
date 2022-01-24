@@ -83,6 +83,7 @@ pub struct UserSettings {
     pub wallet_acc_address: String,  
     pub trigger_percentage: Decimal, 
     pub target_percentage: Decimal,  
+    pub borrow_percentage: Decimal,  
     pub max_gas_adjustment: Decimal, 
     pub min_ust_balance: Decimal, 
     pub gas_adjustment_preference: Decimal,            
@@ -601,6 +602,16 @@ pub async fn await_function(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,
                             map.insert("anchor_protocol_txs_deposit_stable".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
                          
                     }, 
+                    "anchor_protocol_txs_borrow_stable" => {  
+                        let handle = tokio::spawn(async move { 
+                            {    
+                                
+                                return get_block_txs_fee_data("borrow_stable").await;   
+                            }
+                        });
+                            map.insert("anchor_protocol_txs_borrow_stable".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
+                         
+                    }, 
                     "anchor_protocol_txs_repay_stable" => {  
                         let handle = tokio::spawn(async move { 
                             {    
@@ -636,6 +647,9 @@ pub async fn await_function(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,
                     }, 
                     "trigger_percentage" => {     
                         map.insert("trigger_percentage".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Maybe {data: Ok(user_settings.trigger_percentage.to_string().to_owned()), timestamp: Utc::now().timestamp()})));
+                    }, 
+                    "borrow_percentage" => {     
+                        map.insert("borrow_percentage".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Maybe {data: Ok(user_settings.borrow_percentage.to_string().to_owned()), timestamp: Utc::now().timestamp()})));
                     }, 
                     "target_percentage" => {     
                         map.insert("target_percentage".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Maybe {data: Ok(user_settings.target_percentage.to_string().to_owned()), timestamp: Utc::now().timestamp()})));

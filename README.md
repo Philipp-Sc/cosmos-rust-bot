@@ -31,6 +31,10 @@
 
  `./terra-rust-bot -b anchor_auto_stake -d dev` 
 
+
+ `while sleep 0.01666; do cat terra-rust-bot-display.txt; done` (to see whats happening)
+
+
  <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/development/terra-rust-bot_v0.2_auto_stake.png" width="380">
   
  
@@ -43,15 +47,23 @@
  `./terra-rust-bot -b anchor_auto_repay -d dev` 
 
 
+ `while sleep 0.01666; do cat terra-rust-bot-display.txt; done`  
+
+
  <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/development/terra-rust-bot_v0.2_anchor_auto_repay.png" width="380">
   
 ### Anchor Auto Borrow (comming soon)
 ### Anchor Auto Replenish (not yet implemented)
 ### Anchor Auto Exchange Rewards (not yet implemented)
+### Anchor Auto Bid (in consideration)
 
 ### Market Dashboard 
 
 `./terra-rust-bot -i market` (general information)
+
+
+`while sleep 0.01666; do cat terra-rust-bot-display.txt; done`  
+
 
 <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/development/terra-rust-bot_v0.1_terra.png" width="280">
  
@@ -62,7 +74,13 @@
 `./terra-rust-bot -i anchor` (genereal information)
 
 
+`while sleep 0.01666; do cat terra-rust-bot-display.txt; done`  
+
+
 `./terra-rust-bot -i anchor -a anchor_account` (for account specific information)
+
+
+`while sleep 0.01666; do cat terra-rust-bot-display.txt; done`  
   
 
 ## How

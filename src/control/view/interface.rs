@@ -113,6 +113,18 @@ pub async fn target_percentage_to_string(tasks: Arc<RwLock<HashMap<String, Maybe
     }
 }
 
+pub async fn borrow_percentage_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
+    match get_meta_data_maybe_or_await_task(&tasks,"borrow_percentage").await {
+        Ok(response_result) => { 
+            return Decimal::from_str(response_result.as_str()).unwrap()
+                    .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
+                    .to_string();             
+        },
+        Err(_) => {
+            return "--".to_string();
+        }
+    }
+}
 
 pub async fn trigger_percentage_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
     match get_meta_data_maybe_or_await_task(&tasks,"trigger_percentage").await {

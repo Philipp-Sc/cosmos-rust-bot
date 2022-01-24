@@ -18,6 +18,21 @@ use secp256k1::Secp256k1;
 use rust_decimal::Decimal; 
 use anyhow::anyhow;
 
+
+/*
+fn anchor_liquidation_queue_withdraw_luna_msg(wallet_acc_address: &str, coin_amount: Decimal) -> anyhow::Result<Message> {
+        let contract = get_contract("anchorprotocol","mmMarket"); 
+
+        let execute_msg_json = r##"{"claim_liquidations": {
+                                        "collateral_token": "terra1kc87mu460fwkqte29rquh4hc20m54fxwtsx7gp",
+                                        "bids_idx": luna_bid_idx
+                                    }"##;
+        let coins: [Coin;1] = [Coin::create("uusd", coin_amount)];
+        let send = MsgExecuteContract::create_from_json(&wallet_acc_address, &contract, execute_msg_json, &coins)?;
+        return Ok(send);
+}*/
+
+
 fn anchor_repay_stable_msg(wallet_acc_address: &str, coin_amount: Decimal) -> anyhow::Result<Message> {
 		let contract = get_contract("anchorprotocol","mmMarket"); 
         let execute_msg_json = r##"{"repay_stable":{}}"##;

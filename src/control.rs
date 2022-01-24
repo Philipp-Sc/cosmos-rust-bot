@@ -63,7 +63,7 @@ pub async fn anchor_redeem_and_repay_stable(tasks: Arc<RwLock<HashMap<String, Ma
 
     let gas_fees_uusd = decimal_or_return!(gas_price_to_string(tasks.clone(),10).await.as_ref());
 
-    match check_anchor_loan_status(tasks.clone(),2).await.as_ref() {
+    match check_anchor_loan_status(tasks.clone(),"repay",2).await.as_ref() {
 	    	"repay due" => {},
 	    	_ => {
 	    		if !only_estimate {
