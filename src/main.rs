@@ -71,8 +71,7 @@ mod simple_user_input {
 // TODO: Add config for usersettings
  
 
-// TODO: Auto Borrow 
-// TODO: log into a text file instead of the screen.
+// TODO: Auto Borrow  
 
 
 // TODO: Auto Replenish: Always get the account balance a good bit above the limit.
@@ -481,7 +480,7 @@ pub fn print_to_terminal(new_display: &Arc<RwLock<Vec<String>>>, once: bool) -> 
                     let new_line = format!("{esc}c", esc = 27 as char);
                     let line = format!("{}{}",new_line,display_clone.read().await.join(""));
                     fs::write("./terra-rust-bot-display.txt", &line).ok(); 
-                    thread::sleep(time::Duration::from_millis(16));
+                    thread::sleep(time::Duration::from_millis(200));
                 }
             }
             Ok(())

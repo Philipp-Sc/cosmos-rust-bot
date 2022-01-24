@@ -26,28 +26,11 @@
  
 ### Anchor Auto Stake Rewards
 
- `./terra-rust-bot -b anchor_auto_stake -d test dev` (read only)
- 
-
- `./terra-rust-bot -b anchor_auto_stake -d dev` 
-
-
- `while sleep 0.01666; do cat terra-rust-bot-display.txt; done` (to see whats happening)
-
 
  <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/development/terra-rust-bot_v0.2_auto_stake.png" width="380">
   
  
 ### Anchor Auto Loan Repay 
-
-
- `./terra-rust-bot -b anchor_auto_repay -d test dev` (read only)
- 
- 
- `./terra-rust-bot -b anchor_auto_repay -d dev` 
-
-
- `while sleep 0.01666; do cat terra-rust-bot-display.txt; done`  
 
 
  <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/development/terra-rust-bot_v0.2_anchor_auto_repay.png" width="380">
@@ -59,11 +42,6 @@
 
 ### Market Dashboard 
 
-`./terra-rust-bot -i market` (general information)
-
-
-`while sleep 0.01666; do cat terra-rust-bot-display.txt; done`  
-
 
 <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/development/terra-rust-bot_v0.1_terra.png" width="280">
  
@@ -71,17 +49,6 @@
 ### <a href="https://github.com/Philipp-Sc/terra-rust-bot/blob/development/terra-rust-bot_v0.1_anchor.png"> Anchor Dashboard </a>
 
 
-`./terra-rust-bot -i anchor` (genereal information)
-
-
-`while sleep 0.01666; do cat terra-rust-bot-display.txt; done`  
-
-
-`./terra-rust-bot -i anchor -a anchor_account` (for account specific information)
-
-
-`while sleep 0.01666; do cat terra-rust-bot-display.txt; done`  
-  
 
 ## How
 
@@ -98,6 +65,37 @@
 
 ## Manual - Just Read The Instructions
 
+### Run terra-rust-bot
+
+ **Configue terra-rust-bot.json**
+
+ * trigger_percentage: at which point you want to repay (1 equals a LTV of 60%).
+ * borrow_percentage: at which point you want to borrow (1 equals a LTV of 60%).
+ * target_percentage: the LTV do you want to maintain (1 equals a LTV of 60%).
+ * max_tx_fee: the maximum UST amount you want to spend per transaction per fee.
+ * max_gas_adjustment: the maximum gas_adjustment you are willing to use.
+ * gas_adjustment_preference: has an influence on the gas_adjustment you end up with.
+ * min_ust_balance: the minimum UST balance, if below this value no further transactions will be made.
+ * wallet_acc_address: if empty you may be asked at runtime to provide a wallet address.
+
+
+ **Select & Run**
+
+ * `./terra-rust-bot -b anchor_auto_stake -d test dev` (read only, remove `test` to let the bot sign transactions)
+
+ * `./terra-rust-bot -b anchor_auto_repay -d test dev`  
+
+ * `./terra-rust-bot -i market` (market information)
+
+ * `./terra-rust-bot -i anchor` (anchor information)
+
+ * `./terra-rust-bot -i anchor -a anchor_account` (for account specific information)
+
+
+ * `while sleep 0.1; do cat terra-rust-bot-display.txt; done` (to see whats happening)
+
+
+### Build it yourself
 
 **Install Rust**
 
