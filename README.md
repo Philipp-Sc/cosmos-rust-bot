@@ -1,5 +1,3 @@
-> :warning: This code is experimental. Especially the development branch. :warning:
-
 # terra-rust-bot
 
 
@@ -16,12 +14,9 @@
 
 * Rust is a great programming language.
 * Keep It Simple, Stupid. 
-* Async/Paralellism
+* Power to the people. 
+* Reducing transaction fees to a minimum. 
 * Easy to use. One executable.
-
-* Extending, building on top of <a href="https://github.com/unl1k3ly/AnchorHODL">AnchorHODL</a>, adding new strategies.
-* Reducing transaction fees to a minimum.
-* As a failsafe against Anchor/Mirror webapp issues.
 
 
 ## What 
@@ -37,9 +32,13 @@
 
  <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/development/terra-rust-bot_v0.2_anchor_auto_repay.png" width="380">
   
-### Anchor Auto Borrow (comming soon)
+### Anchor Auto Borrow
+
+
+
 ### Anchor Auto Replenish (not yet implemented)
 ### Anchor Auto Exchange Rewards (not yet implemented)
+### Anchor aUST <--> bLuna Strategy (not yet implemented)
 ### Anchor Auto Bid (in consideration)
 
 ### Market Dashboard 
@@ -90,6 +89,10 @@
  * `./terra-rust-bot -b anchor_auto_stake -d test dev` (read only, remove `test` to let the bot sign transactions)
 
  * `./terra-rust-bot -b anchor_auto_repay -d test dev`  
+ 
+ * `./terra-rust-bot -b anchor_auto_borrow -d test dev` 
+
+ * `./terra-rust-bot -b anchor_auto_stake anchor_auto_repay anchor_auto_borrow -d test dev`
 
  * `./terra-rust-bot -i market` (market information)
 
@@ -103,7 +106,7 @@
 
 ### Build it yourself
 
-> If you are on Windows you could use the Ubuntu Subsystem. Feel free to open an Issue if you need help.
+> Tested on Linux, if you have issues on macOS or Windows please let me know.
 
 
 **Install Rust**
