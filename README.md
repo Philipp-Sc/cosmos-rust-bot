@@ -24,15 +24,17 @@
 ### Anchor Auto Stake Rewards
 
 
- <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/development/terra-rust-bot_v0.2_auto_stake.png" width="380">
+ <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/main/terra-rust-bot_v0.3_auto_stake.png" width="380">
   
  
 ### Anchor Auto Loan Repay 
 
 
- <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/development/terra-rust-bot_v0.2_anchor_auto_repay.png" width="380">
+ <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/main/terra-rust-bot_v0.3_auto_repay.png" width="380">
   
 ### Anchor Auto Borrow
+
+ <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/main/terra-rust-bot_v0.3_auto_borrow.png" width="380">
 
 
 
@@ -46,9 +48,12 @@
 
 <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/development/terra-rust-bot_v0.1_terra.png" width="280">
  
- 
-### <a href="https://github.com/Philipp-Sc/terra-rust-bot/blob/development/terra-rust-bot_v0.1_anchor.png"> Anchor Dashboard </a>
 
+### Anchor Dashboard 
+
+
+<img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/development/terra-rust-bot_v0.1_anchor.png" width="980">
+  
 
 
 ## How
