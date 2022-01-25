@@ -3,11 +3,13 @@
 
 > :warning: You will need to provide your **seed phrase** to let the bot create and sign transactions.
 
-> :warning: Terra-rust-bot will not save your seed phrase, make sure you do not lose your seed phrase.
+> :warning: Terra-rust-bot will not save your **seed phrase**, make sure you do not lose it. Make sure you clear your copy/paste clipboard.
 
-> :arrow_right: Terra-rust-bot can be used without a seed phrase, in that case you need to provide your **wallet address**.
+> :arrow_right: Terra-rust-bot can be used without a seed phrase, view only mode. It is recommended to test this first :arrow_left:
 
-> :arrow_right: No security audit has been performed.
+> :arrow_right: It is always a good idea to use a dedicated wallet. :arrow_left:
+ 
+> :warning: No security audit has been performed.
 
 
 ## Why
@@ -64,6 +66,8 @@
 * Requests are either made directly to the Terra FCD or LCD. For that terra-rust-bot mainly relies on the [Terra-Rust-API](https://crates.io/crates/terra-rust-api). In some cases <a href="api.anchorprotocol.com/api/v2/distribution-apy">api.anchorprotocol.com</a> is used.
 * The <a href="https://app.anchorprotocol.com/"> Anchor Web App </a> or <a href="https://github.com/unl1k3ly/AnchorHODL">AnchorHODL</a> have rather high gas fees hard coded into the application. This ensures each transaction goes through, but this also means some money is unnecessarily being spent. Looking at past transactions terra-rust-bot estimates a reasonable transaction fee. In particually by calculating a decent gas adjustment derived from past transactions. To not stale a transaction the user provides a maximum transaction fee. For each transaction the fees are simulated and double checked with the set maximum transaction fee. This way there are no static fees.
 * If possible transactions are grouped together, to further reduce the gas fees.
+* The configuration can be customized via the **terra-rust-bot.json** file. It will be loaded at startup.
+* The current state is written to **terra-rust-bot-display.txt** instead of the console.
 
 ## Disclaimer
 
@@ -90,6 +94,15 @@
 
 
  **Provide command line arguments and run**
+ 
+**Command line args**
+
+ * `-i` show **info** dashboards: `market` or `anchor`.  
+ * `-a` show **account** dashboards: `anchor_account`.  
+ * `-b` enable **bot**: `anchor_auto_stake`, `anchor_auto_borrow`  or `anchor_auto_repay`.
+ * `-d` enable additional development/debugging output. Currently `test` and `dev` are available. `test` will only simulate or estimate transaction fees. `dev` will output additional information to show what is happening in the background. 
+
+ **Examples**
 
  * `./terra-rust-bot -b anchor_auto_stake -d test dev` (read only, remove `test` to let the bot sign transactions)
 
@@ -105,8 +118,9 @@
 
  * `./terra-rust-bot -i anchor -a anchor_account` (for account specific information)
 
+ **View the current state**
 
- * `while sleep 0.1; do cat terra-rust-bot-display.txt; done` (to see whats happening)
+ * `while sleep 0.1; do cat terra-rust-bot-display.txt; done` 
 
 
 ### Build it yourself
@@ -130,20 +144,12 @@
 * `cargo build` or
 * `cargo build --release`
 
-
 **Run**
 
 * `./target/debug/terra-rust-bot ` or
 * `./target/release/terra-rust-bot `
 
-
-**Command line args**
-
-* `-i` show **info** dashboards for `market` or `anchor`. Example: `-i market anchor`. 
-* `-a` show **account** dashboards for `anchor_account`.  Example: `-a anchor_account`. (Requires wallet address)
-* `-b` enable **bot** for `anchor_auto_staking.`  Example: `-b anchor_auto_stake`. (Requires seed phrase)
-* `-b` enable **bot** for `anchor_auto_repay.`  Example: `-b anchor_auto_repay`. (Requires seed phrase)
-* `-d` enable additional development/debugging output. Currently `test` and `dev` are available. `test` will only simulate or estimate transaction fees. `dev` will output additional information to show what is happening in the background.   Example: `-d test dev`.
+* Command line arguments are discribed in the text above.
 
 
  
