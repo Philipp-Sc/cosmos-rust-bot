@@ -142,8 +142,9 @@
 
 **Build**
 
-* `cargo build` or
-* `cargo build --release`
+* `cargo build` (fast build)
+* `cargo build --release` (optimized build)
+* `RUSTFLAGS="-C target-cpu=native" cargo build --release` (optimize the build for your CPU)
 
 **Run**
 
