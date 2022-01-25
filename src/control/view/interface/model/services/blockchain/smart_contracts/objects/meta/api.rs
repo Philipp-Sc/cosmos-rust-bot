@@ -6,9 +6,7 @@
 pub mod data;
 
 use data::endpoints::{get_terra_fcd,get_terra_lcd,get_terra_chain};
-use data::{GasPrices};
-use serde::Deserialize;
-use serde::Serialize;
+use data::{GasPrices}; 
 use serde_json::Value;
 use terra_rust_api::{Terra, GasOptions};
 use terra_rust_api::core_types::{Coin};  
@@ -19,8 +17,7 @@ use terra_rust_api::messages::Message;
 use terra_rust_api::LCDResult;
 use terra_rust_api::client::tx_types::TxFeeResult;
 use secp256k1::Secp256k1;
-use anyhow::anyhow;
-use std::time::SystemTime;
+use anyhow::anyhow; 
 use rust_decimal::Decimal; 
 use rust_decimal::prelude::ToPrimitive;
 use core::str::FromStr;

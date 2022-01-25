@@ -7,6 +7,7 @@ use rust_decimal::Decimal;
 use core::str::FromStr;
 
 use view::interface::model::services::blockchain::smart_contracts::objects::meta::{
+	anchor_borrow_and_deposit_stable_tx,
 	anchor_redeem_and_repay_stable_tx, 
 	anchor_repay_stable_tx, 
 	anchor_claim_rewards,
@@ -36,6 +37,97 @@ macro_rules! decimal_or_return {
         }
     }
 } 
+
+pub async fn anchor_borrow_and_deposit_stable(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> String {
+
+	let max_tx_fee = decimal_or_return!(max_tx_fee_to_string(tasks.clone(), 4).await.as_ref());
+	let likely_tx_fee = decimal_or_return!(estimate_anchor_protocol_auto_borrow_tx_fee(tasks.clone(),2).await.as_ref());
+ 	let balance = decimal_or_return!(terra_balance_to_string(tasks.clone(),"uusd",false,2).await.as_ref());
+ 	let min_ust_balance = decimal_or_return!(min_ust_balance_to_string(tasks.clone(),false,2).await.as_ref());
+
+ 	if balance < min_ust_balance || balance < max_tx_fee || balance < likely_tx_fee {
+ 		return "Insufficient UST balance, replenish your account!".to_string();
+ 	}
+ 
+    let micro = Decimal::from_str("1000000").unwrap();
+    
+    let to_borrow = decimal_or_return!(calculate_amount(tasks.clone(),"borrow",true,0).await.as_ref());
+    /* to deposit is "--" if fees can not be paid, therefore this function returns here.*/
+    let to_deposit = decimal_or_return!(calculate_borrow_plan(tasks.clone(),"to_deposit",2).await.as_ref())
+    							.checked_mul(micro).unwrap()
+								.round_dp_with_strategy(0, rust_decimal::RoundingStrategy::ToZero);
+
+    let gas_fees_uusd = decimal_or_return!(gas_price_to_string(tasks.clone(),10).await.as_ref());
+
+ 	match check_anchor_loan_status(tasks.clone(),"borrow",2).await.as_ref() {
+	    	"borrow due" => {},
+	    	_ => {
+	    		if !only_estimate {
+	    			return "waiting..".to_string();
+	    		}
+	    	}
+	};
+
+	// making sure the data is not outdated
+    match get_meta_data_maybe(&tasks, "latest_transaction").await {
+    	Ok(maybe) => {
+    		let req: [&str;4] = ["terra_balances","borrow_limit","borrow_info","balance"];
+    		if get_oldest_timestamps_of_resolved_tasks(&tasks,&req).await <= maybe.timestamp + 10 {
+    			return "waiting for data to refresh..".to_string();
+    		}
+    	},
+    	Err(_) => {
+    		// no previous transaction, free to continue.
+    	}
+    }
+
+    let mut max_gas_adjustment = decimal_or_return!(max_gas_adjustment_to_string(tasks.clone(),10).await.as_ref());
+	let mut avg_gas_adjustment = Decimal::from_str("0").unwrap();
+
+	match estimate_anchor_protocol_tx_fee(tasks.clone(), "anchor_protocol_txs_borrow_stable","avg_gas_adjustment".to_owned(),false,4).await.as_ref() {
+		"--" => {
+		},
+		e => {
+			avg_gas_adjustment = Decimal::from_str(e).unwrap();
+		}
+	};
+
+	match estimate_anchor_protocol_tx_fee(tasks.clone(), "anchor_protocol_txs_deposit_stable","avg_gas_adjustment".to_owned(),false,4).await.as_ref() {
+		"--" => {
+			avg_gas_adjustment = max_gas_adjustment
+								 .checked_add(avg_gas_adjustment).unwrap();
+		},
+		e => {
+			let gas_adjustment = Decimal::from_str(e).unwrap(); 
+			avg_gas_adjustment = gas_adjustment
+								 .checked_add(avg_gas_adjustment).unwrap() 
+		}
+	};
+	avg_gas_adjustment = avg_gas_adjustment.checked_div(Decimal::from_str("2").unwrap()).unwrap();
+
+	if avg_gas_adjustment < max_gas_adjustment {
+		max_gas_adjustment = avg_gas_adjustment;
+	}
+
+	let gas_adjustment_preference = decimal_or_return!(gas_adjustment_preference_to_string(tasks.clone(),10).await.as_ref());
+	max_gas_adjustment = max_gas_adjustment
+            					 .checked_add(gas_adjustment_preference).unwrap()
+            					 .checked_div(Decimal::from_str("2").unwrap()).unwrap();   
+
+    match anchor_borrow_and_deposit_stable_tx(wallet_seed_phrase.unsecure(), to_borrow, to_deposit, gas_fees_uusd,  max_tx_fee, max_gas_adjustment, only_estimate).await {
+        	Ok(msg) => {
+        		register_value(&tasks,"anchor_borrow_and_deposit_stable".to_string(),msg.to_owned()).await;
+        		register_value(&tasks,"latest_transaction".to_string(),msg.to_owned()).await;
+        		return msg;
+        	},
+        	Err(msg) => {
+        		register_value(&tasks,"anchor_borrow_and_deposit_stable".to_string(),msg.to_string().to_owned()).await;
+        		register_value(&tasks,"latest_transaction".to_string(),msg.to_string().to_owned()).await;
+        		return msg.to_string();
+        	}
+        }  
+}
+
 
 pub async fn anchor_redeem_and_repay_stable(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> String {
     let max_tx_fee = decimal_or_return!(max_tx_fee_to_string(tasks.clone(), 4).await.as_ref());
@@ -76,11 +168,11 @@ pub async fn anchor_redeem_and_repay_stable(tasks: Arc<RwLock<HashMap<String, Ma
     match get_meta_data_maybe(&tasks, "latest_transaction").await {
     	Ok(maybe) => {
     		let req: [&str;4] = ["terra_balances","borrow_limit","borrow_info","balance"];
-    		if get_oldest_timestamps_of_resolved_tasks(&tasks,&req).await <= maybe.timestamp { 
+    		if get_oldest_timestamps_of_resolved_tasks(&tasks,&req).await <= maybe.timestamp + 10{ 
     			return "waiting for data to refresh..".to_string();
     		}
     	},
-    	Err(err) => {
+    	Err(_) => {
     		// no previous transaction, free to continue.
     	}
     }
@@ -190,11 +282,11 @@ pub async fn anchor_borrow_claim_and_stake_rewards(tasks: Arc<RwLock<HashMap<Str
 	    match get_meta_data_maybe(&tasks, "latest_transaction").await {
 	    	Ok(maybe) => {
 	    		let req: [&str;3] = ["terra_balances","borrow_limit","borrow_info"];
-	    		if get_oldest_timestamps_of_resolved_tasks(&tasks,&req).await <= maybe.timestamp { 
+	    		if get_oldest_timestamps_of_resolved_tasks(&tasks,&req).await <= maybe.timestamp + 10{ 
 	    			return "waiting for data to refresh..".to_string();
 	    		}
 	    	},
-	    	Err(err) => {
+	    	Err(_) => {
 	    		// no previous transaction, free to continue.
 	    	}
 	    }

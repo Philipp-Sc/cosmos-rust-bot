@@ -103,6 +103,9 @@
 
 ### Build it yourself
 
+> If you are on Windows you could use the Ubuntu Subsystem. Feel free to open an Issue if you need help.
+
+
 **Install Rust**
 
 * <a href="https://doc.rust-lang.org/book/ch01-00-getting-started.html">Get started here.</a>

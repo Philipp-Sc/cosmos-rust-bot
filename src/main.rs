@@ -69,17 +69,13 @@ mod simple_user_input {
 
 // TODO: Add UST peg stat.
 // TODO: Add config for usersettings
- 
-
-// TODO: Auto Borrow  
-
+  
 
 // TODO: Auto Replenish: Always get the account balance a good bit above the limit.
 // TODO: Anchor Liquidation Bot
 
 
-// TODO: Optimize TX Fee estimate query functions. !!
-// FIX Compiler warnings
+// TODO: Optimize TX Fee estimate query functions. !! (will reduce query time)
 
 
  #[tokio::main]
@@ -115,7 +111,7 @@ async fn main() -> anyhow::Result<()> {
                 // use hard coded values.
             }
         }
-
+ 
         /* Load arguments */
 
         let args: Vec<String> = env::args().collect();
@@ -159,6 +155,7 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
         }
+
         //println!("{:?}",(args_i,args_a,args_b,args_d));
         let is_test = *&is_test;
         let is_debug = *&is_debug;
@@ -167,13 +164,15 @@ async fn main() -> anyhow::Result<()> {
 
         let mut wallet_seed_phrase = SecUtf8::from("".to_string());
 
-        if args_b.len() > 0 && !is_test { // ** seed phrase needed **
+        if args_b.len() > 0 { // ** seed phrase needed **
             wallet_seed_phrase = SecUtf8::from(get_input("Enter your seed phrase (press Enter to skip):").to_string());
             // https://github.com/unrelentingtech/secstr
             println!("{esc}c", esc = 27 as char);  
-            user_settings.wallet_acc_address = get_from_account(wallet_seed_phrase.unsecure()).unwrap_or("".to_string());
+            if wallet_seed_phrase.unsecure().len()>1 {
+                user_settings.wallet_acc_address = get_from_account(wallet_seed_phrase.unsecure()).unwrap_or("".to_string());
+            }
         }else if user_settings.wallet_acc_address.len()==0 { /* ask for wallet address */
-            if (args_a.len() > 0 || args_b.len() > 0) { // if wallet address is needed.
+            if args_a.len() > 0 || args_b.len() > 0 { // if wallet address is needed.
                     user_settings.wallet_acc_address = get_input("Enter your wallet address (press Enter to skip):").to_string();
                     println!("{esc}c", esc = 27 as char); 
             } 
@@ -202,7 +201,7 @@ async fn main() -> anyhow::Result<()> {
         ("simulation anchorprotocol uluna terraswapblunaLunaPair",fast, vec!["market","anchor_account"]),
         ("state anchorprotocol bLunaHub", fast, vec!["market","anchor_account"]),
         ("simulation_cw20 anchorprotocol ANC terraswapAncUstPair", fast, vec!["market","anchor_account","anchor_auto_stake"]),
-        ("epoch_state anchorprotocol mmMarket", fast, vec!["anchor","market","anchor_account","anchor_auto_repay","anchor_auto_borrow"]),
+        ("epoch_state anchorprotocol mmMarket", fast, vec!["anchor","market","anchor_account","anchor_auto_repay"]),
         /* nexus_tokens */
         ("simulation_cw20 nexusprotocol nLunaToken Psi-nLuna_Pair", fast, vec!["market"]),
         ("simulation_cw20 nexusprotocol PsiToken Psi-UST_Pair", fast, vec!["market"]),
@@ -546,16 +545,21 @@ pub async fn display_all_logs(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>
 
     log_view.push(("\n\n  **Logs**\n\n".yellow().to_string(),*offset));
     *offset += 1;
-  
-    // latest_transaction
-    // anchor_redeem_and_repay_stable
-    // anchor_governance_claim_and_stake
+   
     
     if args_b.contains(&"anchor_auto_repay") {
 
         let auto_repay = get_past_transaction_logs(tasks.clone(),"anchor_redeem_and_repay_stable").await;
 
         log_view.push((format!("{}{}","\n   [Auto Repay]            ".yellow(), auto_repay.yellow()),*offset));
+        *offset += 1;
+
+    }
+    if args_b.contains(&"anchor_auto_borrow") {
+
+        let auto_borrow = get_past_transaction_logs(tasks.clone(),"anchor_borrow_and_deposit_stable").await;
+
+        log_view.push((format!("{}{}","\n   [Auto Borrow]           ".yellow(), auto_borrow.yellow()),*offset));
         *offset += 1;
 
     }
@@ -785,9 +789,15 @@ pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromis
     anchor_tasks.push(t);
     *offset += 1;
 
+
+    anchor_view.push(("\n\n".to_string(),*offset));
+    *offset += 1;
+
     if is_first_run {
         add_view_to_display(&new_display, anchor_view).await.ok(); 
     }
+
+
 
     return anchor_tasks;
  
@@ -846,7 +856,6 @@ pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromis
     anchor_view.push((" UST".purple().to_string(),*offset));
     *offset += 1;
 
-
     anchor_view.push((format!("{}{}","\n\n   [Auto Borrow]".truecolor(75,219,75),"                    to deposit:               ".purple().to_string()),*offset));
     *offset += 1;
  
@@ -871,7 +880,6 @@ pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromis
     *offset += 1;
 
     // min(to_repay * tax_rate , tax_cap)
-    // TODO: reduce borrow_amount, for deposit, because that is what we do. current way overestimates stability fee, anyway its zero now.
     anchor_view.push((format!("{}{}","\n   [Auto Borrow Deposit]".truecolor(75,219,75),"            est. stability fee:       ".purple().to_string()),*offset));
     *offset += 1;
  
@@ -895,10 +903,7 @@ pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromis
     anchor_view.push((" UST".purple().to_string(),*offset));
     *offset += 1;
 
-
  
-
- /*
   
     let mut field = "result:  ";
 
@@ -912,7 +917,7 @@ pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromis
     anchor_view.push(("--".purple().to_string(),*offset));
     
     // function able to execute auto repay, therefore registering it as task to run concurrently. 
-    let important_task: Pin<Box<dyn Future<Output = String> + Send + 'static>> = Box::pin(anchor_redeem_and_repay_stable(tasks.clone(), wallet_seed_phrase.clone(),is_test));
+    let important_task: Pin<Box<dyn Future<Output = String> + Send + 'static>> = Box::pin(anchor_borrow_and_deposit_stable(tasks.clone(), wallet_seed_phrase.clone(),is_test));
     let timeout_duration = 120u64;  /* if task hangs for some reason (awaiting data, performaing estimate, broadcasting transaction) then timeout */
     
     let mut block_duration_after_resolve = 1i64;
@@ -930,13 +935,16 @@ pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromis
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(await_function(tasks.clone(),"anchor_auto_borrow".to_owned())));
     anchor_tasks.push(t);
     *offset += 1;
-  
+   
 
-*/
+    anchor_view.push(("\n\n".to_string(),*offset));
+    *offset += 1;
+
 
     if is_first_run {
         add_view_to_display(&new_display, anchor_view).await.ok(); 
     }
+
 
     return anchor_tasks;
  

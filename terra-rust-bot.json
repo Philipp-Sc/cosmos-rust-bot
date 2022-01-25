@@ -1,7 +1,7 @@
 {
             "trigger_percentage": "0.9",
-            "target_percentage": "0.9",
-            "borrow_percentage": "0.8",
+            "target_percentage": "0.8",
+            "borrow_percentage": "0.7",
             "max_tx_fee": "5",
             "max_gas_adjustment": "1.67",
             "gas_adjustment_preference": "1.2" ,

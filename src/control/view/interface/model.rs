@@ -426,15 +426,29 @@ pub async fn await_function(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,
   */
  pub async fn requirements(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, user_settings: &UserSettings, req: &Vec<&str>) { 
           
-         let gas_prices = match fetch_gas_price().await {
-            Ok(res) => {res},
-            Err(err) => {
-                println!("{}",err.to_string());
-                println!("WARNING: Using static gas_prices.");
-                get_gas_price()
-            },
-         };
+
+        let mut gas_prices = get_gas_price();
+
+        if req.contains(&"gas_fees_uusd") {
+            match fetch_gas_price().await {
+                Ok(res) => {gas_prices = res},
+                Err(err) => {
+                    println!("{}",err.to_string());
+                    println!("WARNING: Using static gas_prices.");
+                },
+            };
+        }else{ 
+            match get_meta_data_maybe_or_await_task(&tasks,"gas_fees_uusd").await {
+                        Ok(response_result) => { 
+                            gas_prices.uusd = response_result;    
+                        },
+                        Err(_) => { 
+                        }
+            };
+        }
+         
  
+
          let mut map = tasks.write().await;
 
          for cmd in req {

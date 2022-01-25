@@ -68,7 +68,7 @@ pub async fn get_past_transaction_logs(tasks: Arc<RwLock<HashMap<String, MaybeOr
         Ok(maybe) => {
             return format!("tx: {:?}, timestamp: {}",maybe.data, maybe.timestamp);
         },
-        Err(err) => {
+        Err(_) => {
             // no previous transaction, free to continue.
             return "--".to_string();
         }
@@ -83,7 +83,7 @@ pub async fn calculate_borrow_plan(tasks: Arc<RwLock<HashMap<String, MaybeOrProm
     ust_amount_liquid = ust_amount_liquid.checked_sub(min_ust_balance).unwrap();  
  
     if field == "ust_available_to_pay_fees" {
-        return ust_amount_liquid.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();;
+        return ust_amount_liquid.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();
     }
 
     let borrow_amount = decimal_or_return!(calculate_amount(tasks.clone(),"borrow",false,10).await.as_ref());
@@ -100,13 +100,16 @@ pub async fn calculate_borrow_plan(tasks: Arc<RwLock<HashMap<String, MaybeOrProm
         return stability_tax.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();
     }
 
-    let borrow_stable_fee = decimal_or_return!(estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_borrow_stable","avg_fee_amount_adjusted_without_stability_fee".to_owned(),false,2).await.as_ref());
+    let borrow_stable_fee = decimal_or_return!(estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_borrow_stable","avg_fee_amount_adjusted_without_stability_fee".to_owned(),false,2).await.as_ref())
+                                .checked_add(stability_tax).unwrap();
+   
+    let able_to_borrow = ust_amount_liquid >= borrow_stable_fee;
+
     let deposit_stable_fee = decimal_or_return!(estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_deposit_stable","avg_fee_amount_adjusted_without_stability_fee".to_owned(),false,2).await.as_ref());
 
     let mut to_deposit = borrow_amount
         .checked_sub(borrow_stable_fee).unwrap()
-        .checked_sub(deposit_stable_fee).unwrap()
-        .checked_sub(stability_tax).unwrap();
+        .checked_sub(deposit_stable_fee).unwrap();
 
     let mut stability_tax = to_deposit.checked_mul(tax_rate).unwrap();
     /* stability_tax is slightly overestimated, because it is not substracted from the to_deposit value in the first place.*/
@@ -115,12 +118,16 @@ pub async fn calculate_borrow_plan(tasks: Arc<RwLock<HashMap<String, MaybeOrProm
         stability_tax = uusd_tax_cap;
     }
     to_deposit = to_deposit.checked_sub(stability_tax).unwrap();
+
+    let deposit_stable_fee = deposit_stable_fee.checked_add(stability_tax).unwrap();
+
+    let able_to_deposit = ust_amount_liquid.checked_add(borrow_amount).unwrap().checked_sub(borrow_stable_fee).unwrap() >= deposit_stable_fee;
     
     if field == "stability_tax_deposit" {
         return stability_tax.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();
     }
 
-    if field == "to_deposit" {
+    if field == "to_deposit" && able_to_borrow && able_to_deposit {
         return to_deposit.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();
     }
 
@@ -136,7 +143,7 @@ pub async fn calculate_repay_plan(tasks: Arc<RwLock<HashMap<String, MaybeOrPromi
     ust_amount_liquid = ust_amount_liquid.checked_sub(min_ust_balance).unwrap();  
  
     if field == "ust_available_to_repay" {
-        return ust_amount_liquid.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();;
+        return ust_amount_liquid.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();
     }
 
     let repay_amount = decimal_or_return!(calculate_amount(tasks.clone(),"repay",false,10).await.as_ref());
@@ -145,19 +152,19 @@ pub async fn calculate_repay_plan(tasks: Arc<RwLock<HashMap<String, MaybeOrPromi
     let further_funds_needed = ust_amount_liquid.checked_sub(repay_amount).unwrap() < zero;
 
     if field == "more_funds_required" {
-        return further_funds_needed.to_string();;
+        return further_funds_needed.to_string();
     }
     
     let a_ust_deposit_liquid = decimal_or_return!(borrower_ust_deposited_to_string(tasks.clone(),false,10).await.as_ref());
 
     if field == "available_in_deposit" {
-        return a_ust_deposit_liquid.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();;
+        return a_ust_deposit_liquid.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();
     }
 
     let sufficient_funds_available = a_ust_deposit_liquid.checked_add(ust_amount_liquid).unwrap().checked_sub(repay_amount).unwrap() >= zero;
 
     if field == "sufficient_funds_to_repay" {
-        return sufficient_funds_available.to_string();;
+        return sufficient_funds_available.to_string();
     } 
 
     let mut to_withdraw_from_account = Decimal::from_str("0").unwrap();
@@ -233,22 +240,22 @@ pub async fn calculate_repay_plan(tasks: Arc<RwLock<HashMap<String, MaybeOrPromi
         if fee_to_repay_stable <= ust_amount_leftover {
             to_withdraw_from_account = to_withdraw_from_account.checked_add(fee_to_repay_stable).unwrap();
             fee_to_repay_stable = Decimal::from_str("0").unwrap();
-            ust_amount_leftover = ust_amount_leftover.checked_sub(fee_to_repay_stable).unwrap();
+            //ust_amount_leftover = ust_amount_leftover.checked_sub(fee_to_repay_stable).unwrap();
         }else {
             to_withdraw_from_account = to_withdraw_from_account.checked_add(ust_amount_leftover).unwrap();
             fee_to_repay_stable = fee_to_repay_stable.checked_sub(ust_amount_leftover).unwrap();
-            ust_amount_leftover = Decimal::from_str("0").unwrap();
+            //ust_amount_leftover = Decimal::from_str("0").unwrap();
         }
     }
     if a_ust_amount_leftover > zero && fee_to_repay_stable > zero {
         if fee_to_repay_stable <= a_ust_amount_leftover {
             to_withdraw_from_deposit = to_withdraw_from_deposit.checked_add(fee_to_repay_stable).unwrap();
             fee_to_repay_stable = Decimal::from_str("0").unwrap();
-            a_ust_amount_leftover = a_ust_amount_leftover.checked_sub(fee_to_repay_stable).unwrap();
+            //a_ust_amount_leftover = a_ust_amount_leftover.checked_sub(fee_to_repay_stable).unwrap();
         }else{
             to_withdraw_from_deposit = to_withdraw_from_deposit.checked_add(a_ust_amount_leftover).unwrap();
             fee_to_repay_stable = fee_to_repay_stable.checked_sub(a_ust_amount_leftover).unwrap();
-            a_ust_amount_leftover = Decimal::from_str("0").unwrap();
+            //a_ust_amount_leftover = Decimal::from_str("0").unwrap();
         }
     }
     if fee_to_repay_stable > zero {  // analog to reduce_repay_amount_by_fee
@@ -401,7 +408,7 @@ pub async fn estimate_anchor_protocol_next_claim_and_stake_tx(tasks: Arc<RwLock<
   
             let mut _collateral_value = Decimal::from_str("0").unwrap();  
 
-            let mut borrower_rewards_in_ust = decimal_or_return!(borrower_rewards_in_ust_to_string(tasks.clone(),  10).await.as_ref());
+            let borrower_rewards_in_ust = decimal_or_return!(borrower_rewards_in_ust_to_string(tasks.clone(),  10).await.as_ref());
 
             let mut loan_amount = Decimal::from_str("0").unwrap();  
 
@@ -579,22 +586,22 @@ pub async fn estimate_anchor_protocol_tx_fee(tasks: Arc<RwLock<HashMap<String, M
             // estimate_fee_amount = avg_gas_adjustment * avg_gas_used;
             for entry in result {
                 let stability_tax = entry.amount.checked_mul(tax_rate).unwrap();
-                let mut fee_amount_without_stability_fee = Decimal::from_str("0").unwrap();
+                let mut _fee_amount_without_stability_fee = Decimal::from_str("0").unwrap();
                 if stability_tax < tax_cap_uusd {
-                    fee_amount_without_stability_fee = entry.fee_amount.checked_sub(stability_tax).unwrap();
+                    _fee_amount_without_stability_fee = entry.fee_amount.checked_sub(stability_tax).unwrap();
                 } else {                    
-                    fee_amount_without_stability_fee = entry.fee_amount.checked_sub(tax_cap_uusd).unwrap();
+                    _fee_amount_without_stability_fee = entry.fee_amount.checked_sub(tax_cap_uusd).unwrap();
                 }
 
                 // adjusted means the gas_adjustment is part of the fee_amount
-                avg_fee_amount_adjusted_without_stability_fee = avg_fee_amount_adjusted_without_stability_fee.checked_add(fee_amount_without_stability_fee).unwrap();
+                avg_fee_amount_adjusted_without_stability_fee = avg_fee_amount_adjusted_without_stability_fee.checked_add(_fee_amount_without_stability_fee).unwrap();
 
                 // we can not know the real gas adjustment, but this is a good guess
                 let gas_adjustment = entry.gas_wanted.checked_div(entry.gas_used).unwrap(); 
                 
                 // removing the gas_adjustment that was applied
-                fee_amount_without_stability_fee = fee_amount_without_stability_fee.checked_div(gas_adjustment).unwrap();
-                avg_fee_amount_without_stability_fee = avg_fee_amount_without_stability_fee.checked_add(fee_amount_without_stability_fee).unwrap();
+                _fee_amount_without_stability_fee = _fee_amount_without_stability_fee.checked_div(gas_adjustment).unwrap();
+                avg_fee_amount_without_stability_fee = avg_fee_amount_without_stability_fee.checked_add(_fee_amount_without_stability_fee).unwrap();
 
                 avg_fee_amount = avg_fee_amount.checked_add(entry.fee_amount).unwrap();
                 avg_gas_adjustment = avg_gas_adjustment.checked_add(gas_adjustment).unwrap();
@@ -1216,11 +1223,11 @@ pub async fn utilization_ratio_to_string(tasks: Arc<RwLock<HashMap<String, Maybe
 pub async fn estimate_anchor_protocol_auto_repay_tx_fee(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
      
     // does include gas_adjustment
-    let mut fee_to_redeem_stable = decimal_or_return!(estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_redeem_stable","fee_amount_adjusted".to_owned(),false,10).await.as_ref());
+    let fee_to_redeem_stable = decimal_or_return!(estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_redeem_stable","fee_amount_adjusted".to_owned(),false,10).await.as_ref());
     // does include gas_adjustment
-    let mut anchor_protocol_txs_repay_stable = decimal_or_return!(estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_repay_stable","avg_fee_amount_adjusted_without_stability_fee".to_owned(),false,10).await.as_ref());
+    let anchor_protocol_txs_repay_stable = decimal_or_return!(estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_repay_stable","avg_fee_amount_adjusted_without_stability_fee".to_owned(),false,10).await.as_ref());
     // min(to_repay * tax_rate , tax_cap)
-    let mut stability_tax = decimal_or_return!(calculate_repay_plan(tasks.clone(),"stability_tax",10).await.as_ref());
+    let stability_tax = decimal_or_return!(calculate_repay_plan(tasks.clone(),"stability_tax",10).await.as_ref());
 
     return fee_to_redeem_stable.checked_add(anchor_protocol_txs_repay_stable).unwrap()
                                 .checked_add(stability_tax).unwrap()
@@ -1230,14 +1237,13 @@ pub async fn estimate_anchor_protocol_auto_repay_tx_fee(tasks: Arc<RwLock<HashMa
 pub async fn estimate_anchor_protocol_auto_borrow_tx_fee(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
      
     // does include gas_adjustment
-    let mut anchor_protocol_txs_borrow_stable = decimal_or_return!(estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_borrow_stable","avg_fee_amount_adjusted_without_stability_fee".to_owned(),false,10).await.as_ref());
+    let anchor_protocol_txs_borrow_stable = decimal_or_return!(estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_borrow_stable","avg_fee_amount_adjusted_without_stability_fee".to_owned(),false,10).await.as_ref());
     // min(to_repay * tax_rate , tax_cap)
-    let mut stability_tax_borrow = decimal_or_return!(calculate_borrow_plan(tasks.clone(),"stability_tax_borrow",10).await.as_ref());
+    let stability_tax_borrow = decimal_or_return!(calculate_borrow_plan(tasks.clone(),"stability_tax_borrow",10).await.as_ref());
     // does include gas_adjustment
-    let mut anchor_protocol_txs_deposit_stable = decimal_or_return!(estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_deposit_stable","avg_fee_amount_adjusted_without_stability_fee".to_owned(),false,10).await.as_ref());
-    // min(to_repay * tax_rate , tax_cap)
-    // TODO: reduce this fee, anyway now zero. 
-    let mut stability_tax_deposit = decimal_or_return!(calculate_borrow_plan(tasks.clone(),"stability_tax_deposit",10).await.as_ref());
+    let anchor_protocol_txs_deposit_stable = decimal_or_return!(estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_deposit_stable","avg_fee_amount_adjusted_without_stability_fee".to_owned(),false,10).await.as_ref());
+    // min(to_repay * tax_rate , tax_cap) 
+    let stability_tax_deposit = decimal_or_return!(calculate_borrow_plan(tasks.clone(),"stability_tax_deposit",10).await.as_ref());
 
     return anchor_protocol_txs_borrow_stable
                                 .checked_add(stability_tax_borrow).unwrap()

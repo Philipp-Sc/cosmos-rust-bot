@@ -41,6 +41,26 @@ fn anchor_repay_stable_msg(wallet_acc_address: &str, coin_amount: Decimal) -> an
         return Ok(send);
 }
 
+fn anchor_deposit_stable_msg(wallet_acc_address: &str, coin_amount: Decimal) -> anyhow::Result<Message> {
+        let contract = get_contract("anchorprotocol","mmMarket"); 
+        let execute_msg_json = r##"{"deposit_stable":{}}"##;
+        let coins: [Coin;1] = [Coin::create("uusd", coin_amount)];
+        let send = MsgExecuteContract::create_from_json(&wallet_acc_address, &contract, execute_msg_json, &coins)?;
+        return Ok(send);
+}
+
+fn anchor_borrow_stable_msg(wallet_acc_address: &str, coin_amount: Decimal) -> anyhow::Result<Message> {
+        let contract = get_contract("anchorprotocol","mmMarket"); 
+        let execute_msg_json = format!("{}{}{}", r##"{
+                                        "borrow_stable": {
+                                            "borrow_amount": ""##,coin_amount.to_string().as_str(),r##""
+                                        }
+                                    }"##);
+        let coins: [Coin;0] = []; // no coins needed
+        let send = MsgExecuteContract::create_from_json(&wallet_acc_address, &contract, &execute_msg_json, &coins)?;
+        return Ok(send);
+}
+
 fn anchor_redeem_stable_msg(wallet_acc_address: &str, coin_amount: Decimal) -> anyhow::Result<Message> {
 		let contract_addr_a_ust = get_contract("anchorprotocol","aTerra"); 
 		let contract_addr_mm_market = get_contract("anchorprotocol","mmMarket"); 
@@ -86,7 +106,32 @@ fn anchor_governance_stake_msg(wallet_acc_address: &str, coin_amount: Decimal) -
         return Ok(send);  
 }
 
+pub async fn anchor_borrow_and_deposit_stable_tx(mnemonics: &str, coin_amount_borrow: Decimal,coin_amount_deposit: Decimal, gas_price_uusd: Decimal, max_tx_fee: Decimal, gas_adjustment: Decimal, only_estimate: bool) -> anyhow::Result<String>{
 
+        let secp = Secp256k1::new();
+        let from_key = PrivateKey::from_words(&secp,mnemonics,0,0)?;
+        let from_public_key = from_key.public_key(&secp);
+        let from_account = from_public_key.account()?;
+ 
+        let mut messages = Vec::new();
+        messages.push(anchor_borrow_stable_msg(&from_account,coin_amount_borrow)?);
+        messages.push(anchor_deposit_stable_msg(&from_account,coin_amount_deposit)?);
+
+        let res = estimate_messages(&from_account,messages,gas_price_uusd,gas_adjustment).await?;
+
+        let gas_opts = match estimate_to_gas_opts(res,only_estimate,max_tx_fee) {
+            Err(err) => {
+                return Err(anyhow!(format!("{:?} (gas_adjustment: {})",err,gas_adjustment)));
+            },
+            Ok(e) => {e}
+        };
+
+        let mut messages = Vec::new();
+        messages.push(anchor_borrow_stable_msg(&from_account,coin_amount_borrow)?);
+        messages.push(anchor_deposit_stable_msg(&from_account,coin_amount_deposit)?);
+
+        execute_messages(mnemonics,messages,gas_opts).await
+}
 
 pub async fn anchor_redeem_and_repay_stable_tx(mnemonics: &str, coin_amount_redeem: Decimal,coin_amount_repay: Decimal, gas_price_uusd: Decimal, max_tx_fee: Decimal, gas_adjustment: Decimal, only_estimate: bool) -> anyhow::Result<String>{
 
