@@ -290,7 +290,7 @@ async fn main() -> anyhow::Result<()> {
             let req_failed = get_keys_of_failed_tasks(&tasks, &req_keys_status).await;
 
             // waiting for unresolved tasks to catch up 
-            if req_unresolved.len() >= num_cpus + args_b.len() { 
+            if req_unresolved.len() >= num_cpus { 
                 // anyway we need to have free threads to spawn more tasks
                 // useful to wait here
                 timeout(Duration::from_secs(30), await_running_tasks(&tasks, &req_keys)).await.ok();
@@ -301,6 +301,9 @@ async fn main() -> anyhow::Result<()> {
 
             let mut req_to_update: Vec<&str> = Vec::new(); 
             for i in 0..req.len() {
+                if req_to_update.len()==num_cpus {
+                    break;
+                }
                 let mut contains = false;
                 for x in &args {
                     if req[i].2.contains(&x.as_str()) {
@@ -311,9 +314,7 @@ async fn main() -> anyhow::Result<()> {
                 if contains && !req_unresolved.contains(&req[i].0) && (req_failed.contains(&req[i].0) || req_resolved_timestamps[i]==0i64 || ((now - req_resolved_timestamps[i]) > req[i].1 as i64 )) { // unresolved requirements will not be refreshed.
                     req_to_update.push(req[i].0); 
                 }
-                if req_to_update.len()>num_cpus + args_b.len(){
-                    break;
-                }
+                
             } 
 
            if is_debug {
@@ -498,22 +499,11 @@ pub async fn add_string_to_display(new_display: &Arc<RwLock<Vec<String>>>, index
     Ok(())
 }
 
-pub fn add_view_to_display(new_display: &Arc<RwLock<Vec<String>>>, view: Vec<(String,usize)>) -> JoinHandle<()> {
-     
-    let display_clone = new_display.clone();
-
-    return tokio::spawn(async move {      
-            let mut look = display_clone.try_write();
-            while look.is_err() {
-                thread::sleep(time::Duration::from_millis(10));
-                look = display_clone.try_write();
-            } 
-            let mut vector = look.unwrap();
-            for entry in view {
-                *vector.get_mut(entry.1).unwrap() = entry.0;
-            }
-            
-    });  
+pub async fn add_view_to_display(new_display: &Arc<RwLock<Vec<String>>>, view: Vec<(String,usize)>) {
+    let mut vector = new_display.write().await;
+    for entry in view {
+        *vector.get_mut(entry.1).unwrap() = entry.0;
+    }
 }
 
 pub async fn add_format_to_result(prefix: String,suffix: String, f: Pin<Box<dyn Future<Output = String> + Send + 'static >>) -> String {
@@ -575,7 +565,7 @@ pub async fn display_all_logs(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>
     log_view.push(("\n".to_string(),*offset));
     *offset += 1;
 
-    add_view_to_display(&new_display, log_view).await.ok(); 
+    add_view_to_display(&new_display, log_view).await; 
 }
 
 
@@ -610,7 +600,7 @@ pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromis
         *offset += 1; 
     }
 
-    add_view_to_display(&new_display, error_view).await.ok(); 
+    add_view_to_display(&new_display, error_view).await; 
 }
 /**
  * Anchor Auto Repay requires that the account balance has sufficient funds.
@@ -794,7 +784,7 @@ pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromis
     *offset += 1;
 
     if is_first_run {
-        add_view_to_display(&new_display, anchor_view).await.ok(); 
+        add_view_to_display(&new_display, anchor_view).await; 
     }
 
 
@@ -942,7 +932,7 @@ pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromis
 
 
     if is_first_run {
-        add_view_to_display(&new_display, anchor_view).await.ok(); 
+        add_view_to_display(&new_display, anchor_view).await; 
     }
 
 
@@ -1096,7 +1086,7 @@ pub async fn lazy_anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<S
     *offset += 1;
 
     if is_first_run {
-        add_view_to_display(&new_display, anchor_view).await.ok(); 
+        add_view_to_display(&new_display, anchor_view).await; 
     }     
 
     return anchor_tasks;
@@ -1424,7 +1414,7 @@ pub async fn display_anchor_account(tasks: &Arc<RwLock<HashMap<String, MaybeOrPr
     // ANC -50%, -25%, 0%, + 25%, +50%, + 100%
 
     if is_first_run {
-        add_view_to_display(&new_display, anchor_view).await.ok(); 
+        add_view_to_display(&new_display, anchor_view).await; 
     }
 
     return anchor_tasks;
@@ -1543,7 +1533,7 @@ pub async fn display_anchor_info(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
     *offset += 1;
  
     if is_first_run {
-        add_view_to_display(&new_display, anchor_view).await.ok();
+        add_view_to_display(&new_display, anchor_view).await;
     }
 
     return anchor_tasks;
@@ -1695,7 +1685,7 @@ pub async fn display_market_info(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
     *offset += 1;
 
     if is_first_run {
-        add_view_to_display(&new_display, market_view).await.ok();
+        add_view_to_display(&new_display, market_view).await;
     }
 
     return market_tasks;
