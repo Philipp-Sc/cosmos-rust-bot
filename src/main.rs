@@ -275,8 +275,7 @@ async fn main() -> anyhow::Result<()> {
         let mut timestamps_display: Vec<i64> = vec![0i64; display_slots];
 
         add_string_to_display(&new_display, 0, format!("{}\n\n",terra_rust_bot_json_loaded.truecolor(77, 77, 237))).await.ok();
-        let _display_loop = print_to_terminal(&new_display,false); 
-
+        
         let num_cpus = num_cpus::get();
 
         /* Tasks */
@@ -285,7 +284,17 @@ async fn main() -> anyhow::Result<()> {
 
         let mut is_first_run: bool = true;
 
+        /**
+         * This loop has three major blocking elements.
+         * 1) Awaiting running tasks if thread limit is reached. No harm of waiting here.
+         * 2) Multiple calls of try_add_to_display, checks if results are available. 
+         *    Timeout after 0.1s, worst possible delay (unlikely to happen): req.len() * 0.1s. (~10s).
+         * 3) Writing the display to disk. Acceptable delay, less than 1s.
+         * 
+         * */
         loop { 
+            let time_yay = Utc::now().timestamp();
+
             let req_unresolved = get_keys_of_running_tasks(&tasks,&req_keys_status).await;
             let req_failed = get_keys_of_failed_tasks(&tasks, &req_keys_status).await;
 
@@ -420,7 +429,15 @@ async fn main() -> anyhow::Result<()> {
             if is_first_run {
                 is_first_run = false;
             }
- 
+            
+            // writing display to file.
+            let new_line = format!("{esc}c", esc = 27 as char);
+            let line = format!("{}{}",new_line,new_display.read().await.join(""));
+            fs::write("./terra-rust-bot-display.txt", &line).ok(); 
+                 
+
+            let time_end_yay = Utc::now().timestamp();
+            println!("{}", time_end_yay-time_yay);
          
         }
  
@@ -466,25 +483,6 @@ pub async fn add_table_formatting(f: Pin<Box<dyn Future<Output = String> + Send 
 
     result = format!("{}{}",result,"\n".repeat(new_lines));
     result
-}
- 
-pub fn print_to_terminal(new_display: &Arc<RwLock<Vec<String>>>, once: bool) ->  JoinHandle<anyhow::Result<()>> {
-
-    let display_clone = new_display.clone();
-
-    return tokio::spawn(async move {     
-            if once {
-                println!("{}",display_clone.read().await.join("")); 
-            }else{ 
-                loop {
-                    let new_line = format!("{esc}c", esc = 27 as char);
-                    let line = format!("{}{}",new_line,display_clone.read().await.join(""));
-                    fs::write("./terra-rust-bot-display.txt", &line).ok(); 
-                    thread::sleep(time::Duration::from_millis(200));
-                }
-            }
-            Ok(())
-    });  
 }
 
 pub async fn add_string_to_display(new_display: &Arc<RwLock<Vec<String>>>, index: usize, line: String) -> anyhow::Result<()> {
