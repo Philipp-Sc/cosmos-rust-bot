@@ -174,6 +174,15 @@
 * `while sleep 0.1; do cat terra-rust-bot-display.txt; done` (watch the display output of terra-rust-bot)
 
 
+## Summary
+
+- I created this bot to learn about smart contracts, the terra blockchain and to get to know the Rust programming language.
+- This is a constant work in progress: **Bug Reports** and **Feature Requests** are welcome!
+- Thanks to the people who helped me along the way on the terra discord. 
+
+
+- If terra-rust-bot is not what you are looking for you might want to check out the following projects. (AnchorHODL is my favourite alternative, it offers Telegram/Slack Notification as well as a webview.)
+
 ## Similar projects
 - https://github.com/ALPAC-4/auto_repay
 - https://github.com/RomainLanz/anchor-borrow-bot
