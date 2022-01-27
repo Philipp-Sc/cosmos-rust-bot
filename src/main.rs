@@ -1071,6 +1071,11 @@ pub async fn lazy_anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<S
     anchor_tasks.push(t);
     *offset += 1;
 
+    
+    anchor_view.push(("\n\n".to_string(),*offset));
+    *offset += 1;
+
+
     if is_first_run {
         add_view_to_display(&new_display, anchor_view).await; 
     }     
