@@ -9,7 +9,7 @@
 
 > :diamond_shape_with_a_dot_inside: It is always a good idea to use a dedicated wallet. 
 
-> :speedboat: To optimize speed run terra-rust-bot on a multi-core system for the best performance.  
+> :speedboat: To optimize terra-rust-bot's response time run it on a multi-core system for the best performance.  
  
 > :warning: No security audit has been performed.
 
