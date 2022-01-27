@@ -5,9 +5,11 @@
 
 > :warning: Terra-rust-bot will not save your **seed phrase**, make sure you do not lose it. Make sure you clear your copy/paste clipboard.
 
-> :arrow_right: Terra-rust-bot can be used without a seed phrase, view only mode. It is recommended to test this first :arrow_left:
+> :test_tube: Terra-rust-bot can be used without a seed phrase, view only mode. It is recommended to test this first  
 
-> :arrow_right: It is always a good idea to use a dedicated wallet. :arrow_left:
+> :diamond_shape_with_a_dot_inside: It is always a good idea to use a dedicated wallet. 
+
+> :speedboat: To optimize speed run terra-rust-bot on a multi-core system for the best performance.  
  
 > :warning: No security audit has been performed.
 
