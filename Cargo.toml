@@ -3,7 +3,7 @@ name = "terra-rust-bot"
 authors = ["Philipp Schlütermann <philipp.schluetermann@udo.edu>"]
 description = "Lunatics understand the value that a powerful yield optimizing bot brings, as their ever-present gaze over the field of DeFi offers a strategic edge, and helps commanders keep their assets safe."
 repository = "https://github.com/Philipp-Sc/terra-rust-bot"
-version = "0.1.0"
+version = "0.3.0"
 edition = "2018"
  
 [[bin]] 
@@ -20,14 +20,12 @@ rust_decimal_macros="1.12.2"
 secp256k1 = { version = "0.20.3", default-features = false }
 reqwest="0.11.6"   
 chrono = "0.4"
-enum-as-inner = "0.3.3"
-schemars = { version = "0.8"}
+enum-as-inner = "0.3.3" 
 cosmwasm-std = "0.16"
 num-format = "0.4.0"
 secstr = "0.4.0"
 regex = "1.5.4"
-colored = "2"
-rand = "0.8.4"
+colored = "2" 
 num_cpus = "1.13.1" 
 
 [profile.release]

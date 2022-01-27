@@ -20,35 +20,24 @@ use std::collections::HashMap;
 use core::pin::Pin;
 use core::future::Future;
 
-//use anyhow::anyhow;
-//use enum_as_inner::EnumAsInner; 
-//use num_format::{Locale, ToFormattedString}; 
-
 use std::{thread, time};
-use std::time::{Duration/*, Instant*/};
+use std::time::{Duration};
 
 
 
 use std::sync::Arc; 
-use tokio::sync::RwLock; 
-use tokio::task::JoinHandle;
-use tokio::time::timeout;
-//use tokio::time::Timeout;
+use tokio::sync::RwLock;  
+use tokio::time::timeout; 
 
 
 use colored::*;
  
 use simple_user_input::get_input; 
 
-//use rand::Rng;
-
-
 use chrono::{Utc};
 use std::fs;
 
 extern crate num_cpus;
-
-//use std::collections::HashSet; 
 
 mod simple_user_input {
     use std::io;
@@ -273,6 +262,7 @@ async fn main() -> anyhow::Result<()> {
         let new_display: Arc<RwLock<Vec<String>>> = Arc::new(RwLock::new(vec!["".to_string(); display_slots])); 
         // using timestamps to update each slot with a short delay.
         let mut timestamps_display: Vec<i64> = vec![0i64; display_slots];
+        let mut display_out_timestamp = 0i64;
 
         add_string_to_display(&new_display, 0, format!("{}\n\n",terra_rust_bot_json_loaded.truecolor(77, 77, 237))).await.ok();
         
@@ -284,7 +274,7 @@ async fn main() -> anyhow::Result<()> {
 
         let mut is_first_run: bool = true;
 
-        /**
+        /*
          * This loop has three major blocking elements.
          * 1) Awaiting running tasks if thread limit is reached. No harm of waiting here.
          * 2) Multiple calls of try_add_to_display, checks if results are available. 
@@ -292,8 +282,7 @@ async fn main() -> anyhow::Result<()> {
          * 3) Writing the display to disk. Acceptable delay, less than 1s.
          * 
          * */
-        loop { 
-            let time_yay = Utc::now().timestamp();
+        loop {  
 
             let req_unresolved = get_keys_of_running_tasks(&tasks,&req_keys_status).await;
             let req_failed = get_keys_of_failed_tasks(&tasks, &req_keys_status).await;
@@ -423,22 +412,21 @@ async fn main() -> anyhow::Result<()> {
             display_all_logs(&tasks ,&new_display, &mut offset, &args_b).await;
             
             display_all_errors(&tasks, &*req_unresolved ,&new_display, &mut offset).await;
-            
-            // todo: can write display to a log file.  
 
             if is_first_run {
                 is_first_run = false;
             }
             
-            // writing display to file.
-            let new_line = format!("{esc}c", esc = 27 as char);
-            let line = format!("{}{}",new_line,new_display.read().await.join(""));
-            fs::write("./terra-rust-bot-display.txt", &line).ok(); 
-                 
+            // ensuring one file write per 100ms, not faster.
+            let now = Utc::now().timestamp_millis();
 
-            let time_end_yay = Utc::now().timestamp();
-            println!("{}", time_end_yay-time_yay);
-         
+            if display_out_timestamp== 0i64 || now - display_out_timestamp > 100i64 {
+                // writing display to file.
+                let new_line = format!("{esc}c", esc = 27 as char);
+                let line = format!("{}{}",new_line,new_display.read().await.join(""));
+                fs::write("./terra-rust-bot-display.txt", &line).ok();  
+                display_out_timestamp = now;        
+            }
         }
  
         //Ok(())
