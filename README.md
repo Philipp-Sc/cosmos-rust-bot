@@ -5,20 +5,22 @@
 
 > :warning: Terra-rust-bot will not save your **seed phrase**, make sure you do not lose it. Make sure you clear your copy/paste clipboard.
 
-> :arrow_right: Terra-rust-bot can be used without a seed phrase, view only mode. It is recommended to test this first :arrow_left:
+> :arrow_right_hook: Terra-rust-bot can be used without a seed phrase, view only mode. It is recommended to test this first  
 
-> :arrow_right: It is always a good idea to use a dedicated wallet. :arrow_left:
- 
 > :warning: No security audit has been performed.
+
+> :arrow_down: Check out the *Additional Security Measures* described below. 
 
 
 ## Why
 
 * Rust is a great programming language.
-* Keep It Simple, Stupid. 
 * Power to the people. 
+* The Terra ecosystem needs multiple open source bots to thrive.
+* KISS. Simplicity breeds success. 
+* A single executable that is easy to use with few dependencies.
 * Reducing transaction fees to a minimum. 
-* Easy to use. One executable.
+* New Strategies.
 
 
 ## What 
@@ -28,16 +30,19 @@
 
  <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/main/terra-rust-bot_v0.3_auto_stake.png" width="380">
   
+ Checks your pending borrow rewards and stakes them automatically. 
  
 ### Anchor Auto Loan Repay 
 
-
  <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/main/terra-rust-bot_v0.3_auto_repay.png" width="380">
+ 
+ Keeps your loan safe by sourcing money from your balance (UST) or Anchor Deposit (aUST). 
   
 ### Anchor Auto Borrow
 
  <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/main/terra-rust-bot_v0.3_auto_borrow.png" width="380">
-
+ 
+ Optimizes your LTV by automatically borrowing additional UST and depositing it into Anchor Earn (aUST).
 
 
 ### Anchor Auto Replenish (not yet implemented)
@@ -75,6 +80,10 @@
 
 ## Manual - Just Read The Instructions
 
+
+> :arrow_right: To optimize terra-rust-bot's response time run it on a multi-core system for the best performance.  
+ 
+
 ### Run terra-rust-bot
 
  **Configue terra-rust-bot.json**
@@ -89,7 +98,7 @@
  * `max_tx_fee:` the maximum UST amount you want to spend per transaction per fee.
  * `max_gas_adjustment:` the maximum gas_adjustment you are willing to use.
  * `gas_adjustment_preference:` has an influence on the gas_adjustment you end up with.
- * `min_ust_balance:` the minimum UST balance, if below this value no further transactions will be made.
+ * `min_ust_balance:` the minimum UST balance, if below this value no further transactions will be made. If min_ust_balance is 10 UST then you should have more than that deposited for the bot to be able to execute transactions, around 15 or 20 UST. It is your job to make sure the balance is sufficient.
  * `wallet_acc_address:` if empty you may be asked at runtime to provide a wallet address.
 
 
@@ -171,8 +180,27 @@
 
 * `while sleep 0.1; do cat terra-rust-bot-display.txt; done` (watch the display output of terra-rust-bot)
 
+## Additional Security Measures
+
+> There is no easy way for an attacker to extract your seed phrase, BUT given enough time and root access to your system it is certainly possible someone experienced can hack their way into the RAM, modify the code or introduce memory leaks to steal the seed. Everything CAN be hacked. Here are some security measures you might want to consider.
+
+- Always clear your copy/paste clipboard.
+- Use a dedicated wallet.
+- Avoid vserver and use a dedicated root server. (RAM snapshots are a security risk)
+- Harden your system. (Firewall, SSH, SELinux, Filesystem Encryption, VPN)
+- Minimize your attack surface.
+- Hide the fact that you are using terra-rust-bot. Rename the executable to something unexpected. 
+- Prepare a Honeypot/Decoy
+
+> That being said the main risk is your own negligence. Do your own reseach and know the risks.
+
+## Summary
+
+- I created this bot to learn about smart contracts, the terra blockchain and to get to know the Rust programming language.
+- This is a constant work in progress: **Bug Reports** and **Feature Requests** are welcome!
+- Thanks to the people who helped me along the way on the <a href="https://discord.com/invite/EuKCeGFb93">terra discord </a>. :heart: 
 
 ## Similar projects
 - https://github.com/ALPAC-4/auto_repay
 - https://github.com/RomainLanz/anchor-borrow-bot
-- https://github.com/unl1k3ly/AnchorHODL
+- https://github.com/unl1k3ly/AnchorHODL  (AnchorHODL is a good choice, it offers Telegram/Slack Notification as well as a webview.)
