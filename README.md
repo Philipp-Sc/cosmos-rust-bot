@@ -124,6 +124,7 @@
 * `cargo build --release` (optimized build)
 * `RUSTFLAGS="-C target-cpu=native" cargo build --release` (optimize the build for your CPU)
 
+* `unset LITCRYPT_ENCRYPT_KEY`  
 ---
 
 ### Step 2: terra-rust-bot.json
@@ -177,26 +178,17 @@
 
  **View the current state**
 
- * `while sleep 0.1; do cat terra-rust-bot-display.txt; done` 
+* `while sleep 0.1; do cat terra-rust-bot-display.txt; done` (watch the display output of terra-rust-bot)
 
 
 **Server Environment Example**
 
-* `./target/release/terra-rust-bot -b anchor_auto_stake anchor_auto_repay anchor_auto_borrow -d dev test ` (remove `test` if you want terra-rust-bot to sign transactions)
-
+* `IFS= read -rs SEED_PHRASE < /dev/tty` (stores stdin in variable) 
 * (enter your seed phrase)
 
-* `(Ctrl-Z)` (pause the programm)
+* `nohup ./target/release/terra-rust-bot -b anchor_auto_stake anchor_auto_repay anchor_auto_borrow -d dev test  <<< "$SEED_PHRASE" &` (remove `test` if you want terra-rust-bot to sign transactions)
 
-* `jobs` (show jobs)
-
-* `bg 1` (let the programm run in the background)
-
-* `disown %1` (make sure the program continues after your ssh session is closed)
- 
-* `cat terra-rust-bot-display.txt` (check the display output of terra-rust-bot)
-
-* `while sleep 0.1; do cat terra-rust-bot-display.txt; done` (watch the display output of terra-rust-bot)
+* `unset SEED_PHRASE` (important, remove any trace of the seed phrase)
  
 ---
 
