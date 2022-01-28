@@ -32,16 +32,19 @@
 
  <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/main/terra-rust-bot_v0.3_auto_stake.png" width="380">
   
+ Checks your borrow rewards and stakes them automatically. 
  
 ### Anchor Auto Loan Repay 
 
-
  <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/main/terra-rust-bot_v0.3_auto_repay.png" width="380">
+ 
+ Keeps your loan safe by sourcing money from your balance (UST) or Anchor Deposit (aUST). 
   
 ### Anchor Auto Borrow
 
  <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/main/terra-rust-bot_v0.3_auto_borrow.png" width="380">
-
+ 
+ Optimizes your LTV by automatically borrowing additional UST and depositing it into Anchor Earn (aUST).
 
 
 ### Anchor Auto Replenish (not yet implemented)
