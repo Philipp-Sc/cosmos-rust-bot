@@ -5,13 +5,11 @@
 
 > :warning: Terra-rust-bot will not save your **seed phrase**, make sure you do not lose it. Make sure you clear your copy/paste clipboard.
 
-> :test_tube: Terra-rust-bot can be used without a seed phrase, view only mode. It is recommended to test this first  
+> :arrow_right_hook: Terra-rust-bot can be used without a seed phrase, view only mode. It is recommended to test this first  
 
-> :diamond_shape_with_a_dot_inside: It is always a good idea to use a dedicated wallet. 
-
-> :speedboat: To optimize terra-rust-bot's response time run it on a multi-core system for the best performance.  
- 
 > :warning: No security audit has been performed.
+
+> :arrow_down: Check out the *Additional Security Measures* described below. 
 
 
 ## Why
@@ -81,6 +79,10 @@
 > This may steal your money. Do your own research. Take a look at the code.
 
 ## Manual - Just Read The Instructions
+
+
+> :arrow_right: To optimize terra-rust-bot's response time run it on a multi-core system for the best performance.  
+ 
 
 ### Run terra-rust-bot
 
@@ -178,6 +180,19 @@
 
 * `while sleep 0.1; do cat terra-rust-bot-display.txt; done` (watch the display output of terra-rust-bot)
 
+## Additional Security Measures
+
+> There is no easy way for an attacker to extract your seed phrase, BUT given enough time and root access to your system it is certainly possible someone experienced can hack their way into the RAM, modify the code or introduce memory leaks to steal the seed. Everything CAN be hacked. Here are some security measures you might want to consider.
+
+- Always clear your copy/paste clipboard.
+- Use a dedicated wallet.
+- Avoid vserver and use a dedicated root server. (RAM snapshots are a security risk)
+- Harden your system. (Firewall, SSH, SELinux, Filesystem Encryption, VPN)
+- Minimize your attack surface.
+- Hide the fact that you are using terra-rust-bot. Rename the executable to something unexpected. 
+- Prepare a Honeypot/Decoy
+
+> That being said the main risk is your own negligence. Do your own reseach and know the risks.
 
 ## Summary
 
