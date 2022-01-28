@@ -32,7 +32,7 @@
 
  <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/main/terra-rust-bot_v0.3_auto_stake.png" width="380">
   
- Checks your borrow rewards and stakes them automatically. 
+ Checks your pending borrow rewards and stakes them automatically. 
  
 ### Anchor Auto Loan Repay 
 
