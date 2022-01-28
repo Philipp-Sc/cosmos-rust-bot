@@ -31,8 +31,23 @@ fn anchor_liquidation_queue_withdraw_luna_msg(wallet_acc_address: &str, coin_amo
         let send = MsgExecuteContract::create_from_json(&wallet_acc_address, &contract, execute_msg_json, &coins)?;
         return Ok(send);
 }*/
+/*
+https://api.nexusprotocol.app/graphql
+{
+  "query": "\n  query ($address: String!) {\n    findAirdropsByAddress(address: $address) {\n      claimablePsiTokens\n      proofs\n      stage\n    }\n  }\n",
+  "variables": {
+    "address": "***REMOVED***"
+  }
+}
+{"data":{"findAirdropsByAddress":[{"claimablePsiTokens":"60113231","proofs":["c03922c661a087820ddfd48e1803e2770c8742b4c1a7d517a832ce240fb91e9a","7b10227c07cfb85cb713e887a75e96be8917dd38fd4852be0018c0060621379f","bcab66a9f047fa2d64baa1a97df1e35550b89ccb0b51623730313f4fb3fe9978","c10f7f6b2eee71382078fb4b57dc7e90ee1a596526b503b10eb8c34df2485125","a8491ea876b5461c9246faf61defd7182426873c046ce0dd2989cc538d43ac69","93906a843e59846395feee60c22eaa6aeb11672ac6c7f4db218940cc7d2c64df","1a27480aedaead47314f40726e80284d5008d9ef1d2e7fbf4f36b3f34f4baec7","54683c1383e6bc308e91361538539cd3fd691bfe74db9f5c1437fa45934c6e0a","0f80e8a192c1a545fe3ef7d00019af2290c65f19e0b7ba966d4af9820d7f3c66","ed2073d52595a83fbc1c4aef8bf9688d373c425a0fbeaf35ae2f5879f99ab704","6e861c7d183b7cef8f31f87269a1ff6384334fdfb0c2b5bb301684c5c5f9dfd8","b3c31800855f64d0ddfb771e25f1d7e8035407ca38f0366f634bf03427a1cdaa","45d358cb8b3d24cc97a7d8dc8f7863748d1588a2d655d107998c696698d8de34","0266e70814d8ceebbacda9335e4025f09008080115dacce0a03192ac0c76b442"],"stage":15}]}}
 
 
+https://airdrop.anchorprotocol.com/api/get?address=***REMOVED***&chainId=columbus-4
+https://fcd.terra.dev/wasm/contracts/terra146ahqn6d3qgdvmj8cj96hh03dzmeedhsf0kxqm/store?query_msg={%22latest_stage%22:{}}
+https://fcd.terra.dev/wasm/contracts/terra146ahqn6d3qgdvmj8cj96hh03dzmeedhsf0kxqm/store?query_msg={%22is_claimed%22:{%22stage%22:43,%22address%22:%20%22***REMOVED***%22}}
+
+
+*/
 fn anchor_repay_stable_msg(wallet_acc_address: &str, coin_amount: Decimal) -> anyhow::Result<Message> {
 		let contract = get_contract("anchorprotocol","mmMarket"); 
         let execute_msg_json = r##"{"repay_stable":{}}"##;

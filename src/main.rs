@@ -12,6 +12,8 @@ use control::view::interface::model::{UserSettings,MaybeOrPromise,requirements,t
  
 use control::view::interface::model::services::blockchain::smart_contracts::objects::meta::api::{get_from_account};
 
+use control::view::interface::model::services::blockchain::smart_contracts::objects::meta::api::data::wallet::{encrypt_text_with_secret,decrypt_text_with_secret};
+
 use control::view::*;
 use control::view::interface::*;
 use control::*;
@@ -22,8 +24,6 @@ use core::future::Future;
 
 use std::{thread, time};
 use std::time::{Duration};
-
-
 
 use std::sync::Arc; 
 use tokio::sync::RwLock;  
@@ -65,6 +65,14 @@ mod simple_user_input {
 
 
 // TODO: Optimize TX Fee estimate query functions. !! (will reduce query time)
+
+
+#[macro_use]
+extern crate litcrypt;
+//https://github.com/anvie/litcrypt.rs
+use_litcrypt!();
+
+
 
 
  #[tokio::main]
@@ -154,11 +162,10 @@ async fn main() -> anyhow::Result<()> {
         let mut wallet_seed_phrase = SecUtf8::from("".to_string());
 
         if args_b.len() > 0 { // ** seed phrase needed **
-            wallet_seed_phrase = SecUtf8::from(get_input("Enter your seed phrase (press Enter to skip):").to_string());
-            // https://github.com/unrelentingtech/secstr
+            wallet_seed_phrase = encrypt_text_with_secret(get_input("Enter your seed phrase (press Enter to skip):").to_string());
             println!("{esc}c", esc = 27 as char);  
             if wallet_seed_phrase.unsecure().len()>1 {
-                user_settings.wallet_acc_address = get_from_account(wallet_seed_phrase.unsecure()).unwrap_or("".to_string());
+                user_settings.wallet_acc_address = get_from_account(&decrypt_text_with_secret(&wallet_seed_phrase)).unwrap_or("".to_string());
             }
         }else if user_settings.wallet_acc_address.len()==0 { /* ask for wallet address */
             if args_a.len() > 0 || args_b.len() > 0 { // if wallet address is needed.

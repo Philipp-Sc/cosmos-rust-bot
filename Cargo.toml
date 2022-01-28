@@ -26,7 +26,8 @@ num-format = "0.4.0"
 secstr = "0.4.0"
 regex = "1.5.4"
 colored = "2" 
-num_cpus = "1.13.1" 
+num_cpus = "1.13.1"  
+litcrypt = "0.3" 
 
 [profile.release]
 # Enable link-time optimization, eliminates more code and inlines across crate boundaries.
