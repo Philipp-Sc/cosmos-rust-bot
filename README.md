@@ -17,10 +17,12 @@
 ## Why
 
 * Rust is a great programming language.
-* Keep It Simple, Stupid. 
 * Power to the people. 
+* The Terra ecosystem needs multiple open source bots to thrive.
+* KISS. Simplicity breeds success. 
+* A single executable that is easy to use with few dependencies.
 * Reducing transaction fees to a minimum. 
-* Easy to use. One executable.
+* New Strategies.
 
 
 ## What 
@@ -178,12 +180,9 @@
 
 - I created this bot to learn about smart contracts, the terra blockchain and to get to know the Rust programming language.
 - This is a constant work in progress: **Bug Reports** and **Feature Requests** are welcome!
-- Thanks to the people who helped me along the way on the terra discord. 
-
-
-- If terra-rust-bot is not what you are looking for you might want to check out the following projects. (AnchorHODL is my favourite alternative, it offers Telegram/Slack Notification as well as a webview.)
+- Thanks to the people who helped me along the way on the <a href="https://discord.com/invite/EuKCeGFb93">terra discord </a>. :heart: 
 
 ## Similar projects
 - https://github.com/ALPAC-4/auto_repay
 - https://github.com/RomainLanz/anchor-borrow-bot
-- https://github.com/unl1k3ly/AnchorHODL
+- https://github.com/unl1k3ly/AnchorHODL  (AnchorHODL is a good choice, it offers Telegram/Slack Notification as well as a webview.)
