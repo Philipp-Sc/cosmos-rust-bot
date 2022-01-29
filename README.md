@@ -60,6 +60,7 @@
 
 <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/development/terra-rust-bot_v0.1_anchor.png" width="980">
   
+(* the collateral value is calculated with the max_ltv, once the max_ltv for BLUNA and BETH are different, the collateral will be incorrect, this effects some of the APYs. TODO: query collateral value for BETH and LUNA.)
 
 ---
 
