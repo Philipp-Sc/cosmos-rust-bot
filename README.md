@@ -141,7 +141,7 @@
  * `max_gas_adjustment:` the maximum gas_adjustment you are willing to use.
  * `gas_adjustment_preference:` has an influence on the gas_adjustment you end up with.
  * `min_ust_balance:` the minimum UST balance, if below this value no further transactions will be made. If min_ust_balance is 10 UST then you should have more than that deposited for the bot to be able to execute transactions, around 15 or 20 UST. It is your job to make sure the balance is sufficient.
- * `wallet_acc_address:` if empty you may be asked at runtime to provide a wallet address.
+ * `ust_balance_preference:` should be higher than min_ust_balance. For example 20 UST. Auto Repay will try to maintain the balance at that value.
 
 ### Step 3: Run terra-rust-bot
 
