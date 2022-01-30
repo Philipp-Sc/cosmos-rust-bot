@@ -89,8 +89,8 @@ async fn main() -> anyhow::Result<()> {
             max_tx_fee: Decimal::from_str("5").unwrap(),
             max_gas_adjustment: Decimal::from_str("1.67").unwrap(),
             gas_adjustment_preference: Decimal::from_str("1.2").unwrap(),
-            min_ust_balance: Decimal::from_str("10").unwrap(),  
-            wallet_acc_address: "".to_string(),  
+            min_ust_balance: Decimal::from_str("10").unwrap(),   
+            ust_balance_preference: Decimal::from_str("20").unwrap(),
         };
 
         match fs::read_to_string("./terra-rust-bot.json") {
@@ -119,6 +119,7 @@ async fn main() -> anyhow::Result<()> {
         let mut args_a: Vec<&str> = Vec::new();
         let mut args_b: Vec<&str> = Vec::new();
         let mut args_d: Vec<&str> = Vec::new();
+        let mut arg_w: String = "".to_string();
 
         let mut is_test = false;
         let mut is_debug = false;
@@ -129,7 +130,7 @@ async fn main() -> anyhow::Result<()> {
                 last_item = x;
             }else{
                 if &args[last_item] == "-w" {
-                    user_settings.wallet_acc_address = format!("{}",&args[x]);
+                    arg_w = format!("{}",&args[x]);
                 }
                 if &args[last_item] == "-i" {
                     args_i.push(&args[x]);
@@ -160,23 +161,29 @@ async fn main() -> anyhow::Result<()> {
         /* Get wallet details */
 
         let mut wallet_seed_phrase = SecUtf8::from("".to_string());
+        let mut wallet_acc_address = SecUtf8::from(arg_w);
 
-        if args_b.len() > 0 { // ** seed phrase needed **
+
+        if args_b.len() > 0 {                              
+            // ** seed phrase needed **
             wallet_seed_phrase = encrypt_text_with_secret(get_input("Enter your seed phrase (press Enter to skip):").to_string());
-            println!("{esc}c", esc = 27 as char);  
-            if wallet_seed_phrase.unsecure().len()>1 {
-                user_settings.wallet_acc_address = get_from_account(&decrypt_text_with_secret(&wallet_seed_phrase)).unwrap_or("".to_string());
+            if wallet_acc_address.unsecure().len()!=44 || !is_test {
+                wallet_acc_address = SecUtf8::from(get_from_account(&decrypt_text_with_secret(&wallet_seed_phrase)).unwrap_or("".to_string()));
             }
-        }else if user_settings.wallet_acc_address.len()==0 { /* ask for wallet address */
-            if args_a.len() > 0 || args_b.len() > 0 { // if wallet address is needed.
-                    user_settings.wallet_acc_address = get_input("Enter your wallet address (press Enter to skip):").to_string();
-                    println!("{esc}c", esc = 27 as char); 
+        }else if wallet_acc_address.unsecure().len()==0 { 
+            // ** maybe need wallet address **
+            if args_a.len() > 0 || args_b.len() > 0 { // yes.
+                    wallet_acc_address = SecUtf8::from(get_input("Enter your wallet address (press Enter to skip):").to_string());
             } 
         }
+        println!("{esc}c", esc = 27 as char); 
 
         // Arc allows multiple references to the same object,
         // to potentially spawn multiple tasks with access to the seed phrase, while not revealing the string.
         let wallet_seed_phrase = Arc::new(wallet_seed_phrase);
+        let wallet_acc_address = Arc::new(wallet_acc_address);
+
+
  
         // note: around every 6s a new block is generated. 
         let fast: i32 = 10;      // 10s for short lived information
@@ -215,6 +222,7 @@ async fn main() -> anyhow::Result<()> {
         ("config anchorprotocol mmInterestModel", fast, vec!["anchor","anchor_account"]),
         //("config anchorprotocol collector",every_minute),
         /* <anchor_protocol account> */ 
+        ("anchor_airdrops", fast, vec!["anchor_account"]),
         ("borrow_limit", fast, vec!["anchor_account","anchor_auto_stake","anchor_auto_repay","anchor_auto_borrow"]),
         ("borrow_info", fast, vec!["anchor_account","anchor_auto_stake","anchor_auto_repay","anchor_auto_borrow"]),
         ("balance", fast, vec!["anchor_account","anchor_auto_repay","anchor_auto_borrow"]),
@@ -222,6 +230,7 @@ async fn main() -> anyhow::Result<()> {
         ("staker", fast, vec!["anchor_account","anchor_auto_stake"]),
         ("blocks_per_year", slow, vec!["market","anchor","anchor_account"]), 
         ("earn_apy", slow, vec!["anchor","anchor_account"]),
+        ("anchor_protocol_whitelist", slow, vec!["anchor_account"]),
         /* <meta data> */ 
         ("anchor_protocol_txs_claim_rewards", slow, vec!["anchor","anchor_account","anchor_auto_stake"]), 
         ("anchor_protocol_txs_staking", slow, vec!["anchor","anchor_account","anchor_auto_stake"]), 
@@ -236,6 +245,7 @@ async fn main() -> anyhow::Result<()> {
         ("max_gas_adjustment", fast, vec!["anchor_account","anchor_auto_stake","anchor_auto_repay","anchor_auto_borrow"]),
         ("gas_adjustment_preference",fast, vec!["anchor_account","anchor_auto_stake","anchor_auto_repay","anchor_auto_borrow"]),
         ("min_ust_balance", fast, vec!["anchor_account","anchor_auto_stake","anchor_auto_repay","anchor_auto_borrow"]),
+        ("ust_balance_preference", fast, vec!["anchor_auto_repay"]),
         ("max_tx_fee", fast, vec!["anchor_auto_stake","anchor_auto_repay","anchor_auto_borrow"]),
         /* <from gas_prices>*/
         ("gas_fees_uusd", medium, vec!["market","anchor","anchor_account","anchor_auto_stake","anchor_auto_repay","anchor_auto_borrow"]),
@@ -353,7 +363,7 @@ async fn main() -> anyhow::Result<()> {
                     )).await.ok(); 
             }
 
-            requirements(&tasks,&user_settings,&req_to_update).await;  
+            requirements(&tasks,&user_settings,&wallet_acc_address,&req_to_update).await;  
              
             let mut offset: usize = 2;
 
@@ -387,7 +397,7 @@ async fn main() -> anyhow::Result<()> {
             }
 
             if args_b.contains(&"anchor_auto_stake") {
-                let anchor_auto_stake = lazy_anchor_account_auto_stake_rewards(&tasks, &wallet_seed_phrase, &new_display, &mut offset, is_test, is_first_run).await;
+                let anchor_auto_stake = lazy_anchor_account_auto_stake_rewards(&tasks, &wallet_acc_address, &wallet_seed_phrase, &new_display, &mut offset, is_test, is_first_run).await;
                 for t in anchor_auto_stake {
                     if timestamps_display[t.0] == 0i64 || now - timestamps_display[t.0] > 1i64 { 
                         try_add_to_display(&new_display,t.0,Box::pin(t.1)).await.ok();
@@ -397,7 +407,7 @@ async fn main() -> anyhow::Result<()> {
             }  
 
             if args_b.contains(&"anchor_auto_repay") {
-                let anchor_auto_repay = lazy_anchor_account_auto_repay(&tasks, &wallet_seed_phrase, &new_display, &mut offset, is_test, is_first_run).await;
+                let anchor_auto_repay = lazy_anchor_account_auto_repay(&tasks, &wallet_acc_address, &wallet_seed_phrase, &new_display, &mut offset, is_test, is_first_run).await;
                 for t in anchor_auto_repay {
                     if timestamps_display[t.0] == 0i64 || now - timestamps_display[t.0] > 1i64 { 
                         try_add_to_display(&new_display,t.0,Box::pin(t.1)).await.ok();
@@ -407,7 +417,7 @@ async fn main() -> anyhow::Result<()> {
                 
             }   
             if args_b.contains(&"anchor_auto_borrow") {
-                let anchor_auto_borrow = lazy_anchor_account_auto_borrow(&tasks, &wallet_seed_phrase, &new_display, &mut offset, is_test, is_first_run).await;
+                let anchor_auto_borrow = lazy_anchor_account_auto_borrow(&tasks, &wallet_acc_address, &wallet_seed_phrase, &new_display, &mut offset, is_test, is_first_run).await;
                 for t in anchor_auto_borrow {
                     if timestamps_display[t.0] == 0i64 || now - timestamps_display[t.0] > 1i64 { 
                         try_add_to_display(&new_display,t.0,Box::pin(t.1)).await.ok();
@@ -607,7 +617,7 @@ pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromis
  * 
  * */
 
- pub async fn lazy_anchor_account_auto_repay(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_seed_phrase: &Arc<SecUtf8>,  new_display: &Arc<RwLock<Vec<String>>>,offset: &mut usize, is_test: bool, is_first_run: bool) -> Vec<(usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>)>  {
+ pub async fn lazy_anchor_account_auto_repay(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_acc_address: &Arc<SecUtf8>, wallet_seed_phrase: &Arc<SecUtf8>,  new_display: &Arc<RwLock<Vec<String>>>,offset: &mut usize, is_test: bool, is_first_run: bool) -> Vec<(usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>)>  {
 
     let mut anchor_view: Vec<(String,usize)> = Vec::new();
     let mut anchor_tasks: Vec<(usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>)> = Vec::new();
@@ -753,7 +763,7 @@ pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromis
     anchor_view.push(("--".purple().to_string(),*offset));
     
     // function able to execute auto repay, therefore registering it as task to run concurrently. 
-    let important_task: Pin<Box<dyn Future<Output = String> + Send + 'static>> = Box::pin(anchor_redeem_and_repay_stable(tasks.clone(), wallet_seed_phrase.clone(),is_test));
+    let important_task: Pin<Box<dyn Future<Output = String> + Send + 'static>> = Box::pin(anchor_redeem_and_repay_stable(tasks.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(),is_test));
     let timeout_duration = 120u64;  /* if task hangs for some reason (awaiting data, performaing estimate, broadcasting transaction) then timeout */
     
     let mut block_duration_after_resolve = 1i64;
@@ -787,7 +797,7 @@ pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromis
 }
 
 
- pub async fn lazy_anchor_account_auto_borrow(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_seed_phrase: &Arc<SecUtf8>,  new_display: &Arc<RwLock<Vec<String>>>,offset: &mut usize, is_test: bool, is_first_run: bool) -> Vec<(usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>)>  {
+ pub async fn lazy_anchor_account_auto_borrow(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_acc_address: &Arc<SecUtf8>, wallet_seed_phrase: &Arc<SecUtf8>,  new_display: &Arc<RwLock<Vec<String>>>,offset: &mut usize, is_test: bool, is_first_run: bool) -> Vec<(usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>)>  {
 
     let mut anchor_view: Vec<(String,usize)> = Vec::new();
     let mut anchor_tasks: Vec<(usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>)> = Vec::new();
@@ -900,7 +910,7 @@ pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromis
     anchor_view.push(("--".purple().to_string(),*offset));
     
     // function able to execute auto repay, therefore registering it as task to run concurrently. 
-    let important_task: Pin<Box<dyn Future<Output = String> + Send + 'static>> = Box::pin(anchor_borrow_and_deposit_stable(tasks.clone(), wallet_seed_phrase.clone(),is_test));
+    let important_task: Pin<Box<dyn Future<Output = String> + Send + 'static>> = Box::pin(anchor_borrow_and_deposit_stable(tasks.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(),is_test));
     let timeout_duration = 120u64;  /* if task hangs for some reason (awaiting data, performaing estimate, broadcasting transaction) then timeout */
     
     let mut block_duration_after_resolve = 1i64;
@@ -937,7 +947,7 @@ pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromis
  * Anchor Auto Stake requires that the account balance has sufficient funds.
  * Info: It will not replenish the account balance. 
  * */
-pub async fn lazy_anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_seed_phrase: &Arc<SecUtf8>,  new_display: &Arc<RwLock<Vec<String>>>,offset: &mut usize, is_test: bool, is_first_run: bool) -> Vec<(usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>)> {
+pub async fn lazy_anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_acc_address: &Arc<SecUtf8>, wallet_seed_phrase: &Arc<SecUtf8>,  new_display: &Arc<RwLock<Vec<String>>>,offset: &mut usize, is_test: bool, is_first_run: bool) -> Vec<(usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>)> {
      
     let mut anchor_view: Vec<(String,usize)> = Vec::new();
     let mut anchor_tasks: Vec<(usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>)> = Vec::new();
@@ -1060,7 +1070,7 @@ pub async fn lazy_anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<S
     anchor_view.push(("--".purple().to_string(),*offset));
     
     // function able to execute auto stake, therefore registering it as task to run concurrently. 
-    let important_task: Pin<Box<dyn Future<Output = String> + Send + 'static>> = Box::pin(anchor_borrow_claim_and_stake_rewards(tasks.clone(), wallet_seed_phrase.clone(),is_test));
+    let important_task: Pin<Box<dyn Future<Output = String> + Send + 'static>> = Box::pin(anchor_borrow_claim_and_stake_rewards(tasks.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(),is_test));
     let timeout_duration = 120u64;
     let mut block_duration_after_resolve = 10i64;
     /* a small duration is optimal, since the data is already there */
@@ -1101,10 +1111,25 @@ pub async fn display_anchor_account(tasks: &Arc<RwLock<HashMap<String, MaybeOrPr
     anchor_view.push(("\n  **Anchor Protocol Account**\n".truecolor(75,219,75).to_string(),*offset)); 
     *offset += 1;
 
+    // AIRDROP TEST
+/*
+    anchor_view.push((format!("{}{}","\n   [Airdrops]".truecolor(75,219,75),"  luna staking airdrops:   ".purple().to_string()),*offset));
+    *offset += 1;
+
+    anchor_view.push(("--".purple().to_string(),*offset));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(anchor_airdrops_to_string(tasks.clone())));
+    anchor_tasks.push(t);
+    *offset += 1;
+
+    
+    println!("{}",anchor_claim_and_stake_airdrops(tasks.clone(),"--").await);
+
+*/
+
     //anchor_view.push((format!("{}{}","\n   [Liquidation Queue]".truecolor(75,219,75),"    withdrawals:             ".purple().to_string()),*offset));
     //*offset += 1;
 
-    anchor_view.push((format!("{}{}","\n   [Borrow]".truecolor(75,219,75),"    loan amount:             ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n\n   [Borrow]".truecolor(75,219,75),"    loan amount:             ".purple().to_string()),*offset));
     *offset += 1;
 
     anchor_view.push(("--".purple().to_string(),*offset));

@@ -113,7 +113,7 @@ pub async fn estimate_messages(wallet_acc_address: &str, messages: Vec<Message>,
         ).await?)
 }
 
-pub async fn get_fcd_or_lcd_query(contract_addr: &str, query_msg: &str, gas_prices: &GasPrices) -> anyhow::Result<String>{
+pub async fn get_fcd_or_lcd_query(contract_addr: &str, query_msg: &str) -> anyhow::Result<String>{
 
 	/*
      * Returns the response from which ever server is faster.
@@ -121,22 +121,22 @@ pub async fn get_fcd_or_lcd_query(contract_addr: &str, query_msg: &str, gas_pric
 	 */ 
 	 tokio::select! {
         v1 = get_fcd_query(contract_addr,query_msg) => {return v1},
-        v1 = get_lcd_query(contract_addr,query_msg, gas_prices) => {return v1},
+        v1 = get_lcd_query(contract_addr,query_msg) => {return v1},
     };
     //result = get_lcd_query(query_identifier, gas_prices).await;
     //Err(anyhow!("Unexpected Error: Null"))
 }
 
-pub async fn get_fcd_else_lcd_query(contract_addr: &str, query_msg: &str, gas_prices: &GasPrices) -> anyhow::Result<String>{
+pub async fn get_fcd_else_lcd_query(contract_addr: &str, query_msg: &str) -> anyhow::Result<String>{
 	let mut v1 = get_fcd_query(contract_addr,query_msg).await;
 	if let Err(_) = v1 { 
-	    	v1 = get_lcd_query(contract_addr,query_msg, gas_prices).await; 
+	    	v1 = get_lcd_query(contract_addr,query_msg).await; 
 	} 
 	v1
 }
 
-pub async fn get_lcd_else_fcd_query(contract_addr: &str, query_msg: &str, gas_prices: &GasPrices) -> anyhow::Result<String>{
-    let mut v1 = get_lcd_query(contract_addr,query_msg, gas_prices).await;
+pub async fn get_lcd_else_fcd_query(contract_addr: &str, query_msg: &str) -> anyhow::Result<String>{
+    let mut v1 = get_lcd_query(contract_addr,query_msg).await;
 	if let Err(_) = v1 { 
 	    	v1 = get_fcd_query(contract_addr,query_msg).await; 
 	} 
@@ -175,11 +175,10 @@ pub async fn get_fcd_query(contract_addr: &str, query_msg: &str) -> anyhow::Resu
 	} 
 }
 
-pub async fn get_lcd_query(contract_addr: &str, query_msg: &str, gas_prices: &GasPrices) -> anyhow::Result<String>{
-	let gas_opts = GasOptions::create_with_gas_estimate(format!("{}{}", gas_prices.uusd, "uusd").as_str(),1.4)?; 
+pub async fn get_lcd_query(contract_addr: &str, query_msg: &str) -> anyhow::Result<String>{ 
 	let endpoint: &str = &get_terra_lcd();
 	let chain: &str = &get_terra_chain();
- 	let terra = Terra::lcd_client(endpoint,chain, &gas_opts, None);
+	let terra = Terra::lcd_client_no_tx(endpoint,chain);  
   	
 
 	let code_result = terra.send_cmd::<Value>(
@@ -221,11 +220,10 @@ pub async fn query_core_block_at_height(height: u64) -> anyhow::Result<BlockResu
 	Ok(sw)
 }
 
-pub async fn query_core_market_swap_rate(from: &str, to: &str,gas_prices: &GasPrices) -> anyhow::Result<String> { 
-	let gas_opts = GasOptions::create_with_gas_estimate(format!("{}{}", gas_prices.uusd, "uusd").as_str(),1.4)?; 
+pub async fn query_core_market_swap_rate(from: &str, to: &str) -> anyhow::Result<String> {  
 	let endpoint: &str = &get_terra_lcd();
 	let chain: &str = &get_terra_chain();
- 	let terra = Terra::lcd_client(endpoint,chain, &gas_opts,None); 
+ 	let terra = Terra::lcd_client_no_tx(endpoint,chain); 
 	let coin: Coin = Coin::parse(format!("{}{}", "1000000", from).as_str())?.unwrap();
 	let ask = to; 
 

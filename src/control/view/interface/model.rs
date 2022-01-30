@@ -1,5 +1,6 @@
 
 pub mod services;
+use secstr::*;
 
 use rust_decimal::Decimal; 
   
@@ -13,7 +14,8 @@ use services::blockchain::smart_contracts::objects::meta::api::{fetch_gas_price,
  
 use services::{
     query_api_distribution_apy,
-    query_api_gov_reward};
+    query_api_gov_reward,
+    query_anchor_airdrops};
 
 
 use services::blockchain::{ 
@@ -36,7 +38,8 @@ use services::blockchain::smart_contracts::{
     anchor_protocol_balance,
     anchor_protocol_staker,
     anchor_protocol_anc_balance,
-    terra_balances};
+    terra_balances,
+    anchor_protocol_whitelist};
 
 use std::collections::HashMap; 
 
@@ -79,8 +82,7 @@ pub struct Maybe<T> {
 } 
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct UserSettings {
-    pub wallet_acc_address: String,  
+pub struct UserSettings { 
     pub trigger_percentage: Decimal, 
     pub target_percentage: Decimal,  
     pub borrow_percentage: Decimal,  
@@ -88,9 +90,8 @@ pub struct UserSettings {
     pub min_ust_balance: Decimal, 
     pub gas_adjustment_preference: Decimal,            
     pub max_tx_fee: Decimal,
-
+    pub ust_balance_preference: Decimal,
 } 
- 
 
 /*
  * returns the value for the given key, if the enum is of the type Maybe.
@@ -424,41 +425,29 @@ pub async fn await_function(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,
   * retrieve the value when it is needed: "data.get_mut(String).unwrap().await"
   * use try_join!, join! or select! macros to optimise retrieval of multiple values.
   */
- pub async fn requirements(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, user_settings: &UserSettings, req: &Vec<&str>) { 
+ pub async fn requirements(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, user_settings: &UserSettings, wallet_acc_address: &Arc<SecUtf8>, req: &Vec<&str>) { 
           
-
-        let mut gas_prices = get_gas_price();
-
-        if req.contains(&"gas_fees_uusd") {
-            match fetch_gas_price().await {
-                Ok(res) => {gas_prices = res},
-                Err(err) => {
-                    println!("{}",err.to_string());
-                    println!("WARNING: Using static gas_prices.");
-                },
-            };
-        }else{ 
-            match get_meta_data_maybe_or_await_task(&tasks,"gas_fees_uusd").await {
-                        Ok(response_result) => { 
-                            gas_prices.uusd = response_result;    
-                        },
-                        Err(_) => { 
-                        }
-            };
-        }
-         
- 
-
          let mut map = tasks.write().await;
 
          for cmd in req {
             let vec: Vec<&str> = cmd.split(" ").collect();
             let length = vec.len();
             let mut into_iter = vec.into_iter();
+            let wallet = wallet_acc_address.clone();
             if length == 1 {
 
                 let first: String = into_iter.next().unwrap().to_string();
                 match first.as_ref() {
+                    "anchor_protocol_whitelist" => {
+                         let handle = tokio::spawn(async move { 
+                            {    
+                                
+                                return anchor_protocol_whitelist().await;   
+                            }
+                        }); 
+                        map.insert("anchor_protocol_whitelist".to_string(), MaybeOrPromise::Data(QueryData::Task(handle))); 
+                  
+                    }
                     "earn_apy" => {
                         let handle = tokio::spawn(async move { 
                             {    
@@ -478,77 +467,76 @@ pub async fn await_function(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,
                         }); 
                         map.insert("blocks_per_year".to_string(), MaybeOrPromise::Data(QueryData::Task(handle))); 
                     }
-                    "borrow_limit" => {  
-                        let wallet = user_settings.wallet_acc_address.to_owned();
-                        let gas_prices_copy = gas_prices.to_owned();
+                    "anchor_airdrops" => {   
                         let handle = tokio::spawn(async move { 
                             {    
-                                
-                                return anchor_protocol_borrower_limit(wallet,gas_prices_copy).await;   
+                                return query_anchor_airdrops(wallet.unsecure()).await;   
                             }
                         });
                        
-                            map.insert("borrow_limit".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
- 
+                        map.insert("anchor_airdrops".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
+
                     },
-                    "borrow_info" => {
-                        let wallet = user_settings.wallet_acc_address.to_owned();
-                        let gas_prices_copy = gas_prices.to_owned();
+                    "borrow_limit" => {   
                         let handle = tokio::spawn(async move { 
                             {    
                                 
-                                return anchor_protocol_borrower_info(wallet,gas_prices_copy).await;   
+                                return anchor_protocol_borrower_limit(wallet.unsecure()).await;   
+                            }
+                        });
+                       
+                        map.insert("borrow_limit".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
+ 
+                    },
+                    "borrow_info" => { 
+                        let handle = tokio::spawn(async move { 
+                            {    
+                                
+                                return anchor_protocol_borrower_info(wallet.unsecure()).await;   
                             }
                         });
                        
                             map.insert("borrow_info".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
                         
                     },
-                    "balance" => {
-                        let wallet = user_settings.wallet_acc_address.to_owned();
-                        let gas_prices_copy = gas_prices.to_owned();
+                    "balance" => { 
                         let handle = tokio::spawn(async move { 
                             {    
                                 
-                                return anchor_protocol_balance(wallet,gas_prices_copy).await;   
+                                return anchor_protocol_balance(wallet.unsecure()).await;   
                             }
                         });
                        
                             map.insert("balance".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
                         
                     },
-                    "terra_balances" => {
-                        let wallet = user_settings.wallet_acc_address.to_owned(); 
+                    "terra_balances" => { 
                         let handle = tokio::spawn(async move { 
                             {    
                                 
-                                return terra_balances(wallet).await;   
+                                return terra_balances(wallet.unsecure()).await;   
                             }
                         });
                        
                             map.insert("terra_balances".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
                         
                     },
-                    "anc_balance" => {
-                        let wallet = user_settings.wallet_acc_address.to_owned();
-                        let gas_prices_copy = gas_prices.to_owned();
+                    "anc_balance" => { 
                         let handle = tokio::spawn(async move { 
                             {    
                                 
-                                return anchor_protocol_anc_balance(wallet,gas_prices_copy).await;   
+                                return anchor_protocol_anc_balance(wallet.unsecure()).await;   
                             }
                         });
                        
                             map.insert("anc_balance".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
                          
                     },
-                    "staker" => {
-                        let wallet = user_settings.wallet_acc_address.to_owned();
-                        let gas_prices_copy = gas_prices.to_owned();
+                    "staker" => { 
                         let handle = tokio::spawn(async move { 
                             {    
                                 
-                                return anchor_protocol_staker(wallet,gas_prices_copy).await;   
+                                return anchor_protocol_staker(wallet.unsecure()).await;   
                             }
                         });
                        
@@ -656,7 +644,15 @@ pub async fn await_function(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,
                        
                             map.insert("tax_caps".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
                     },
-                    "gas_fees_uusd" => {                      
+                    "gas_fees_uusd" => {      
+                        let mut gas_prices = get_gas_price(); 
+                        match fetch_gas_price().await {
+                            Ok(res) => {gas_prices = res},
+                            Err(err) => {
+                                println!("{}",err.to_string());
+                                println!("Info: Failed to query gas price. Fallback to static gas prices.");
+                            },
+                        }; 
                         map.insert("gas_fees_uusd".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Maybe {data: Ok(gas_prices.uusd.to_string().to_owned()), timestamp: Utc::now().timestamp()})));
                     }, 
                     "trigger_percentage" => {     
@@ -677,6 +673,9 @@ pub async fn await_function(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,
                     "min_ust_balance" => {       
                         map.insert("min_ust_balance".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Maybe {data: Ok(user_settings.min_ust_balance.to_string().to_owned()), timestamp: Utc::now().timestamp()})));
                     },    
+                    "ust_balance_preference" => {       
+                        map.insert("ust_balance_preference".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Maybe {data: Ok(user_settings.ust_balance_preference.to_string().to_owned()), timestamp: Utc::now().timestamp()})));
+                    },   
                     "max_tx_fee" => {       
                         map.insert("max_tx_fee".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Maybe {data: Ok(user_settings.max_tx_fee.to_string().to_owned()), timestamp: Utc::now().timestamp()})));
                     },     
@@ -695,12 +694,11 @@ pub async fn await_function(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,
                         // "state anchorprotocol bLunaHub"
                         // "state anchorprotocol mmMarket"
                         let second_copy = second.to_owned();
-                        let third_copy = third.to_owned();
-                        let gas_prices_copy = gas_prices.to_owned();
+                        let third_copy = third.to_owned(); 
                         let handle = tokio::spawn(async move { 
                             {    
                                 
-                                return state_query_msg(second_copy,third_copy,gas_prices_copy).await;   
+                                return state_query_msg(second_copy,third_copy).await;   
                             }
                         });
                        
@@ -709,12 +707,11 @@ pub async fn await_function(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,
                      "epoch_state" => {
                         // "epoch_state anchorprotocol mmMarket"
                         let second_copy = second.to_owned();
-                        let third_copy = third.to_owned();
-                        let gas_prices_copy = gas_prices.to_owned();
+                        let third_copy = third.to_owned(); 
                         let handle = tokio::spawn(async move { 
                             {    
                                 
-                                return epoch_state_query_msg(second_copy,third_copy,gas_prices_copy).await;   
+                                return epoch_state_query_msg(second_copy,third_copy).await;   
                             }
                         });
                        
@@ -722,24 +719,22 @@ pub async fn await_function(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,
                     },
                      "config" => {
                         let second_copy = second.to_owned();
-                        let third_copy = third.to_owned();
-                        let gas_prices_copy = gas_prices.to_owned();
+                        let third_copy = third.to_owned(); 
                         let handle = tokio::spawn(async move { 
                             {    
                                 
-                                return config_query_msg(second_copy,third_copy,gas_prices_copy).await;   
+                                return config_query_msg(second_copy,third_copy).await;   
                             }
                         });
                        
                             map.insert(format!("config {} {}",second, third).to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
                     },
                     "simulation_cw20" => {
-                        let third_copy = third.to_owned();
-                        let gas_prices_copy = gas_prices.to_owned();
+                        let third_copy = third.to_owned(); 
                         let handle = tokio::spawn(async move { 
                             {    
                                 
-                                return masset_to_ust(third_copy,gas_prices_copy).await;   
+                                return masset_to_ust(third_copy).await;   
                             }
                         });
                        
@@ -748,12 +743,11 @@ pub async fn await_function(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,
                     },
                     "core_swap" => { 
                         let second_copy = second.to_owned();
-                        let third_copy = third.to_owned();
-                        let gas_prices_copy = gas_prices.to_owned();
+                        let third_copy = third.to_owned(); 
                         let handle = tokio::spawn(async move { 
                             {    
                                 
-                                return native_token_core_swap(second_copy,third_copy,gas_prices_copy).await;   
+                                return native_token_core_swap(second_copy,third_copy).await;   
                             }
                         });
                        
@@ -781,11 +775,10 @@ pub async fn await_function(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,
                         let second_copy = second.to_owned();
                         let third_copy = third.to_owned();
                         let fourth_copy = fourth.to_owned();
-                        let gas_prices_copy = gas_prices.to_owned();
                         let handle = tokio::spawn(async move { 
                             {    
                                 
-                                return native_token_to_swap_pair(second_copy,third_copy,fourth_copy,gas_prices_copy).await;   
+                                return native_token_to_swap_pair(second_copy,third_copy,fourth_copy).await;   
                             }
                         });
                        
@@ -795,12 +788,11 @@ pub async fn await_function(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,
                     "simulation_cw20" => {
                         let second_copy = second.to_owned();
                         let third_copy = third.to_owned();
-                        let fourth_copy = fourth.to_owned();
-                        let gas_prices_copy = gas_prices.to_owned();
+                        let fourth_copy = fourth.to_owned(); 
                         let handle = tokio::spawn(async move { 
                             {    
                                 
-                                return cw20_to_swap_pair(second_copy,third_copy,fourth_copy,gas_prices_copy).await;   
+                                return cw20_to_swap_pair(second_copy,third_copy,fourth_copy).await;   
                             }
                         });
                        

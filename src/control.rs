@@ -4,20 +4,21 @@ pub mod view;
 use secstr::*;
 
 use rust_decimal::Decimal;
-use core::str::FromStr;
-
+use core::str::FromStr; 
 use view::interface::model::services::blockchain::smart_contracts::objects::meta::{
 	anchor_borrow_and_deposit_stable_tx,
 	anchor_redeem_and_repay_stable_tx, 
 	anchor_repay_stable_tx, 
 	anchor_claim_rewards,
 	anchor_governance_stake,
-	anchor_governance_claim_and_stake};
+	anchor_governance_claim_and_stake,
+	anchor_claim_and_stake_airdrop_tx};
 
 use view::interface::model::{
 	MaybeOrPromise,
 	register_value,
 	get_meta_data_maybe,
+	get_data_maybe_or_meta_data_maybe,
 	get_oldest_timestamps_of_resolved_tasks};
 
 use view::interface::*;
@@ -42,7 +43,44 @@ macro_rules! decimal_or_return {
     }
 } 
 
-pub async fn anchor_borrow_and_deposit_stable(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> String {
+
+pub async fn anchor_claim_and_stake_airdrops(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,wallet_acc_address: &str /* wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool*/) -> String {
+
+
+        match get_data_maybe_or_meta_data_maybe(&tasks,"anchor_airdrops").await {
+            Ok(res) => {
+                let anchor_airdrops = res.as_airdrop_response().unwrap();  
+                let mut vec_proof = Vec::new();
+                let mut vec_stage = Vec::new();
+                let mut vec_amount = Vec::new();
+                for i in 0..anchor_airdrops.len() {
+                    if anchor_airdrops[i].claimable {
+                    	vec_proof.push(anchor_airdrops[i].proof.to_owned());
+                    	vec_stage.push(anchor_airdrops[i].stage.to_owned());
+                    	vec_amount.push(anchor_airdrops[i].amount.to_owned()); 
+                    }
+                }
+                let gas_adjustment = Decimal::from_str("1.0").unwrap();
+                let max_tx_fee = Decimal::from_str("5").unwrap();
+                let gas_fees_uusd = Decimal::from_str("0.15").unwrap();
+                return format!("{:?}",anchor_claim_and_stake_airdrop_tx(wallet_acc_address,&vec_proof, &vec_stage, &vec_amount, gas_fees_uusd, max_tx_fee, gas_adjustment).await);
+                //return serde_json::to_string_pretty(&vec_claims).unwrap_or("--".to_string());
+ 				
+ 				// checks if funds are enought to proceed
+ 				// checks if it is worth it to claim airdrop
+
+ 				// get an estimate
+            },
+            Err(err) => {
+                return format!("{:?}",err);
+            }
+        } 
+
+}
+
+
+
+pub async fn anchor_borrow_and_deposit_stable(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> String {
 
 	let max_tx_fee = decimal_or_return!(max_tx_fee_to_string(tasks.clone(), 4).await.as_ref());
 	let likely_tx_fee = decimal_or_return!(estimate_anchor_protocol_auto_borrow_tx_fee(tasks.clone(),2).await.as_ref());
@@ -118,7 +156,12 @@ pub async fn anchor_borrow_and_deposit_stable(tasks: Arc<RwLock<HashMap<String, 
             					 .checked_add(gas_adjustment_preference).unwrap()
             					 .checked_div(Decimal::from_str("2").unwrap()).unwrap();   
 
-    match anchor_borrow_and_deposit_stable_tx(&decrypt_text_with_secret(&wallet_seed_phrase), to_borrow, to_deposit, gas_fees_uusd,  max_tx_fee, max_gas_adjustment, only_estimate).await {
+	let mnemonics = match only_estimate {
+		true => {wallet_acc_address.unsecure().to_string()},
+		false => {decrypt_text_with_secret(&wallet_seed_phrase)}
+	};
+
+    match anchor_borrow_and_deposit_stable_tx(&mnemonics, to_borrow, to_deposit, gas_fees_uusd,  max_tx_fee, max_gas_adjustment, only_estimate).await {
         	Ok(msg) => {
         		register_value(&tasks,"anchor_borrow_and_deposit_stable".to_string(),msg.to_owned()).await;
         		register_value(&tasks,"latest_transaction".to_string(),msg.to_owned()).await;
@@ -133,7 +176,7 @@ pub async fn anchor_borrow_and_deposit_stable(tasks: Arc<RwLock<HashMap<String, 
 }
 
 
-pub async fn anchor_redeem_and_repay_stable(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> String {
+pub async fn anchor_redeem_and_repay_stable(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> String {
     let max_tx_fee = decimal_or_return!(max_tx_fee_to_string(tasks.clone(), 4).await.as_ref());
 	let likely_tx_fee = decimal_or_return!(estimate_anchor_protocol_auto_repay_tx_fee(tasks.clone(),2).await.as_ref());
  	let balance = decimal_or_return!(terra_balance_to_string(tasks.clone(),"uusd",false,2).await.as_ref());
@@ -217,7 +260,12 @@ pub async fn anchor_redeem_and_repay_stable(tasks: Arc<RwLock<HashMap<String, Ma
 	            					 .checked_add(gas_adjustment_preference).unwrap()
 	            					 .checked_div(Decimal::from_str("2").unwrap()).unwrap();   
 
-        match anchor_redeem_and_repay_stable_tx(&decrypt_text_with_secret(&wallet_seed_phrase),to_withdraw_from_deposit,to_repay,gas_fees_uusd,  max_tx_fee, max_gas_adjustment, only_estimate).await {
+		let mnemonics = match only_estimate {
+			true => {wallet_acc_address.unsecure().to_string()},
+			false => {decrypt_text_with_secret(&wallet_seed_phrase)}
+		};
+
+        match anchor_redeem_and_repay_stable_tx(&mnemonics,to_withdraw_from_deposit,to_repay,gas_fees_uusd,  max_tx_fee, max_gas_adjustment, only_estimate).await {
         	Ok(msg) => {
         		register_value(&tasks,"anchor_redeem_and_repay_stable".to_string(),msg.to_owned()).await;
         		register_value(&tasks,"latest_transaction".to_string(),msg.to_owned()).await;
@@ -256,8 +304,12 @@ pub async fn anchor_redeem_and_repay_stable(tasks: Arc<RwLock<HashMap<String, Ma
 		max_gas_adjustment = max_gas_adjustment
 	            					 .checked_add(gas_adjustment_preference).unwrap()
 	            					 .checked_div(Decimal::from_str("2").unwrap()).unwrap();   
+		let mnemonics = match only_estimate {
+			true => {wallet_acc_address.unsecure().to_string()},
+			false => {decrypt_text_with_secret(&wallet_seed_phrase)}
+		};
 
-        match anchor_repay_stable_tx(&decrypt_text_with_secret(&wallet_seed_phrase), to_repay, gas_fees_uusd, max_tx_fee, max_gas_adjustment, only_estimate).await {
+        match anchor_repay_stable_tx(&mnemonics, to_repay, gas_fees_uusd, max_tx_fee, max_gas_adjustment, only_estimate).await {
         	Ok(msg) => {
         		register_value(&tasks,"anchor_redeem_and_repay_stable".to_string(),msg.to_owned()).await;
         		register_value(&tasks,"latest_transaction".to_string(),msg.to_owned()).await;
@@ -276,7 +328,7 @@ pub async fn anchor_redeem_and_repay_stable(tasks: Arc<RwLock<HashMap<String, Ma
 }
 
 
-pub async fn anchor_borrow_claim_and_stake_rewards(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> String {
+pub async fn anchor_borrow_claim_and_stake_rewards(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> String {
 		let max_tx_fee = decimal_or_return!(max_tx_fee_to_string(tasks.clone(), 4).await.as_ref());
 		let likely_tx_fee = decimal_or_return!(estimate_anchor_protocol_tx_fee_claim_and_stake(tasks.clone(),2).await.as_ref());
 	 	let balance = decimal_or_return!(terra_balance_to_string(tasks.clone(),"uusd",false,2).await.as_ref());
@@ -341,8 +393,12 @@ pub async fn anchor_borrow_claim_and_stake_rewards(tasks: Arc<RwLock<HashMap<Str
 	    let anc_to_claim = decimal_or_return!(borrower_rewards_to_string(tasks.clone(), true,0).await.as_ref());
         let gas_fees_uusd = decimal_or_return!(gas_price_to_string(tasks.clone(),10).await.as_ref());
 
+		let mnemonics = match only_estimate {
+			true => {wallet_acc_address.unsecure().to_string()},
+			false => {decrypt_text_with_secret(&wallet_seed_phrase)}
+		};
 
-	    match anchor_governance_claim_and_stake(&decrypt_text_with_secret(&wallet_seed_phrase),anc_to_claim,gas_fees_uusd, max_tx_fee, max_gas_adjustment, only_estimate).await {
+	    match anchor_governance_claim_and_stake(&mnemonics, anc_to_claim, gas_fees_uusd, max_tx_fee, max_gas_adjustment, only_estimate).await {
         	Ok(msg) => {
         		register_value(&tasks,"anchor_governance_claim_and_stake".to_string(),msg.to_owned()).await;
         		register_value(&tasks,"latest_transaction".to_string(),msg.to_owned()).await;
@@ -356,7 +412,7 @@ pub async fn anchor_borrow_claim_and_stake_rewards(tasks: Arc<RwLock<HashMap<Str
         }
 }
  
-pub async fn anchor_borrow_claim_rewards(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,  wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> String {
+pub async fn anchor_borrow_claim_rewards(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,  wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> String {
          
         let max_tx_fee = decimal_or_return!(max_tx_fee_to_string(tasks.clone(), 4).await.as_ref());
 		let mut max_gas_adjustment = decimal_or_return!(max_gas_adjustment_to_string(tasks.clone(),10).await.as_ref());
@@ -378,8 +434,13 @@ pub async fn anchor_borrow_claim_rewards(tasks: Arc<RwLock<HashMap<String, Maybe
 	            					 .checked_div(Decimal::from_str("2").unwrap()).unwrap();   
   
         let gas_fees_uusd = decimal_or_return!(gas_price_to_string(tasks.clone(),10).await.as_ref());
+		
+		let mnemonics = match only_estimate {
+			true => {wallet_acc_address.unsecure().to_string()},
+			false => {decrypt_text_with_secret(&wallet_seed_phrase)}
+		};
 
-        match anchor_claim_rewards(&decrypt_text_with_secret(&wallet_seed_phrase),gas_fees_uusd, max_tx_fee, max_gas_adjustment,only_estimate).await {
+        match anchor_claim_rewards(&mnemonics, gas_fees_uusd, max_tx_fee, max_gas_adjustment,only_estimate).await {
         	Ok(msg) => {
         		return msg;
         	},
@@ -388,7 +449,7 @@ pub async fn anchor_borrow_claim_rewards(tasks: Arc<RwLock<HashMap<String, Maybe
         	}
         }
 }
-pub async fn anchor_governance_stake_balance(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,  wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> String {
+pub async fn anchor_governance_stake_balance(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,  wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> String {
         
         let max_tx_fee = decimal_or_return!(max_tx_fee_to_string(tasks.clone(), 4).await.as_ref());
 		let mut max_gas_adjustment = decimal_or_return!(max_gas_adjustment_to_string(tasks.clone(),10).await.as_ref());
@@ -414,7 +475,12 @@ pub async fn anchor_governance_stake_balance(tasks: Arc<RwLock<HashMap<String, M
   
 		let gas_fees_uusd = decimal_or_return!(gas_price_to_string(tasks.clone(),10).await.as_ref());
 
-	    match anchor_governance_stake(&decrypt_text_with_secret(&wallet_seed_phrase),anc_balance, gas_fees_uusd, max_tx_fee, max_gas_adjustment,only_estimate).await {
+		let mnemonics = match only_estimate {
+			true => {wallet_acc_address.unsecure().to_string()},
+			false => {decrypt_text_with_secret(&wallet_seed_phrase)}
+		};
+
+	    match anchor_governance_stake(&mnemonics, anc_balance, gas_fees_uusd, max_tx_fee, max_gas_adjustment,only_estimate).await {
 	    	Ok(msg) => {
 	    		return msg;
 	    	},

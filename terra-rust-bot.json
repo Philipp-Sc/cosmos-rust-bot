@@ -5,6 +5,6 @@
             "max_tx_fee": "5",
             "max_gas_adjustment": "1.67",
             "gas_adjustment_preference": "1.2" ,
-            "min_ust_balance": "10" ,
-            "wallet_acc_address": ""
+            "min_ust_balance": "10",
+            "ust_balance_preference": "20"
 }

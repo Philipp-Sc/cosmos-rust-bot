@@ -137,11 +137,14 @@ pub async fn calculate_borrow_plan(tasks: Arc<RwLock<HashMap<String, MaybeOrProm
  
 pub async fn calculate_repay_plan(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, field: &str, digits_rounded_to: u32) -> String {
 
-    let mut ust_amount_liquid = decimal_or_return!(terra_balance_to_string(tasks.clone(),"uusd",false,10).await.as_ref());
-    
     let min_ust_balance = decimal_or_return!(min_ust_balance_to_string(tasks.clone(),false,10).await.as_ref());
-    ust_amount_liquid = ust_amount_liquid.checked_sub(min_ust_balance).unwrap();  
- 
+    
+    let ust_amount_liquid = decimal_or_return!(terra_balance_to_string(tasks.clone(),"uusd",false,10).await.as_ref())
+                            .checked_sub(min_ust_balance).unwrap();  
+
+    let ust_balance_preference = decimal_or_return!(ust_balance_preference_to_string(tasks.clone(),false,10).await.as_ref());
+    let ust_extra = ust_balance_preference.checked_sub(min_ust_balance).unwrap();
+
     if field == "ust_available_to_repay" {
         return ust_amount_liquid.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();
     }
@@ -240,22 +243,22 @@ pub async fn calculate_repay_plan(tasks: Arc<RwLock<HashMap<String, MaybeOrPromi
         if fee_to_repay_stable <= ust_amount_leftover {
             to_withdraw_from_account = to_withdraw_from_account.checked_add(fee_to_repay_stable).unwrap();
             fee_to_repay_stable = Decimal::from_str("0").unwrap();
-            //ust_amount_leftover = ust_amount_leftover.checked_sub(fee_to_repay_stable).unwrap();
+            ust_amount_leftover = ust_amount_leftover.checked_sub(fee_to_repay_stable).unwrap();
         }else {
             to_withdraw_from_account = to_withdraw_from_account.checked_add(ust_amount_leftover).unwrap();
             fee_to_repay_stable = fee_to_repay_stable.checked_sub(ust_amount_leftover).unwrap();
-            //ust_amount_leftover = Decimal::from_str("0").unwrap();
+            ust_amount_leftover = Decimal::from_str("0").unwrap();
         }
     }
     if a_ust_amount_leftover > zero && fee_to_repay_stable > zero {
         if fee_to_repay_stable <= a_ust_amount_leftover {
             to_withdraw_from_deposit = to_withdraw_from_deposit.checked_add(fee_to_repay_stable).unwrap();
             fee_to_repay_stable = Decimal::from_str("0").unwrap();
-            //a_ust_amount_leftover = a_ust_amount_leftover.checked_sub(fee_to_repay_stable).unwrap();
+            a_ust_amount_leftover = a_ust_amount_leftover.checked_sub(fee_to_repay_stable).unwrap();
         }else{
             to_withdraw_from_deposit = to_withdraw_from_deposit.checked_add(a_ust_amount_leftover).unwrap();
             fee_to_repay_stable = fee_to_repay_stable.checked_sub(a_ust_amount_leftover).unwrap();
-            //a_ust_amount_leftover = Decimal::from_str("0").unwrap();
+            a_ust_amount_leftover = Decimal::from_str("0").unwrap();
         }
     }
     if fee_to_repay_stable > zero {  // analog to reduce_repay_amount_by_fee
@@ -264,6 +267,17 @@ pub async fn calculate_repay_plan(tasks: Arc<RwLock<HashMap<String, MaybeOrPromi
         // roughly maintaining the account balance at the set limit.
         to_repay = to_repay.checked_sub(fee_to_repay_stable).unwrap();
     }
+
+    // looking to withdraw more UST to maintain the prefered UST balance
+    if ust_extra > zero && a_ust_amount_leftover > zero && ust_amount_leftover < ust_balance_preference {
+        if a_ust_amount_leftover >= ust_extra {
+            to_withdraw_from_deposit = to_withdraw_from_deposit.checked_add(ust_extra).unwrap();
+        }else{
+            to_withdraw_from_deposit = to_withdraw_from_deposit.checked_add(a_ust_amount_leftover).unwrap();
+            //ust_extra_leftover = ust_extra_leftover.checked_sub(a_ust_amount_leftover).unwrap();
+        }
+    } 
+
 
     let total_amount = to_withdraw_from_account.checked_add(to_withdraw_from_deposit).unwrap();
     
@@ -406,16 +420,12 @@ pub async fn check_anchor_loan_status(tasks: Arc<RwLock<HashMap<String, MaybeOrP
 
 pub async fn estimate_anchor_protocol_next_claim_and_stake_tx(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, field_amount: &str, field: &str, digits_rounded_to: u32) -> String {
   
-            let mut _collateral_value = Decimal::from_str("0").unwrap();  
 
             let borrower_rewards_in_ust = decimal_or_return!(borrower_rewards_in_ust_to_string(tasks.clone(),  10).await.as_ref());
 
             let mut loan_amount = Decimal::from_str("0").unwrap();  
 
-            let borrow_limit = decimal_or_return!(borrow_limit_to_string(tasks.clone(), 10).await.as_ref());
-            let max_ltv = Decimal::from_str("0.6").unwrap(); 
-            _collateral_value = borrow_limit.checked_div(max_ltv).unwrap(); 
-             
+            let borrow_limit = decimal_or_return!(borrow_limit_to_string(tasks.clone(), 10).await.as_ref()); 
 
             if "loan_amount"==field_amount {
                 loan_amount = decimal_or_return!(borrower_loan_amount_to_string(tasks.clone(), 10).await.as_ref()); 
@@ -517,7 +527,11 @@ pub async fn estimate_anchor_protocol_next_claim_and_stake_tx(tasks: Arc<RwLock<
                          .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
                          .to_string();
             }else if "apr"==field && _total_returns_in_ust!=None  {
-                match _total_returns_in_ust.unwrap().checked_div(_collateral_value) {
+                
+                let max_ltv = decimal_or_return!(max_ltv_to_string(tasks.clone(), "BLUNA", 2).await.as_ref());
+                let collateral_value = borrow_limit.checked_div(max_ltv).unwrap(); 
+            
+                match _total_returns_in_ust.unwrap().checked_div(collateral_value) {
                     None => {
                         return "--".to_string();
                     },
@@ -691,9 +705,6 @@ pub async fn estimate_anchor_protocol_tx_fee(tasks: Arc<RwLock<HashMap<String, M
 pub async fn apy_on_collateral_by(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, amount_field: &str, apr_field: &str, digits_rounded_to: u32) -> String { 
  
     let borrow_limit = decimal_or_return!(borrow_limit_to_string(tasks.clone(), 10).await.as_ref());
-    let max_ltv = Decimal::from_str("0.6").unwrap(); 
-    
-    let collateral_value = borrow_limit.checked_div(max_ltv).unwrap(); 
           
     let mut loan_amount = Decimal::from_str("0").unwrap();  
 
@@ -720,6 +731,10 @@ pub async fn apy_on_collateral_by(tasks: Arc<RwLock<HashMap<String, MaybeOrPromi
     }else if "distribution_apr" == apr_field {
         apr = percent_decimal_or_return!(distribution_apr_to_string(tasks.clone(),  10).await.as_ref());
     }
+
+
+    let max_ltv = decimal_or_return!(max_ltv_to_string(tasks.clone(), "BLUNA", 2).await.as_ref());
+    let collateral_value = borrow_limit.checked_div(max_ltv).unwrap(); 
 
     match apr
             .checked_mul(Decimal::from_str("100").unwrap()).unwrap()
@@ -892,7 +907,6 @@ pub async fn borrower_deposit_liquidity_to_string(tasks: Arc<RwLock<HashMap<Stri
 pub async fn borrower_ltv_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
      
     let mut _borrow_limit =  Decimal::from_str("0").unwrap();
-    let ltv_max =  Decimal::from_str("0.6").unwrap();
 
     match get_data_maybe_or_await_task(&tasks,"borrow_limit").await {
         Ok(response_result) => { 
@@ -905,7 +919,6 @@ pub async fn borrower_ltv_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPro
         }
     }
 
-    let collateral_value = _borrow_limit.checked_div(ltv_max).unwrap();
 
     let mut _loan_amount = Decimal::from_str("0").unwrap();
 
@@ -920,6 +933,9 @@ pub async fn borrower_ltv_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPro
             return "--".to_string();
         }
     }
+
+    let max_ltv = decimal_or_return!(max_ltv_to_string(tasks.clone(), "BLUNA", 2).await.as_ref());
+    let collateral_value = _borrow_limit.checked_div(max_ltv).unwrap();
 
     match _loan_amount.checked_div(collateral_value) {
         None => { 
@@ -1044,6 +1060,50 @@ pub async fn borrow_apr_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromi
             }
         }      
 }
+
+pub async fn anchor_airdrops_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>) -> String {  
+        match get_data_maybe_or_meta_data_maybe(&tasks,"anchor_airdrops").await {
+            Ok(res) => {
+                let anchor_airdrops = res.as_airdrop_response().unwrap();
+                let mut amount_unclaimed: u64 = 0;
+                let mut amount_claimed: u64 = 0;
+                for i in 0..anchor_airdrops.len() {
+                    if anchor_airdrops[i].claimable {
+                        amount_unclaimed += anchor_airdrops[i].amount.parse::<u64>().unwrap_or(0u64);
+                    }else{
+                        amount_claimed += anchor_airdrops[i].amount.parse::<u64>().unwrap_or(0u64);
+                    }
+                }
+
+                let micro = Decimal::from_str("1000000").unwrap();  
+                let amount_unclaimed = Decimal::from_str(amount_unclaimed.to_string().as_str()).unwrap()
+                                        .checked_div(micro).unwrap() 
+                                        .round_dp_with_strategy(2, rust_decimal::RoundingStrategy::MidpointAwayFromZero).to_string();
+                   
+                let amount_claimed = Decimal::from_str(amount_claimed.to_string().as_str()).unwrap()
+                                        .checked_div(micro).unwrap() 
+                                        .round_dp_with_strategy(2, rust_decimal::RoundingStrategy::MidpointAwayFromZero).to_string();
+                return format!("available to claim: {}, amount already claimed: {}",amount_unclaimed,amount_claimed);
+            },
+            Err(err) => {
+                return format!("{:?}",err);
+            }
+        } 
+
+}
+
+pub async fn anything_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: &str) -> String { 
+     
+        match get_data_maybe_or_meta_data_maybe(&tasks,key).await {
+            Ok(res) => {
+               return serde_json::to_string_pretty(&res).unwrap_or("--".to_string());
+            },
+            Err(err) => {
+                return format!("{:?}",err);
+            }
+        } 
+}
+
 pub async fn anything_to_err(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: &str) -> String { 
      
         match get_data_maybe_or_meta_data_maybe(&tasks,key).await {

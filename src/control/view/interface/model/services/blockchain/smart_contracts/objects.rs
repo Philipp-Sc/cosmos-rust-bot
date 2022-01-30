@@ -26,8 +26,19 @@ pub enum ResponseResult {
     Transactions(Response<Vec<TXLog>>),
     EarnAPY(Response<APY>),
     TaxRate(Response<String>),
-    TaxCaps(Response<Vec<TaxCap>>)
+    TaxCaps(Response<Vec<TaxCap>>),
+    AirdropResponse(AnchorAirdrops),
+    IsClaimedResponse(Response<IsClaimedResult>),
+    AnchorWhitelistResponse(Response<AnchorWhitelistResult>)
 }
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IsClaimedResult {
+    #[serde(rename = "is_claimed")]
+    pub is_claimed: bool,
+}
+
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -259,3 +270,54 @@ pub struct TXLog {
     pub amount: rust_decimal::Decimal,
     pub raw_log: String, 
 } 
+
+pub type AnchorAirdrops = Vec<AnchorAirdrop>;
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AnchorAirdrop {
+    pub chain_id: String,
+    pub merkle_root: String,
+    pub rate: String,
+    pub stage: u64,
+    pub claimable: bool,
+    pub proof: String,
+    pub staked: String,
+    pub amount: String,
+    pub sk: i64,
+    pub address: String,
+    pub pk: String,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClaimAirdropMsg {
+    pub claim: Claim,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Claim {
+    pub proof: String,
+    pub stage: u64,
+    pub amount: String,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AnchorWhitelistResult {
+    pub elems: Vec<AnchorWhitelist>,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AnchorWhitelist {
+    pub name: String,
+    pub symbol: String,
+    #[serde(rename = "max_ltv")]
+    pub max_ltv: String,
+    #[serde(rename = "custody_contract")]
+    pub custody_contract: String,
+    #[serde(rename = "collateral_token")]
+    pub collateral_token: String,
+}
