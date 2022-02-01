@@ -117,10 +117,12 @@
 **Build**
 
  *Recommended, make good use of litcrypt:*
-* `terra-rust-bot/src/control/view/interface/model/services/blockchain/smart_contracts/objects/meta/api/data/wallet.rs` (edit this file)
-* `export LITCRYPT_ENCRYPT_KEY="ixHRHd2QfI4JjK37umIY4HdUImo0a2JPYTx9WAZjcLfDfTcl1CqjeANkg0OVE6P1CKF377YeKm5YU1zQTnBBuWKi0aESA3ma2lXaK86LZ2knsCmE6YfvCnTWte9MQ3wmhltWdgz8MsLAiNl8NyQG987XbtfsZPX17AH3GXtYKUYOgiMisJRricq0NRhwCfBptv0FkXBojqOqZiKtLhsKs8SOytYZWMgHbyEECAiMlM2ipFmWUYk92HCkkANKvdwv"` (set environment variable for litcrypt, min 256 characters)
+* `terra-rust-bot/src/lazy_bot/lazy_info/lazy_logs/control/view/interface/model/services/blockchain/smart_contracts/objects/meta/api/data/wallet.rs` (edit this file)
 
  *Required, one of the following build commands:*
+
+* `export LITCRYPT_ENCRYPT_KEY="ixHRHd2QfI4JjK37umIY4HdUImo0a2JPYTx9WAZjcLfDfTcl1CqjeANkg0OVE6P1CKF377YeKm5YU1zQTnBBuWKi0aESA3ma2lXaK86LZ2knsCmE6YfvCnTWte9MQ3wmhltWdgz8MsLAiNl8NyQG987XbtfsZPX17AH3GXtYKUYOgiMisJRricq0NRhwCfBptv0FkXBojqOqZiKtLhsKs8SOytYZWMgHbyEECAiMlM2ipFmWUYk92HCkkANKvdwv"` (set environment variable for litcrypt, min 256 characters)
+ 
 * `cargo build` (fast build)
 * `cargo build --release` (optimized build)
 * `RUSTFLAGS="-C target-cpu=native" cargo build --release` (optimize the build for your CPU)
