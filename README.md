@@ -106,6 +106,8 @@
 
 * <a href="https://doc.rust-lang.org/book/ch01-00-getting-started.html">Get started here.</a>
 * On Linux: Download the file with `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rust.sh`, view it: `less ./rust.sh`, and run the script `./rust.sh` to start rustup installation. The script makes PATH changes only to login shell configuration files. You need to `source ~/.cargo/env` until you logout and login back into the system. To update rustup afterwards, run `rustup self update`.
+* Note: Works both with edition = "2018" and edition = "2021" (Cargo.toml). If you do not want to use the nightly version, just edit the config (Cargo.toml).
+* To use the nightly edition (edition = "2021") install it with: `rustup default nightly && rustup update`.
 
 **Clone the repository**
 
