@@ -99,13 +99,19 @@
 
 ### Step 1: Build
 
-> Tested on Linux, if you have issues on macOS or Windows please let me know. 
+> Tested on Linux.
+> Tested on Windows Subsystem for Linux / Ubuntu.
 
 
 **Install Rust**
 
 * <a href="https://doc.rust-lang.org/book/ch01-00-getting-started.html">Get started here.</a>
 * On Linux: Download the file with `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rust.sh`, view it: `less ./rust.sh`, and run the script `./rust.sh` to start rustup installation. The script makes PATH changes only to login shell configuration files. You need to `source ~/.cargo/env` until you logout and login back into the system. To update rustup afterwards, run `rustup self update`.
+* Note: Works both with edition = "2018" and edition = "2021" (Cargo.toml). If you do not want to use the nightly version, just edit the config (Cargo.toml).
+* To use the nightly edition (edition = "2021") install it with: `rustup default nightly && rustup update`.
+
+* On WSL: You may need to install the following packages first:
+* `sudo apt-get install build-essential libssl-dev pkg-config`
 
 **Clone the repository**
 
@@ -117,10 +123,12 @@
 **Build**
 
  *Recommended, make good use of litcrypt:*
-* `terra-rust-bot/src/control/view/interface/model/services/blockchain/smart_contracts/objects/meta/api/data/wallet.rs` (edit this file)
-* `export LITCRYPT_ENCRYPT_KEY="ixHRHd2QfI4JjK37umIY4HdUImo0a2JPYTx9WAZjcLfDfTcl1CqjeANkg0OVE6P1CKF377YeKm5YU1zQTnBBuWKi0aESA3ma2lXaK86LZ2knsCmE6YfvCnTWte9MQ3wmhltWdgz8MsLAiNl8NyQG987XbtfsZPX17AH3GXtYKUYOgiMisJRricq0NRhwCfBptv0FkXBojqOqZiKtLhsKs8SOytYZWMgHbyEECAiMlM2ipFmWUYk92HCkkANKvdwv"` (set environment variable for litcrypt, min 256 characters)
+* `terra-rust-bot/src/lazy_bot/lazy_info/lazy_logs/control/view/interface/model/services/blockchain/smart_contracts/objects/meta/api/data/wallet.rs` (edit this file)
 
  *Required, one of the following build commands:*
+
+* `export LITCRYPT_ENCRYPT_KEY="ixHRHd2QfI4JjK37umIY4HdUImo0a2JPYTx9WAZjcLfDfTcl1CqjeANkg0OVE6P1CKF377YeKm5YU1zQTnBBuWKi0aESA3ma2lXaK86LZ2knsCmE6YfvCnTWte9MQ3wmhltWdgz8MsLAiNl8NyQG987XbtfsZPX17AH3GXtYKUYOgiMisJRricq0NRhwCfBptv0FkXBojqOqZiKtLhsKs8SOytYZWMgHbyEECAiMlM2ipFmWUYk92HCkkANKvdwv"` (set environment variable for litcrypt, min 256 characters)
+ 
 * `cargo build` (fast build)
 * `cargo build --release` (optimized build)
 * `RUSTFLAGS="-C target-cpu=native" cargo build --release` (optimize the build for your CPU)
@@ -138,8 +146,8 @@
  * `borrow_percentage:` at which point you want to borrow (1 equals a LTV of 60%).
  * `target_percentage:` the LTV do you want to maintain (1 equals a LTV of 60%).
  * `max_tx_fee:` the maximum UST amount you want to spend per transaction per fee.
- * `max_gas_adjustment:` the maximum gas_adjustment you are willing to use.
- * `gas_adjustment_preference:` has an influence on the gas_adjustment you end up with.
+ * `max_gas_adjustment:` currently not used by the bot.
+ * `gas_adjustment_preference:` the gas_adjustment you want to use, recommended value is "1.2" or higher.
  * `min_ust_balance:` the minimum UST balance, if below this value no further transactions will be made. If min_ust_balance is 10 UST then you should have more than that deposited for the bot to be able to execute transactions, around 15 or 20 UST. It is your job to make sure the balance is sufficient.
  * `ust_balance_preference:` should be higher than min_ust_balance. For example 20 UST. Auto Repay will try to maintain the balance at that value.
 

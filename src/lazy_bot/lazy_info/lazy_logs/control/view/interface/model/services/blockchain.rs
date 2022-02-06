@@ -84,6 +84,12 @@ pub async fn get_block_txs_fee_data(key: &str) -> anyhow::Result<ResponseResult>
         if key == "borrow_stable" {
            next = get_txs_fee_data(temp_offset.as_str(),&mut tx_data,get_contract("anchorprotocol","mmMarket").as_ref(),"borrow_stable","borrow_amount").await; 
         }
+        if key == "provide_liquidity" {
+           next = get_txs_fee_data(temp_offset.as_str(),&mut tx_data,get_contract("anchorprotocol","ANC-UST LP").as_ref(),"provide_liquidity","null").await; 
+        }
+        if key == "staking_lp" {
+            next = get_txs_fee_data(temp_offset.as_str(),&mut tx_data,get_contract("anchorprotocol","ANC-UST LP").as_ref(),"staking_lp","null").await; 
+        }
 
         if next.is_ok() {
             temp_offset = next.unwrap();
@@ -95,6 +101,10 @@ pub async fn get_block_txs_fee_data(key: &str) -> anyhow::Result<ResponseResult>
 
     if tx_data.len()<10 && start.elapsed().as_secs() >= 60*3 {
         return Err(anyhow!("Unexpected Error: Timeout!"));
+    }
+
+    if tx_data.len() == 0 {
+        return Err(anyhow!("Unexpected Error: To many errors!"));
     }
 
     Ok(ResponseResult::Transactions(Response{
@@ -131,9 +141,26 @@ fn get_tx_log(entry: &Value, account: &str, query_msg: &str, amount_field: &str)
 
     let msg = entry.get("tx").ok_or(anyhow!("no tx"))?.get("value").ok_or(anyhow!("no value"))?.get("msg").ok_or(anyhow!("no msg"))?.as_array().ok_or(anyhow!("no array"))?; 
                
-    if  msg.len() == 1 &&
-        (   (query_msg=="staking" && 
-            msg[0].get("value").ok_or(anyhow!("no value"))?.get("execute_msg").ok_or(anyhow!("no execute_msg"))?.get("send").ok_or(anyhow!("no send"))?.get("msg").ok_or(anyhow!("no msg"))?.to_string().contains("eyJzdGFrZV92b3RpbmdfdG9rZW5zIjp7fX0=")
+    if  (msg.len() == 2 && 
+            (
+            query_msg=="provide_liquidity" &&
+            msg[0].get("value").ok_or(anyhow!("no value"))?.get("contract").ok_or(anyhow!("no contract"))? == "terra14z56l0fp2lsf86zy3hty2z47ezkhnthtr9yq76" &&
+            msg[0].get("value").ok_or(anyhow!("no value"))?.get("execute_msg").ok_or(anyhow!("no execute_msg"))?.get("increase_allowance").ok_or(anyhow!("no increase_allowance"))?.get("spender").ok_or(anyhow!("no spender"))? == "terra1qr2k6yjjd5p2kaewqvg93ag74k6gyjr7re37fs" &&
+            msg[1].get("value").ok_or(anyhow!("no value"))?.get("contract").ok_or(anyhow!("no contract"))? == "terra1qr2k6yjjd5p2kaewqvg93ag74k6gyjr7re37fs" &&
+            msg[1].get("value").ok_or(anyhow!("no value"))?.get("execute_msg").ok_or(anyhow!("no execute_msg"))?.get("provide_liquidity").ok_or(anyhow!("no provide_liquidity"))?.get("assets").ok_or(anyhow!("no assets"))?.as_array().ok_or(anyhow!("no array"))?.len() == 2 &&
+            msg[1].get("value").ok_or(anyhow!("no value"))?.get("execute_msg").ok_or(anyhow!("no execute_msg"))?.get("provide_liquidity").ok_or(anyhow!("no provide_liquidity"))?.get("assets").ok_or(anyhow!("no assets"))?.as_array().ok_or(anyhow!("no array"))?[0].get("info").ok_or(anyhow!("no info"))?.get("token").ok_or(anyhow!("no token"))?.get("contract_addr").ok_or(anyhow!("no contract_addr"))? == "terra14z56l0fp2lsf86zy3hty2z47ezkhnthtr9yq76" &&
+            msg[1].get("value").ok_or(anyhow!("no value"))?.get("execute_msg").ok_or(anyhow!("no execute_msg"))?.get("provide_liquidity").ok_or(anyhow!("no provide_liquidity"))?.get("assets").ok_or(anyhow!("no assets"))?.as_array().ok_or(anyhow!("no array"))?[1].get("info").ok_or(anyhow!("no info"))?.get("native_token").ok_or(anyhow!("no native_token"))?.get("denom").ok_or(anyhow!("no denom"))? == "uusd"
+            )
+        )
+        ||  (msg.len() == 1 &&
+            ( 
+            (query_msg=="staking_lp" && 
+            msg[0].get("value").ok_or(anyhow!("no value"))?.get("execute_msg").ok_or(anyhow!("no execute_msg"))?.get("send").ok_or(anyhow!("no send"))?.get("msg").ok_or(anyhow!("no msg"))?.to_string().contains("eyJkZXBvc2l0Ijp7fX0=") &&
+            msg[0].get("value").ok_or(anyhow!("no value"))?.get("execute_msg").ok_or(anyhow!("no execute_msg"))?.get("send").ok_or(anyhow!("no send"))?.get("contract").ok_or(anyhow!("no contract"))? == "terra1zgrx9jjqrfye8swykfgmd6hpde60j0nszzupp9"
+            )   
+        ||  (query_msg=="staking" && 
+            msg[0].get("value").ok_or(anyhow!("no value"))?.get("execute_msg").ok_or(anyhow!("no execute_msg"))?.get("send").ok_or(anyhow!("no send"))?.get("msg").ok_or(anyhow!("no msg"))?.to_string().contains("eyJzdGFrZV92b3RpbmdfdG9rZW5zIjp7fX0=") &&
+            msg[0].get("value").ok_or(anyhow!("no value"))?.get("execute_msg").ok_or(anyhow!("no execute_msg"))?.get("send").ok_or(anyhow!("no send"))?.get("contract").ok_or(anyhow!("no contract"))? == "terra1f32xyep306hhcxxxf7mlyh0ucggc00rm2s9da5"
             ) 
         || (query_msg=="claim_rewards" &&
             msg[0].get("value").ok_or(anyhow!("no value"))?.get("execute_msg").ok_or(anyhow!("no execute_msg"))?.get("claim_rewards") != None
@@ -150,7 +177,7 @@ fn get_tx_log(entry: &Value, account: &str, query_msg: &str, amount_field: &str)
         || (query_msg=="borrow_stable" &&
             msg[0].get("value").ok_or(anyhow!("no value"))?.get("execute_msg").ok_or(anyhow!("no execute_msg"))?.get("borrow_stable") != None
             )
-        ) && msg[0].get("value").ok_or(anyhow!("no value"))?.get("contract").ok_or(anyhow!("no contract"))? == account
+        ) && msg[0].get("value").ok_or(anyhow!("no value"))?.get("contract").ok_or(anyhow!("no contract"))? == account)
     {
             let gas_wanted = entry.get("gas_wanted").ok_or(anyhow!("no gas_wanted"))?;  // gas_limit // gas requested
             let gas_used = entry.get("gas_used").ok_or(anyhow!("no gas_used"))?;        // used

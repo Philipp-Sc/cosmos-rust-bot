@@ -1,5 +1,5 @@
 {
-            "trigger_percentage": "0.9",
+            "trigger_percentage": "0.95",
             "target_percentage": "0.8",
             "borrow_percentage": "0.7",
             "max_tx_fee": "5",

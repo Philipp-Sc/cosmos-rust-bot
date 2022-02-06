@@ -31,23 +31,23 @@ pub fn display_add(item: String, fixed_len: usize, new_lines: usize) -> String {
 }
 
 pub async fn add_table_formatting(f: Pin<Box<dyn Future<Output = String> + Send + 'static >>, fixed_len: usize, new_lines: usize) -> String {
-    let res = f.await;
-    let split = res.split("    ");
-    let mut result = "".to_string();
+    
+        let res = f.await;
+        let split = res.split("    ");
+        let mut result = "".to_string();
 
-    for s in split {
-        if s.len() > 0 {
-            if s.len() <= fixed_len {
-                let space = fixed_len - s.len();
-                result = format!("{}{}{}",result,s," ".repeat(space));
-            }else{
-                result = format!("{}{}", result,s);
+        for s in split {
+            if s.len() > 0 {
+                if s.len() <= fixed_len {
+                    let space = fixed_len - s.len();
+                    result = format!("{}{}{}",result,s," ".repeat(space));
+                }else{
+                    result = format!("{}{}", result,s);
+                }
             }
         }
-    }
 
-    result = format!("{}{}",result,"\n".repeat(new_lines));
-    result
+        format!("{}{}",result,"\n".repeat(new_lines))
 }
 
 pub async fn add_string_to_display(new_display: &Arc<RwLock<Vec<String>>>, index: usize, line: String) -> anyhow::Result<()> {
@@ -70,7 +70,8 @@ pub async fn add_view_to_display(new_display: &Arc<RwLock<Vec<String>>>, view: V
 }
 
 pub async fn add_format_to_result(prefix: String,suffix: String, f: Pin<Box<dyn Future<Output = String> + Send + 'static >>) -> String {
-    return format!("{}{}{}",prefix,f.await,suffix);
+    let res = f.await;
+    format!("{}{}{}",prefix,res,suffix)
 }
 
 pub async fn add_to_display(new_display: &Arc<RwLock<Vec<String>>>, index: usize, result: Option<String>) -> anyhow::Result<()> {

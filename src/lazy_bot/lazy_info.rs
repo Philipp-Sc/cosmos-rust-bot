@@ -62,7 +62,7 @@ pub async fn display_anchor_account(tasks: &Arc<RwLock<HashMap<String, MaybeOrPr
     anchor_view.push((" UST)".purple().to_string(),*offset));
     *offset += 1;
 
-    anchor_view.push((format!("{}{}","\n   [Borrow]".truecolor(75,219,75),"    loan to value:           ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n   [Borrow]".truecolor(75,219,75),"    loan to borrow limit:      ".purple().to_string()),*offset));
     *offset += 1;
 
     anchor_view.push(("--".purple().to_string(),*offset));

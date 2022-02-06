@@ -49,14 +49,57 @@ extern crate num_cpus;
 // TODO: Optimize TX Fee estimate query functions. !! (will reduce query time)
 
 
+// TODO: Instead of current display implementation write out a JSON file.
+// TODO: Then to display this file write a different programm.
+// TODO: Long term this will be easier to maintain, and make it much easier to write forks or extensions.
+
+
 #[macro_use]
 extern crate litcrypt;
 //https://github.com/anvie/litcrypt.rs
 use_litcrypt!();
 
+/*
+async fn test() -> anyhow::Result<()> {
+    
+    let mut tx_data: Vec<String> = Vec::new();
+    let mut temp_offset = "0".to_string(); 
+    let mut err_count = 0;
+
+    while tx_data.len()<100 { 
+
+        println!("{:?}", temp_offset);
+        
+        let query = format!("https://fcd.terra.dev/v1/txs?offset={}&limit=100",temp_offset); 
+        let res = reqwest::get(query).await?.text().await?; 
+        if res.contains("MsgGrantAuthorization") || res.contains("GenericAuthorization") || res.contains("SendAuthorization") {
+            tx_data.push(res.to_owned());
+            println!("{:?}",&res);
+        }
+        
+        let res: serde_json::Value = serde_json::from_str(&res)?;
+
+        let re = regex::Regex::new(r"[^0-9]").unwrap();
+        let next: anyhow::Result<String>  = Ok(re.replace_all(res.get("next").ok_or(anyhow::anyhow!("no next"))?.to_string().as_str(),"").to_string());
+        
+        if next.is_ok() {
+            temp_offset = next.unwrap();
+            err_count = 0;
+        }else{
+            err_count = err_count + 1;
+        }
+    }
+    
+    println!("{:?}",tx_data);
+    
+    Ok(())
+}*/
 
  #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+
+        //test().await.ok();
+        //loop{}
 
         /* Load user settings */
         let mut terra_rust_bot_json_loaded = "terra-rust-bot.json not loaded";
@@ -294,6 +337,15 @@ async fn main() -> anyhow::Result<()> {
                     }  
                 }                    
             }  
+            if args_b.contains(&"anchor_auto_lp") {
+                let anchor_auto_lp = lazy_anchor_account_auto_farm_rewards(&tasks, &wallet_acc_address, &wallet_seed_phrase, &new_display, &mut offset, is_test, is_first_run).await;
+                for t in anchor_auto_lp {
+                    if timestamps_display[t.0] == 0i64 || now - timestamps_display[t.0] > 1i64 { 
+                        try_add_to_display(&new_display,t.0,Box::pin(t.1)).await.ok();
+                        timestamps_display[t.0] = now;
+                    }  
+                }                    
+            }   
 
             if args_b.contains(&"anchor_auto_repay") {
                 let anchor_auto_repay = lazy_anchor_account_auto_repay(&tasks, &wallet_acc_address, &wallet_seed_phrase, &new_display, &mut offset, is_test, is_first_run).await;

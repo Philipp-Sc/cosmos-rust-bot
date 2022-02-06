@@ -24,6 +24,8 @@ pub fn get_contract(source: &str, contract: &str) -> String {
 								  "shortReward": "terra16mlzdwqq5qs6a23250lq0fftke8v80sapc5kye",
 							},
 							"anchorprotocol": {  
+								"ANC-UST LP": "terra1wmaty65yt7mjw6fjfymkd9zsm6atsq82d9arcd",
+								"ANC-UST LP Minter": "terra1qr2k6yjjd5p2kaewqvg93ag74k6gyjr7re37fs",
 							// https://docs.anchorprotocol.com/developers-terra/anchor-cli
 							// https://docs.anchorprotocol.com/smart-contracts/deployed-contracts
 							    "bLunaHub": "terra1mtwph2juhj0rvjz7dy92gvl6xvukaxu8rfv8ts",

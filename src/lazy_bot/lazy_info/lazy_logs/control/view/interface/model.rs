@@ -625,6 +625,26 @@ pub async fn await_function(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,
                             map.insert("anchor_protocol_txs_repay_stable".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
                          
                     }, 
+                    "anchor_protocol_txs_provide_liquidity" => {  
+                        let handle = tokio::spawn(async move { 
+                            {    
+                                
+                                return get_block_txs_fee_data("provide_liquidity").await;   
+                            }
+                        });
+                            map.insert("anchor_protocol_txs_provide_liquidity".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
+                         
+                    }, 
+                    "anchor_protocol_txs_staking_lp" => {  
+                        let handle = tokio::spawn(async move { 
+                            {    
+                                
+                                return get_block_txs_fee_data("staking_lp").await;   
+                            }
+                        });
+                            map.insert("anchor_protocol_txs_staking_lp".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
+                         
+                    },  
                      "tax_rate" => { 
                         let handle = tokio::spawn(async move { 
                             {    
