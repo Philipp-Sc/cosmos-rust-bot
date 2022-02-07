@@ -49,15 +49,19 @@ done
 #echo "IS_TEST:${IS_TEST}"
 #echo "HAS_WALLET:${HAS_WALLET}"
 
+NEED_INPUT=false
+
 if [ "$IS_BOT" = true ] && ( ( [ "$IS_TEST" = true ] && [ "$HAS_WALLET" = false ] ) || [ "$IS_TEST" = false ] ); then
     echo -e "${BLUE}Enter your seed phrase ${PURPLE}(press enter if you want to continue without your seed phrase)"
+    NEED_INPUT=true
 fi
 
 if [ "$IS_BOT" = false ] && [ "$HAS_WALLET" = false ] && [ "$IS_GENERAL" = false ]; then
     echo -e "${BLUE}Enter your wallet address ${PURPLE}(press enter if you want to continue withoug your wallet address)"
+    NEED_INPUT=true
 fi
 
-if [ "$IS_GENERAL" = false ]; then
+if [ "$IS_GENERAL" = false ] && [ "$NEED_INPUT" = true ]; then
     IFS= read -rs INPUT < /dev/tty
     nohup ./my-bot $@  <<< "$INPUT" &
 else
