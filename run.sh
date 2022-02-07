@@ -1,4 +1,7 @@
-#!/bin/bash
+#!/bin/bash 
+
+export CLICOLOR=1
+export CLICOLOR_FORCE=1
 
 BLUE='\033[0;34m'
 PURPLE='\033[0;35m' 
@@ -56,7 +59,6 @@ fi
 
 if [ "$IS_GENERAL" = false ]; then
     IFS= read -rs INPUT < /dev/tty
-    #echo ${INPUT}
     nohup ./my-bot $@  <<< "$INPUT" &
 else
     nohup ./my-bot $@ & 
