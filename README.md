@@ -122,18 +122,12 @@
 
 **Build**
 
- *Recommended, make good use of litcrypt:*
-* `terra-rust-bot/src/lazy_bot/lazy_info/lazy_logs/control/view/interface/model/services/blockchain/smart_contracts/objects/meta/api/data/wallet.rs` (edit this file)
+ *To make the process as simple as possible I created a bash script: ./install.sh*
+ *You can choose between three different build options:*
+* `./install.sh dev` fast build
+* `./install.sh prod` optimized build
+* `./install.sh native` optimize the build for your CPU
 
- *Required, one of the following build commands:*
-
-* `export LITCRYPT_ENCRYPT_KEY="ixHRHd2QfI4JjK37umIY4HdUImo0a2JPYTx9WAZjcLfDfTcl1CqjeANkg0OVE6P1CKF377YeKm5YU1zQTnBBuWKi0aESA3ma2lXaK86LZ2knsCmE6YfvCnTWte9MQ3wmhltWdgz8MsLAiNl8NyQG987XbtfsZPX17AH3GXtYKUYOgiMisJRricq0NRhwCfBptv0FkXBojqOqZiKtLhsKs8SOytYZWMgHbyEECAiMlM2ipFmWUYk92HCkkANKvdwv"` (set environment variable for litcrypt, min 256 characters)
- 
-* `cargo build` (fast build)
-* `cargo build --release` (optimized build)
-* `RUSTFLAGS="-C target-cpu=native" cargo build --release` (optimize the build for your CPU)
-
-* `unset LITCRYPT_ENCRYPT_KEY`  
 ---
 
 ### Step 2: terra-rust-bot.json
@@ -159,8 +153,9 @@
 
 **Location of the executable**
 
-* `./target/debug/terra-rust-bot ` or
-* `./target/release/terra-rust-bot `
+* `./target/debug/terra-rust-bot `,
+* `./target/release/terra-rust-bot ` or
+* `./my-bot` (if you use the install script)
 
 **Command line args**
 
@@ -192,13 +187,18 @@
 
 **Server Environment Example**
 
-* `IFS= read -rs SEED_PHRASE < /dev/tty` (stores stdin in variable) 
-* (enter your seed phrase)
+*For convinience the following two bash scripts are available: ./run.sh and ./stop.sh*
+*./run.sh makes sure the seed phrase stays secure and starts the bot as a background process*
+*It will also automatically stop any running instance of ./my-bot first before creating a new process*
+ **Common Use Cases**
+* Auto Repay/Borrow `./run.sh -b anchor_auto_repay anchor_auto_borrow -d test dev` (read only, remove `test` to let the bot sign transactions)
+* Auto Repay/Borrow + Auto Staking `./run.sh -b anchor_auto_stake anchor_auto_repay anchor_auto_borrow -d test dev` (read only, remove `test` to let the bot sign transactions)
 
-* `nohup ./target/release/terra-rust-bot -b anchor_auto_stake anchor_auto_repay anchor_auto_borrow -d dev test  <<< "$SEED_PHRASE" &` (remove `test` if you want terra-rust-bot to sign transactions)
 
-* `unset SEED_PHRASE` (important, remove any trace of the seed phrase)
- 
+*The ./stop.sh script simply stops the bot.*
+* `./stop.sh` (stops the bot)
+
+
 ---
 
 ## Additional Security Measures

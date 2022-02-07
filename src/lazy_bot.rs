@@ -555,11 +555,8 @@ pub async fn lazy_anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<S
 pub async fn lazy_anchor_account_auto_farm_rewards(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_acc_address: &Arc<SecUtf8>, wallet_seed_phrase: &Arc<SecUtf8>,  new_display: &Arc<RwLock<Vec<String>>>,offset: &mut usize, is_test: bool, is_first_run: bool) -> Vec<(usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>)> {
 
 
-
-
     let mut anchor_view: Vec<(String,usize)> = Vec::new();
     let mut anchor_tasks: Vec<(usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>)> = Vec::new();
-
 
 
     anchor_view.push(("\n  **Anchor Protocol Auto Farm**\n\n".truecolor(75,219,75).to_string(),*offset)); 
@@ -567,7 +564,7 @@ pub async fn lazy_anchor_account_auto_farm_rewards(tasks: &Arc<RwLock<HashMap<St
 
      // Pending ANC Rewards
     
-    anchor_view.push((format!("{}{}","\n   [Auto Borrow Rewards]".truecolor(75,219,75),"     amount:            ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n   [Auto Borrow Rewards]".truecolor(75,219,75),"   amount:            ".purple().to_string()),*offset));
     *offset += 1;
 
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -589,8 +586,9 @@ pub async fn lazy_anchor_account_auto_farm_rewards(tasks: &Arc<RwLock<HashMap<St
 
     // ANC PRICE
 
-    anchor_view.push((format!("{}{}","\n\n   [Anchor]".truecolor(75,219,75),"   ANC    -> UST:          $".purple()),*offset));
+    anchor_view.push((format!("{}{}","\n\n   [Anchor]".truecolor(75,219,75),"                ANC    -> UST:     ".purple()),*offset));
     *offset += 1;
+
 
     anchor_view.push(("--".purple().to_string(),*offset));
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(simulation_swap_return_amount_to_string(tasks.clone(),"simulation_cw20 anchorprotocol ANC terraswapAncUstPair",2)));
@@ -598,8 +596,41 @@ pub async fn lazy_anchor_account_auto_farm_rewards(tasks: &Arc<RwLock<HashMap<St
     *offset += 1; 
 
 
-    anchor_view.push((format!("{}{}","\n\n   [Anchor]".truecolor(75,219,75),"   est. fee to claim and swap 50% plus fee".purple()),*offset));
+    anchor_view.push((" UST".purple().to_string(),*offset));
     *offset += 1;
+
+
+    anchor_view.push((format!("{}{}","\n\n   [Anchor]".truecolor(75,219,75),"                ANC amount:        ".purple()),*offset));
+    *offset += 1;
+
+    anchor_view.push(("--".purple().to_string(),*offset));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(calculate_farm_plan(tasks.clone(),"anc_amount",2)));
+    anchor_tasks.push(t);
+    *offset += 1; 
+
+    anchor_view.push((format!("{}{}","\n\n   [Anchor]".truecolor(75,219,75),"                UST amount:        ".purple()),*offset));
+    *offset += 1;
+
+    anchor_view.push(("--".purple().to_string(),*offset));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(calculate_farm_plan(tasks.clone(),"ust_amount",2)));
+    anchor_tasks.push(t);
+    *offset += 1; 
+
+    anchor_view.push((format!("{}{}","\n\n   [Anchor Claim]".truecolor(75,219,75),"          est. fee:          ".purple()),*offset));
+    *offset += 1;
+
+    anchor_view.push(("--".purple().to_string(),*offset));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(estimate_anchor_protocol_tx_fee_claim(tasks.clone(),2)));
+    anchor_tasks.push(t);
+    *offset += 1; 
+
+
+    anchor_view.push((format!("{}{}","\n\n   [Anchor Swap ANC]".truecolor(75,219,75),"       est. fee:          ".purple()),*offset));
+    *offset += 1;
+
+    
+
+    
 
     
     // RESULTING ANC

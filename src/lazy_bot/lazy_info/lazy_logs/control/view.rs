@@ -331,6 +331,52 @@ pub async fn calculate_repay_plan(tasks: Arc<RwLock<HashMap<String, MaybeOrPromi
     return "--".to_string();
 }
 
+
+pub async fn calculate_farm_plan(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, field: &str, digits_rounded_to: u32) -> String {
+
+
+    let borrow_anc_rewards = decimal_or_return!(borrower_rewards_to_string(tasks.clone(),true,0).await.as_ref());
+   
+    let gas_fees_uusd = decimal_or_return!(gas_price_to_string(tasks.clone(),10).await.as_ref());
+
+    let gas_adjustment_preference = decimal_or_return!(gas_adjustment_preference_to_string(tasks.clone(),10).await.as_ref());
+
+    let tx_fee_claim_rewards_gas_used = decimal_or_return!(estimate_anchor_protocol_tx_fee(tasks.clone(), "anchor_protocol_txs_claim_rewards","avg_gas_used".to_owned(),false,10).await.as_ref());   
+     
+    let fee_to_claim_anc_rewards_uusd = tx_fee_claim_rewards_gas_used 
+            .checked_mul(gas_fees_uusd).unwrap()
+            .checked_mul(gas_adjustment_preference).unwrap();
+
+    let exchange_rate = decimal_or_return!(simulation_swap_return_amount_to_string(tasks.clone(),"simulation_cw20 anchorprotocol ANC terraswapAncUstPair",2).await.as_ref());
+    // this does already include the 0.3% terraswap tax fee.
+
+    let borrow_anc_rewards_in_ust = borrow_anc_rewards.checked_div(exchange_rate).unwrap();
+
+    let anc_in_ust_fee_substracted = borrow_anc_rewards_in_ust.checked_sub(fee_to_claim_anc_rewards_uusd).unwrap();
+    // assertion >0
+    let anc_amount = anc_in_ust_fee_substracted.checked_div(Decimal::from_str("2").unwrap()).unwrap();
+    let ust_amount = borrow_anc_rewards.checked_sub(anc_amount).unwrap();
+    // does not yet include the swap fee.
+
+    match field {
+        "anc_amount" => {
+            return anc_amount
+                .checked_div(Decimal::from_str("1000000").unwrap()).unwrap()
+                .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();
+        },
+        "ust_amount" => {
+            return ust_amount
+                .checked_div(Decimal::from_str("1000000").unwrap()).unwrap()
+                .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();
+        },
+        _ => {
+            return "--".to_string();
+        }
+    }
+}
+
+
+
 pub async fn calculate_amount(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: &str, as_micro: bool, digits_rounded_to: u32) -> String {
     /* Calculate the repay amount required based on the desired "target_percent" value from user config.
      * target_percent is where ltv will be at once repay is complete.
@@ -591,6 +637,22 @@ pub async fn estimate_anchor_protocol_tx_fee_claim_and_farm(tasks: Arc<RwLock<Ha
                              .to_string();
 }
  
+
+pub async fn estimate_anchor_protocol_tx_fee_claim(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
+    let gas_fees_uusd = decimal_or_return!(gas_price_to_string(tasks.clone(),10).await.as_ref());
+
+    let gas_adjustment_preference = decimal_or_return!(gas_adjustment_preference_to_string(tasks.clone(),10).await.as_ref());
+
+    let tx_fee_claim_rewards_gas_used = decimal_or_return!(estimate_anchor_protocol_tx_fee(tasks.clone(), "anchor_protocol_txs_claim_rewards","avg_gas_used".to_owned(),false,10).await.as_ref());   
+    
+    return  tx_fee_claim_rewards_gas_used 
+            .checked_mul(gas_fees_uusd).unwrap()
+            .checked_mul(gas_adjustment_preference).unwrap()
+            .checked_div(Decimal::from_str("1000000").unwrap()).unwrap()
+            .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
+            .to_string();
+}
+
 pub async fn estimate_anchor_protocol_tx_fee_claim_and_stake(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
     let gas_fees_uusd = decimal_or_return!(gas_price_to_string(tasks.clone(),10).await.as_ref());
 
