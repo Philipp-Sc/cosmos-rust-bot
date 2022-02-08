@@ -825,7 +825,8 @@ pub async fn apy_on_collateral_by(tasks: Arc<RwLock<HashMap<String, MaybeOrPromi
         loan_amount = decimal_or_return!(borrower_ust_deposited_to_string(tasks.clone(),false, 10).await.as_ref()); 
 
     }else if amount_field == "target_ltv" { 
-        loan_amount = decimal_or_return!(trigger_percentage_to_string(tasks.clone(),10).await.as_ref());
+        loan_amount = decimal_or_return!(trigger_percentage_to_string(tasks.clone(),10).await.as_ref())
+                      .checked_mul(borrow_limit).unwrap();
     }
 
     let mut apr = Decimal::from_str("0").unwrap();
