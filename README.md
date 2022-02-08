@@ -63,7 +63,7 @@
 ## How it works
  
 
-### Security
+#### Security
 * Sensitive information is gathered at runtime via user input. This avoids storing sensitive information within config files.
 * The encrypted seed phrase is stored safely in memory with <a href="https://github.com/unrelentingtech/secstr">secstr</a>.
 * The seed phrase is encrypted using a simple XOR Cipher and only decrypted when used.
@@ -72,15 +72,15 @@
 > :arrow_down: Check out the *Additional Security Measures* described below. 
 
 
-### Requests
+#### Requests
 * Requests are either made directly to the Terra FCD or LCD. For that terra-rust-bot mainly relies on the [Terra-Rust-API](https://crates.io/crates/terra-rust-api). In some cases <a href="api.anchorprotocol.com/api/v2/distribution-apy">api.anchorprotocol.com</a> is used.
 
-### Fees
-* The <a href="https://app.anchorprotocol.com/"> Anchor Web App </a> or <a href="https://github.com/unl1k3ly/AnchorHODL">AnchorHODL</a> have rather high gas fees hard coded into the application. This ensures each transaction goes through, but this also means some money is unnecessarily being spent. Looking at past transactions terra-rust-bot estimates a reasonable transaction fee. In particually by calculating a decent gas adjustment derived from past transactions. To not stale a transaction the user provides a maximum transaction fee. For each transaction the fees are simulated and double checked with the set maximum transaction fee. This way there are no static fees.
+#### Fees
+* Looking at past transactions terra-rust-bot estimates a reasonable transaction fee. In particually by looking at the actual gas amounts that were used in past transactions. This estimate can be used to offset the fee, keeping the account balance stable. For each transaction the fees are simulated using the prefered gas adjustment and double checked with the set maximum transaction fee.  
 * If possible transactions are grouped together, to further reduce the gas fees.
 
 ### Configuration
-* The configuration can be customized via the **terra-rust-bot.json** file. It will be loaded at startup.
+* The configuration can be customized via the **terra-rust-bot.json** file.
 * The current state is written to **terra-rust-bot-display.txt** instead of the console.
  
 
