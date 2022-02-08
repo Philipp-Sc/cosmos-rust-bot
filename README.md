@@ -1,32 +1,29 @@
-# terra-rust-bot
+<div align="center">
+  <h1>terra-rust-bot</h1> 
+    <img src="https://img.shields.io/github/languages/top/Philipp-Sc/terra-rust-bot"> 
+    <img src="https://img.shields.io/github/repo-size/Philipp-Sc/terra-rust-bot"> 
+    <img src="https://img.shields.io/github/commit-activity/m/Philipp-Sc/terra-rust-bot"> 
+    <img src="https://img.shields.io/github/license/Philipp-Sc/terra-rust-bot">
+    <img src="https://img.shields.io/twitter/follow/PSchlutermann?style=social"> 
+  </div>
+<br/>
 
 
-> :warning: You will need to provide your **seed phrase** to let the bot create and sign transactions.
+> :warning: You will need to provide your **seed phrase** to let the bot *create and sign transactions*.  
+> :arrow_right_hook: Terra-rust-bot can be used without a *seed phrase* in view mode. **It is recommended to test this first.**  
 
-> :warning: Terra-rust-bot will not save your **seed phrase**, make sure you do not lose it. Make sure you clear your copy/paste clipboard.
+> :warning: No security audit has been performed. (*Disclaimer: This may steal your money. Do your own research. Take a look at the code.*)
+ 
 
-> :arrow_right_hook: Terra-rust-bot can be used without a seed phrase, view only mode. It is recommended to test this first  
-
-> :warning: No security audit has been performed.
-
-
----
 
 ## Why
 
-
-* Rust is a great programming language.
 * Power to the people. 
-* The Terra ecosystem needs multiple open source bots to thrive.
-* KISS. Simplicity breeds success. 
+* The Terra ecosystem needs accessible open source bots to thrive.
 * A single executable that is easy to use with few dependencies.
-* Reducing transaction fees to a minimum. 
-* New Strategies.
 
-
----
-
-## What 
+ 
+## Highlights 
 
  
 ### Anchor Auto Stake Rewards
@@ -34,7 +31,7 @@
 
  <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/main/terra-rust-bot_v0.3_auto_stake.png" width="380">
   
- Checks your pending borrow rewards and stakes them automatically. 
+ Checks your pending borrower ANC rewards, considers the gas fees and stakes them automatically. 
  
 ### Anchor Auto Loan Repay 
 
@@ -61,10 +58,9 @@
 <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/development/terra-rust-bot_v0.1_anchor.png" width="980">
   
 (* the collateral value is calculated with the max_ltv, once the max_ltv for BLUNA and BETH are different, the collateral will be incorrect, this effects some of the APYs. TODO: query collateral value for BETH and LUNA.)
+ 
 
----
-
-## How
+## How it works
  
 
 ### Security
@@ -86,14 +82,7 @@
 ### Configuration
 * The configuration can be customized via the **terra-rust-bot.json** file. It will be loaded at startup.
 * The current state is written to **terra-rust-bot-display.txt** instead of the console.
-
----
-
-## Disclaimer
-
-> This may steal your money. Do your own research. Take a look at the code.
-
----
+ 
 
 ## Manual - Just Read The Instructions
 
@@ -127,8 +116,7 @@
 * `./install.sh dev` fast build
 * `./install.sh prod` optimized build
 * `./install.sh native` optimize the build for your CPU
-
----
+ 
 
 ### Step 2: terra-rust-bot.json
 
@@ -198,8 +186,7 @@
 *The ./stop.sh script simply stops the bot.*
 * `./stop.sh` (stops the bot)
 
-
----
+ 
 
 ## Additional Security Measures
 
@@ -212,16 +199,14 @@
 - Minimize your attack surface.
 - Hide the fact that you are using terra-rust-bot: Rename the executable to something (un)expected. 
 - Prepare a Honeypot/Decoy
-
----
+ 
 
 ## Summary
 
 - I created this bot to learn about smart contracts, the terra blockchain and to get to know the Rust programming language.
 - This is a constant work in progress: **Bug Reports** and **Feature Requests** are welcome!
 - Thanks to the people who helped me along the way on the <a href="https://discord.com/invite/EuKCeGFb93">terra discord </a>. :heart: 
-
----
+ 
 
 ## Similar projects
 - https://github.com/ALPAC-4/auto_repay
