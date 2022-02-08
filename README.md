@@ -23,7 +23,7 @@
 * A single executable that is easy to use with few dependencies.
 
  
-## Highlights 
+## Features 
 
  
 ### Anchor Auto Stake Rewards
