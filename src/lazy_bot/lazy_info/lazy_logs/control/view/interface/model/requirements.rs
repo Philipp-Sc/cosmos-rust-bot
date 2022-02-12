@@ -49,28 +49,31 @@ pub fn requirement_list() ->  Vec<(&'static str, i32, Vec<&'static str>)>  {
         /* <anchor_protocol> */
         ("state anchorprotocol mmMarket", fast, vec!["anchor","anchor_account"]),
         ("api/v2/distribution-apy", fast, vec!["anchor","anchor_account","anchor_auto_lp","anchor_auto_stake"]),
-        ("api/v2/gov-reward", fast, vec!["anchor","anchor_account","anchor_auto_lp","anchor_auto_stake"]),
+        ("api/v2/gov-reward", fast, vec!["anchor","anchor_account","anchor_auto_stake"]),
         ("config anchorprotocol mmInterestModel", fast, vec!["anchor","anchor_account"]),
         //("config anchorprotocol collector",every_minute),
         /* <anchor_protocol account> */ 
         ("anchor_airdrops", fast, vec!["anchor_account"]),
-        ("borrow_limit", fast, vec!["anchor_account","anchor_auto_lp","anchor_auto_stake","anchor_auto_repay","anchor_auto_borrow"]),
+        ("borrow_limit", fast, vec!["anchor_account","anchor_auto_repay","anchor_auto_borrow"]),
         ("borrow_info", fast, vec!["anchor_account","anchor_auto_lp","anchor_auto_stake","anchor_auto_repay","anchor_auto_borrow"]),
         ("balance", fast, vec!["anchor_account","anchor_auto_repay","anchor_auto_borrow"]),
-        ("anc_balance", fast, vec!["anchor_account","anchor_auto_lp","anchor_auto_stake"]),
-        ("staker", fast, vec!["anchor_account","anchor_auto_lp","anchor_auto_stake"]),
+        ("anc_balance", fast, vec!["anchor_account","anchor_auto_stake"]),
+        ("staker", fast, vec!["anchor_account","anchor_auto_stake"]),
         ("blocks_per_year", slow, vec!["market","anchor","anchor_account"]), 
         ("earn_apy", slow, vec!["anchor","anchor_account"]),
         ("anchor_protocol_whitelist", slow, vec!["anchor_account"]),
         /* <meta data> */ 
         ("anchor_protocol_txs_claim_rewards", slow, vec!["anchor","anchor_account","anchor_auto_lp","anchor_auto_stake"]), 
-        ("anchor_protocol_txs_staking", slow, vec!["anchor","anchor_account","anchor_auto_lp","anchor_auto_stake"]), 
+        ("anchor_protocol_txs_staking", slow, vec!["anchor","anchor_account","anchor_auto_stake"]), 
         ("anchor_protocol_txs_redeem_stable", slow, vec!["anchor_auto_repay"]), 
         ("anchor_protocol_txs_deposit_stable", slow, vec!["anchor_auto_borrow"]), 
         ("anchor_protocol_txs_borrow_stable", slow, vec!["anchor_auto_borrow"]), 
         ("anchor_protocol_txs_repay_stable", slow, vec!["anchor_auto_repay"]), 
-        ("anchor_protocol_txs_provide_liquidity", slow, vec!["anchor_auto_lp"]), 
-        ("anchor_protocol_txs_staking_lp", slow, vec!["anchor_auto_lp"]), 
+//        ("anchor_protocol_txs_provide_liquidity", slow, vec!["anchor_auto_lp"]), 
+//        ("anchor_protocol_txs_staking_lp", slow, vec!["anchor_auto_lp"]), 
+        ("txs_provide_to_spec_anc_ust_vault", slow, vec!["anchor_auto_lp"]), 
+//        ("api/v2/ust-lp-reward", slow, vec!["anchor_auto_lp"]), 
+        ("api/data?type=lpVault", slow, vec!["anchor_auto_lp"]),  
         ]
 
  }

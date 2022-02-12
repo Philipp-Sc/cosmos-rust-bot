@@ -345,6 +345,30 @@ pub async fn gas_price_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromis
                 }
 }
 
+pub async fn spec_anc_ust_lp_apy_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
+        match get_data_maybe_or_await_task(&tasks,"api/data?type=lpVault").await {
+            Ok(response_result) => {
+                let current_apy = response_result.as_spec_astro_vault().unwrap().dpr; 
+                return format!("{}%",Decimal::from_str(current_apy.to_string().as_str()).unwrap().checked_mul(Decimal::from_str("36500").unwrap()).unwrap().round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero).to_string());
+            },
+            Err(_) => {
+                return "--".to_string();
+            }
+        }
+}
+
+pub async fn anc_ust_lp_apy_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
+        match get_data_maybe_or_await_task(&tasks,"api/v2/ust-lp-reward").await {
+            Ok(response_result) => {
+                let current_apy: cosmwasm_std::Decimal = response_result.as_lp_reward().unwrap().apy; 
+                return format!("{}%",Decimal::from_str(current_apy.to_string().as_str()).unwrap().checked_mul(Decimal::from_str("100").unwrap()).unwrap().round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero).to_string());
+            },
+            Err(_) => {
+                return "--".to_string();
+            }
+        }
+}
+
 pub async fn staking_apy_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
         match get_data_maybe_or_await_task(&tasks,"api/v2/gov-reward").await {
             Ok(response_result) => {
@@ -465,11 +489,33 @@ pub async fn total_liabilities_to_string(tasks: Arc<RwLock<HashMap<String, Maybe
 }
 
 
-pub async fn simulation_swap_return_amount_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: &str, digits_rounded_to: u32) -> String { 
+pub async fn simulation_swap_exchange_rate_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: &str, as_micro: bool, digits_rounded_to: u32) -> String { 
+        match get_data_maybe_or_await_task(&tasks,key).await {
+            Ok(response_result) => {
+                let res = &response_result.as_simulation().unwrap().result;
+                let amount: cosmwasm_std::Decimal = cosmwasm_std::Decimal::from_str(res.return_amount.to_string().as_str()).unwrap();
+                let commission_amount: cosmwasm_std::Decimal = cosmwasm_std::Decimal::from_str(res.commission_amount.to_string().as_str()).unwrap(); 
+                
+                let mut micro = cosmwasm_std::Uint128::from_str("1").unwrap();
+                if !as_micro {
+                    micro = cosmwasm_std::Uint128::from_str("1000000").unwrap();          
+                }                
+                return Decimal::from_str(((amount+commission_amount) / micro).to_string().as_str()).unwrap().round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero).to_string();
+            },
+            Err(_) => {
+                return "--".to_string();
+            }
+        }
+}
+
+pub async fn simulation_swap_return_amount_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: &str, as_micro: bool, digits_rounded_to: u32) -> String { 
         match get_data_maybe_or_await_task(&tasks,key).await {
             Ok(response_result) => {
                 let amount: cosmwasm_std::Decimal = cosmwasm_std::Decimal::from_str(response_result.as_simulation().unwrap().result.return_amount.to_string().as_str()).unwrap(); 
-                let micro: cosmwasm_std::Uint128 = cosmwasm_std::Uint128::from_str("1000000").unwrap();
+                let mut micro = cosmwasm_std::Uint128::from_str("1").unwrap();
+                if !as_micro {
+                    micro = cosmwasm_std::Uint128::from_str("1000000").unwrap();          
+                }  
                 return Decimal::from_str((amount / micro).to_string().as_str()).unwrap().round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero).to_string();
             },
             Err(_) => {

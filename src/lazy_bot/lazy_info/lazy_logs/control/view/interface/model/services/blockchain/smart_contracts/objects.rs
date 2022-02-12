@@ -21,6 +21,8 @@ pub enum ResponseResult {
     Staker(Response<StakerResponse>), 
     DistributionApy(DistributionApyResponse),
     GovReward(GovRewardResponse),
+    LPReward(LPRewardResponse),
+    SpecAstroVault(SpecAstroVaultResponse),
     Blocks(Response<BlocksPerYearResponse>),
     StablecoinDeposits(Response<Vec<DepositStableLog>>),
     Transactions(Response<Vec<TXLog>>),
@@ -211,6 +213,30 @@ pub struct GovRewardResponse {
     pub gov_share_index: Decimal,
     pub current_apy: Decimal,
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct LPRewardResponse {
+    pub anc_price: Decimal,
+    pub height: u64,
+    pub timestamp: u64,
+    pub apy: Decimal, 
+    pub total_pool: Decimal,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct SpecAstroVaultResponse {
+    pub pool_apr: f64,
+    pub pool_apy: f64,
+    pub pool_astro_apr: f64,
+    pub farm_apr: f64,
+    pub tvl: String,
+    pub multiplier: i64,
+    pub vault_fee: f64,
+    pub spec_apr: f64,
+    pub dpr: f64,
+}
+
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

@@ -332,41 +332,70 @@ pub async fn calculate_repay_plan(tasks: Arc<RwLock<HashMap<String, MaybeOrPromi
 }
 
 
-pub async fn calculate_farm_plan(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, field: &str, digits_rounded_to: u32) -> String {
+pub async fn calculate_farm_plan(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, field: &str, as_micro: bool, digits_rounded_to: u32) -> String {
 
+    let gas_fees_uusd = decimal_or_return!(gas_price_to_string(tasks.clone(),10).await.as_ref());
+    let gas_adjustment_preference = decimal_or_return!(gas_adjustment_preference_to_string(tasks.clone(),10).await.as_ref());
+
+    let exchange_rate = decimal_or_return!(simulation_swap_exchange_rate_to_string(tasks.clone(),"simulation_cw20 anchorprotocol ANC terraswapAncUstPair",false,10).await.as_ref());
+   
+    let fee_to_claim_anc_rewards_uusd_in_anc = decimal_or_return!(estimate_anchor_protocol_tx_fee(tasks.clone(), "anchor_protocol_txs_claim_rewards","avg_gas_used".to_owned(),true,0).await.as_ref())
+            .checked_mul(gas_fees_uusd).unwrap()
+            .checked_mul(gas_adjustment_preference).unwrap()
+            .checked_mul(exchange_rate).unwrap();
+
+
+    let fee_to_provide_in_anc = decimal_or_return!(estimate_anchor_protocol_tx_fee(tasks.clone(), "txs_provide_to_spec_anc_ust_vault","avg_gas_used".to_owned(),true,0).await.as_ref())
+            .checked_mul(gas_fees_uusd).unwrap()
+            .checked_mul(gas_adjustment_preference).unwrap()
+            .checked_mul(exchange_rate).unwrap();
+
+    let fees_in_anc = fee_to_claim_anc_rewards_uusd_in_anc.checked_add(fee_to_provide_in_anc).unwrap();
 
     let borrow_anc_rewards = decimal_or_return!(borrower_rewards_to_string(tasks.clone(),true,0).await.as_ref());
    
-    let gas_fees_uusd = decimal_or_return!(gas_price_to_string(tasks.clone(),10).await.as_ref());
 
-    let gas_adjustment_preference = decimal_or_return!(gas_adjustment_preference_to_string(tasks.clone(),10).await.as_ref());
+    let borrow_anc_rewards_fees_estimate_substracted = borrow_anc_rewards.checked_sub(fees_in_anc).unwrap();
 
-    let tx_fee_claim_rewards_gas_used = decimal_or_return!(estimate_anchor_protocol_tx_fee(tasks.clone(), "anchor_protocol_txs_claim_rewards","avg_gas_used".to_owned(),false,10).await.as_ref());   
+    let pair_anc_excluding_exchange_fees = borrow_anc_rewards_fees_estimate_substracted.checked_div(Decimal::from_str("2").unwrap()).unwrap();
+
+    // if pair_anc is used to swap that amount of anc
+    // then the ust returned is lower than the remaining ANC value
+  
+    let exchange_return = decimal_or_return!(simulation_swap_return_amount_to_string(tasks.clone(),"simulation_cw20 anchorprotocol ANC terraswapAncUstPair",false,10).await.as_ref());
+    let return_ust_amount = pair_anc_excluding_exchange_fees.checked_div(exchange_return).unwrap();
+    let return_amount_in_anc = return_ust_amount.checked_mul(exchange_rate).unwrap();
+
+    let difference = pair_anc_excluding_exchange_fees.checked_sub(return_amount_in_anc).unwrap();
+
+    let anc_to_swap = pair_anc_excluding_exchange_fees
+        .checked_add(difference).unwrap()
+        .checked_add(fees_in_anc).unwrap();
+    // this way the UST side of the pair's amount is always higher
+    // it includes the amount for the claim fee (est.)
+    // it includes the swap transaction fee (est.)
+
+    let anc_to_keep = borrow_anc_rewards.checked_sub(anc_to_swap).unwrap();
+
+    // everything available for claim_and_swap_for_lp
      
-    let fee_to_claim_anc_rewards_uusd = tx_fee_claim_rewards_gas_used 
-            .checked_mul(gas_fees_uusd).unwrap()
-            .checked_mul(gas_adjustment_preference).unwrap();
+    // check if enough UST balance available to make sure the UST part of the Pair can be fulfilled.
 
-    let exchange_rate = decimal_or_return!(simulation_swap_return_amount_to_string(tasks.clone(),"simulation_cw20 anchorprotocol ANC terraswapAncUstPair",2).await.as_ref());
-    // this does already include the 0.3% terraswap tax fee.
-
-    let borrow_anc_rewards_in_ust = borrow_anc_rewards.checked_div(exchange_rate).unwrap();
-
-    let anc_in_ust_fee_substracted = borrow_anc_rewards_in_ust.checked_sub(fee_to_claim_anc_rewards_uusd).unwrap();
-    // assertion >0
-    let anc_amount = anc_in_ust_fee_substracted.checked_div(Decimal::from_str("2").unwrap()).unwrap();
-    let ust_amount = borrow_anc_rewards.checked_sub(anc_amount).unwrap();
-    // does not yet include the swap fee.
-
+    let mut micro = Decimal::from_str("1").unwrap();
+    if !as_micro {
+        micro = Decimal::from_str("1000000").unwrap();                
+    } 
+    
+    
     match field {
-        "anc_amount" => {
-            return anc_amount
-                .checked_div(Decimal::from_str("1000000").unwrap()).unwrap()
+        "anc_to_keep" => {
+            return anc_to_keep
+                .checked_div(micro).unwrap()
                 .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();
         },
-        "ust_amount" => {
-            return ust_amount
-                .checked_div(Decimal::from_str("1000000").unwrap()).unwrap()
+        "anc_to_swap" => {
+            return anc_to_swap
+                .checked_div(micro).unwrap()
                 .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string();
         },
         _ => {
@@ -494,24 +523,31 @@ pub async fn check_anchor_loan_status(tasks: Arc<RwLock<HashMap<String, MaybeOrP
 
 }
 
-pub async fn estimate_anchor_protocol_next_claim_and_stake_tx(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, field_amount: &str, field: &str, digits_rounded_to: u32) -> String {
+pub async fn estimate_anchor_protocol_next_claim_and_stake_tx(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, field_type: &str, field_amount: &str, field: &str, digits_rounded_to: u32) -> String {
   
 
             let borrower_rewards_in_ust = decimal_or_return!(borrower_rewards_in_ust_to_string(tasks.clone(),  10).await.as_ref());
 
             let mut loan_amount = Decimal::from_str("0").unwrap();  
 
-            let borrow_limit = decimal_or_return!(borrow_limit_to_string(tasks.clone(), 10).await.as_ref()); 
-
             if "loan_amount"==field_amount {
                 loan_amount = decimal_or_return!(borrower_loan_amount_to_string(tasks.clone(), 10).await.as_ref()); 
             }else if "target_ltv"==field_amount {
                 let trigger_percentage = decimal_or_return!(trigger_percentage_to_string(tasks.clone(),10).await.as_ref());
+                let borrow_limit = decimal_or_return!(borrow_limit_to_string(tasks.clone(), 10).await.as_ref()); 
                 loan_amount = borrow_limit.checked_mul(trigger_percentage).unwrap();
             }
             let distribution_apr = percent_decimal_or_return!(distribution_apr_to_string(tasks.clone(),  10).await.as_ref()); 
-            let staking_apy = percent_decimal_or_return!(staking_apy_to_string(tasks.clone(),  10).await.as_ref()); 
-            let transaction_fee = decimal_or_return!(estimate_anchor_protocol_tx_fee_claim_and_stake(tasks.clone(),  10).await.as_ref());
+            let apy = match field_type {
+                "staking" => {percent_decimal_or_return!(staking_apy_to_string(tasks.clone(),  10).await.as_ref())},
+                "farming" => {percent_decimal_or_return!(spec_anc_ust_lp_apy_to_string(tasks.clone(),  10).await.as_ref())},
+                _ => {return "Error".to_string();}
+            };
+            let transaction_fee =  match field_type {
+                "staking" => {decimal_or_return!(estimate_anchor_protocol_tx_fee_claim_and_stake(tasks.clone(),  10).await.as_ref())},
+                "farming" => {decimal_or_return!(estimate_anchor_protocol_tx_fee_claim_and_provide_to_spec_vault(tasks.clone(),  10).await.as_ref())},
+                _ => {return "Error".to_string();}
+            };
             
             
             let mut _optimal_time_to_wait: Option<Decimal> = None; 
@@ -523,7 +559,7 @@ pub async fn estimate_anchor_protocol_next_claim_and_stake_tx(tasks: Arc<RwLock<
             let anc_dist_returns_per_timeframe = distribution_apr.checked_div(one_year_equals_this_many_time_frames).unwrap();
             let anc_dist_returns_per_time_frame_in_ust = loan_amount.checked_mul(anc_dist_returns_per_timeframe).unwrap(); 
             
-            let anc_staking_returns_per_timeframe = staking_apy.checked_div(one_year_equals_this_many_time_frames).unwrap();
+            let anc_staking_returns_per_timeframe = apy.checked_div(one_year_equals_this_many_time_frames).unwrap();
 
             let claim_and_stake_gas_fee = Decimal::from_str("-1").unwrap().checked_mul(transaction_fee).unwrap();
             
@@ -605,6 +641,7 @@ pub async fn estimate_anchor_protocol_next_claim_and_stake_tx(tasks: Arc<RwLock<
             }else if "apr"==field && _total_returns_in_ust!=None  {
                 
                 let max_ltv = decimal_or_return!(max_ltv_to_string(tasks.clone(), "BLUNA", 2).await.as_ref());
+                let borrow_limit = decimal_or_return!(borrow_limit_to_string(tasks.clone(), 10).await.as_ref()); 
                 let collateral_value = borrow_limit.checked_div(max_ltv).unwrap(); 
             
                 match _total_returns_in_ust.unwrap().checked_div(collateral_value) {
@@ -637,6 +674,20 @@ pub async fn estimate_anchor_protocol_tx_fee_claim_and_farm(tasks: Arc<RwLock<Ha
                              .to_string();
 }
  
+pub async fn estimate_spec_tx_fee_provide(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
+    let gas_fees_uusd = decimal_or_return!(gas_price_to_string(tasks.clone(),10).await.as_ref());
+
+    let gas_adjustment_preference = decimal_or_return!(gas_adjustment_preference_to_string(tasks.clone(),10).await.as_ref());
+
+    let tx_fee_claim_rewards_gas_used = decimal_or_return!(estimate_anchor_protocol_tx_fee(tasks.clone(), "txs_provide_to_spec_anc_ust_vault","avg_gas_used".to_owned(),false,10).await.as_ref());   
+    
+    return  tx_fee_claim_rewards_gas_used 
+            .checked_mul(gas_fees_uusd).unwrap()
+            .checked_mul(gas_adjustment_preference).unwrap()
+            .checked_div(Decimal::from_str("1000000").unwrap()).unwrap()
+            .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
+            .to_string();
+}
 
 pub async fn estimate_anchor_protocol_tx_fee_claim(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
     let gas_fees_uusd = decimal_or_return!(gas_price_to_string(tasks.clone(),10).await.as_ref());
@@ -646,6 +697,25 @@ pub async fn estimate_anchor_protocol_tx_fee_claim(tasks: Arc<RwLock<HashMap<Str
     let tx_fee_claim_rewards_gas_used = decimal_or_return!(estimate_anchor_protocol_tx_fee(tasks.clone(), "anchor_protocol_txs_claim_rewards","avg_gas_used".to_owned(),false,10).await.as_ref());   
     
     return  tx_fee_claim_rewards_gas_used 
+            .checked_mul(gas_fees_uusd).unwrap()
+            .checked_mul(gas_adjustment_preference).unwrap()
+            .checked_div(Decimal::from_str("1000000").unwrap()).unwrap()
+            .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
+            .to_string();
+}
+
+
+
+pub async fn estimate_anchor_protocol_tx_fee_claim_and_provide_to_spec_vault(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
+ 
+    let gas_fees_uusd = decimal_or_return!(gas_price_to_string(tasks.clone(),10).await.as_ref());
+    let gas_adjustment_preference = decimal_or_return!(gas_adjustment_preference_to_string(tasks.clone(),10).await.as_ref());
+
+    let fee_to_claim_anc_rewards_uusd = decimal_or_return!(estimate_anchor_protocol_tx_fee(tasks.clone(), "anchor_protocol_txs_claim_rewards","avg_gas_used".to_owned(),false,10).await.as_ref());
+    let fee_to_provide = decimal_or_return!(estimate_anchor_protocol_tx_fee(tasks.clone(), "txs_provide_to_spec_anc_ust_vault","avg_gas_used".to_owned(),false,10).await.as_ref());
+           
+    return fee_to_claim_anc_rewards_uusd
+            .checked_add(fee_to_provide).unwrap()
             .checked_mul(gas_fees_uusd).unwrap()
             .checked_mul(gas_adjustment_preference).unwrap()
             .checked_div(Decimal::from_str("1000000").unwrap()).unwrap()

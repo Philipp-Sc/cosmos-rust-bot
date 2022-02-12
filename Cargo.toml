@@ -28,6 +28,7 @@ regex = "1.5.4"
 colored = "2" 
 num_cpus = "1.13.1"  
 litcrypt = "0.3" 
+base64 = "0.13.0"
 
 [profile.release]
 # Enable link-time optimization, eliminates more code and inlines across crate boundaries.

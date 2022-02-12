@@ -12,6 +12,7 @@ use view::interface::model::services::blockchain::smart_contracts::objects::meta
 	anchor_claim_rewards,
 	anchor_governance_stake,
 	anchor_governance_claim_and_stake,
+	anchor_governance_claim_and_provide_to_spec_vault,
 	anchor_claim_and_stake_airdrop_tx};
 
 use view::interface::model::{
@@ -254,6 +255,74 @@ pub async fn anchor_redeem_and_repay_stable(tasks: Arc<RwLock<HashMap<String, Ma
 }
 
 
+pub async fn anchor_borrow_claim_and_farm_rewards(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> String {
+		let max_tx_fee = decimal_or_return!(max_tx_fee_to_string(tasks.clone(), 4).await.as_ref());
+		let balance = decimal_or_return!(terra_balance_to_string(tasks.clone(),"uusd",false,2).await.as_ref());
+	 	let min_ust_balance = decimal_or_return!(min_ust_balance_to_string(tasks.clone(),false,2).await.as_ref());
+
+	 	// making sure the data is not outdated
+	    match get_meta_data_maybe(&tasks, "latest_transaction").await {
+	    	Ok(maybe) => {
+	    		let req: [&str;3] = ["terra_balances","borrow_limit","borrow_info"];
+	    		if get_oldest_timestamps_of_resolved_tasks(&tasks,&req).await <= maybe.timestamp + 10{ 
+	    			return "waiting for data to refresh..".to_string();
+	    		}
+	    	},
+	    	Err(_) => {
+	    		// no previous transaction, free to continue.
+	    	}
+	    }
+
+	 	if balance < min_ust_balance || balance < max_tx_fee {
+	 		return "Insufficient UST balance, replenish your account!".to_string();
+	 	}
+	 	match estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"farming","loan_amount","date_next",2).await.as_ref(){
+	 		"now" => {},
+	 		 _ => {return "waiting..".to_string()}
+	 	}; 
+	
+		let gas_adjustment_preference = decimal_or_return!(gas_adjustment_preference_to_string(tasks.clone(),10).await.as_ref());
+
+	    let anc_to_swap = decimal_or_return!(calculate_farm_plan(tasks.clone(),"anc_to_swap",true,0).await.as_ref());
+
+	    let anc_to_keep = decimal_or_return!(calculate_farm_plan(tasks.clone(),"anc_to_keep",true,0).await.as_ref());
+	
+	    let exchange_rate = decimal_or_return!(simulation_swap_exchange_rate_to_string(tasks.clone(),"simulation_cw20 anchorprotocol ANC terraswapAncUstPair",false,10).await.as_ref());
+   
+	    let ust_to_keep = anc_to_keep.checked_mul(exchange_rate).unwrap().round_dp_with_strategy(0, rust_decimal::RoundingStrategy::ToZero);
+
+	    let zero = Decimal::from_str("1").unwrap();
+
+	    if anc_to_keep <= zero {
+	    	return "waiting..".to_string();
+	    }
+
+	    let belief_price = decimal_or_return!(simulation_swap_exchange_rate_to_string(tasks.clone(),"simulation_cw20 anchorprotocol ANC terraswapAncUstPair",false,10).await.as_ref());
+
+	    let max_spread = Decimal::from_str("0.001").unwrap();
+
+        let gas_fees_uusd = decimal_or_return!(gas_price_to_string(tasks.clone(),10).await.as_ref());
+
+		let mnemonics = match only_estimate {
+			true => {wallet_acc_address.unsecure().to_string()},
+			false => {decrypt_text_with_secret(&wallet_seed_phrase)}
+		};
+
+	 	// prepare input params, then meta execute msg.
+	    match anchor_governance_claim_and_provide_to_spec_vault(&mnemonics, anc_to_keep, ust_to_keep, anc_to_swap, belief_price, max_spread, gas_fees_uusd, max_tx_fee, gas_adjustment_preference, only_estimate).await {
+        	Ok(msg) => {
+        		register_value(&tasks,"anchor_governance_claim_and_farm".to_string(),msg.to_owned()).await;
+        		register_value(&tasks,"latest_transaction".to_string(),msg.to_owned()).await;
+        		return msg;
+        	},
+        	Err(msg) => {
+        		register_value(&tasks,"anchor_governance_claim_and_farm".to_string(),msg.to_string().to_owned()).await;
+        		register_value(&tasks,"latest_transaction".to_string(),msg.to_string().to_owned()).await;
+        		return msg.to_string();
+        	}
+        }
+}
+
 pub async fn anchor_borrow_claim_and_stake_rewards(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> String {
 		let max_tx_fee = decimal_or_return!(max_tx_fee_to_string(tasks.clone(), 4).await.as_ref());
 		let balance = decimal_or_return!(terra_balance_to_string(tasks.clone(),"uusd",false,2).await.as_ref());
@@ -275,7 +344,7 @@ pub async fn anchor_borrow_claim_and_stake_rewards(tasks: Arc<RwLock<HashMap<Str
 	 	if balance < min_ust_balance || balance < max_tx_fee {
 	 		return "Insufficient UST balance, replenish your account!".to_string();
 	 	}
-	 	match estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"loan_amount","date_next",2).await.as_ref(){
+	 	match estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"staking","loan_amount","date_next",2).await.as_ref(){
 	 		"now" => {},
 	 		 _ => {return "waiting..".to_string()}
 	 	};

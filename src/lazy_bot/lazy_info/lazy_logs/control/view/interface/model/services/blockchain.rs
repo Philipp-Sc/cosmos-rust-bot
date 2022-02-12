@@ -90,6 +90,9 @@ pub async fn get_block_txs_fee_data(key: &str) -> anyhow::Result<ResponseResult>
         if key == "staking_lp" {
             next = get_txs_fee_data(temp_offset.as_str(),&mut tx_data,get_contract("anchorprotocol","ANC-UST LP").as_ref(),"staking_lp","null").await; 
         }
+        if key == "provide_to_spec_anc_ust_vault" {
+           next = get_txs_fee_data(temp_offset.as_str(),&mut tx_data,get_contract("anchorprotocol","SPEC ANC-UST VAULT").as_ref(),"provide_to_spec_anc_ust_vault","null").await; 
+        }
 
         if next.is_ok() {
             temp_offset = next.unwrap();
@@ -141,15 +144,27 @@ fn get_tx_log(entry: &Value, account: &str, query_msg: &str, amount_field: &str)
 
     let msg = entry.get("tx").ok_or(anyhow!("no tx"))?.get("value").ok_or(anyhow!("no value"))?.get("msg").ok_or(anyhow!("no msg"))?.as_array().ok_or(anyhow!("no array"))?; 
                
-    if  (msg.len() == 2 && 
+    if  (msg.len() == 2 && (
             (
-            query_msg=="provide_liquidity" &&
+            query_msg=="provide_to_spec_anc_ust_vault" &&
+            msg[0].get("value").ok_or(anyhow!("no value"))?.get("contract").ok_or(anyhow!("no contract"))? == "terra14z56l0fp2lsf86zy3hty2z47ezkhnthtr9yq76" &&
+            msg[0].get("value").ok_or(anyhow!("no value"))?.get("execute_msg").ok_or(anyhow!("no execute_msg"))?.get("increase_allowance").ok_or(anyhow!("no increase_allowance"))?.get("spender").ok_or(anyhow!("no spender"))? == "terra10u9342cdwwqpe4wz9mf2c00ytlcr847wpe0xh4" &&
+            msg[1].get("value").ok_or(anyhow!("no value"))?.get("contract").ok_or(anyhow!("no contract"))? == "terra10u9342cdwwqpe4wz9mf2c00ytlcr847wpe0xh4" &&
+            msg[1].get("value").ok_or(anyhow!("no value"))?.get("execute_msg").ok_or(anyhow!("no execute_msg"))?.get("bond").ok_or(anyhow!("no bond"))?.get("assets").ok_or(anyhow!("no assets"))?.as_array().ok_or(anyhow!("no array"))?.len() == 2 &&
+            msg[1].get("value").ok_or(anyhow!("no value"))?.get("execute_msg").ok_or(anyhow!("no execute_msg"))?.get("bond").ok_or(anyhow!("no bond"))?.get("assets").ok_or(anyhow!("no assets"))?.as_array().ok_or(anyhow!("no array"))?[0].get("info").ok_or(anyhow!("no info"))?.get("token").ok_or(anyhow!("no token"))?.get("contract_addr").ok_or(anyhow!("no contract_addr"))? == "terra14z56l0fp2lsf86zy3hty2z47ezkhnthtr9yq76" &&
+            msg[1].get("value").ok_or(anyhow!("no value"))?.get("execute_msg").ok_or(anyhow!("no execute_msg"))?.get("bond").ok_or(anyhow!("no bond"))?.get("assets").ok_or(anyhow!("no assets"))?.as_array().ok_or(anyhow!("no array"))?[1].get("info").ok_or(anyhow!("no info"))?.get("native_token").ok_or(anyhow!("no native_token"))?.get("denom").ok_or(anyhow!("no denom"))? == "uusd"
+            )
+            || (
+                query_msg=="provide_liquidity" && 
+
             msg[0].get("value").ok_or(anyhow!("no value"))?.get("contract").ok_or(anyhow!("no contract"))? == "terra14z56l0fp2lsf86zy3hty2z47ezkhnthtr9yq76" &&
             msg[0].get("value").ok_or(anyhow!("no value"))?.get("execute_msg").ok_or(anyhow!("no execute_msg"))?.get("increase_allowance").ok_or(anyhow!("no increase_allowance"))?.get("spender").ok_or(anyhow!("no spender"))? == "terra1qr2k6yjjd5p2kaewqvg93ag74k6gyjr7re37fs" &&
             msg[1].get("value").ok_or(anyhow!("no value"))?.get("contract").ok_or(anyhow!("no contract"))? == "terra1qr2k6yjjd5p2kaewqvg93ag74k6gyjr7re37fs" &&
             msg[1].get("value").ok_or(anyhow!("no value"))?.get("execute_msg").ok_or(anyhow!("no execute_msg"))?.get("provide_liquidity").ok_or(anyhow!("no provide_liquidity"))?.get("assets").ok_or(anyhow!("no assets"))?.as_array().ok_or(anyhow!("no array"))?.len() == 2 &&
             msg[1].get("value").ok_or(anyhow!("no value"))?.get("execute_msg").ok_or(anyhow!("no execute_msg"))?.get("provide_liquidity").ok_or(anyhow!("no provide_liquidity"))?.get("assets").ok_or(anyhow!("no assets"))?.as_array().ok_or(anyhow!("no array"))?[0].get("info").ok_or(anyhow!("no info"))?.get("token").ok_or(anyhow!("no token"))?.get("contract_addr").ok_or(anyhow!("no contract_addr"))? == "terra14z56l0fp2lsf86zy3hty2z47ezkhnthtr9yq76" &&
             msg[1].get("value").ok_or(anyhow!("no value"))?.get("execute_msg").ok_or(anyhow!("no execute_msg"))?.get("provide_liquidity").ok_or(anyhow!("no provide_liquidity"))?.get("assets").ok_or(anyhow!("no assets"))?.as_array().ok_or(anyhow!("no array"))?[1].get("info").ok_or(anyhow!("no info"))?.get("native_token").ok_or(anyhow!("no native_token"))?.get("denom").ok_or(anyhow!("no denom"))? == "uusd"
+          
+                )
             )
         )
         ||  (msg.len() == 1 &&

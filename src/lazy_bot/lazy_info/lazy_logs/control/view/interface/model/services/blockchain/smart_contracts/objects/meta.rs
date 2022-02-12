@@ -124,6 +124,76 @@ fn anchor_governance_stake_msg(wallet_acc_address: &str, coin_amount: Decimal) -
         return Ok(send);  
 }
 
+fn astroport_swap_msg(wallet_acc_address: &str, coin_amount: Decimal, max_spread: Decimal, belief_price: Decimal) -> anyhow::Result<Message> {
+        let contract_addr_anc = get_contract("anchorprotocol","ANC"); 
+        let contract_addr_lp = get_contract("anchorprotocol","ANC-UST LP Minter");    
+        let coins: [Coin;0] = []; // no coins needed 
+        let msg = format!("{}{}{}{}{}",r##"{
+            "swap":
+                {
+                    "max_spread":""##,max_spread.to_string().as_str(),r##"",
+                    "belief_price":""##,belief_price.round_dp_with_strategy(18, rust_decimal::RoundingStrategy::ToZero).to_string().as_str(),r##""
+                }
+            }"##);
+        let execute_msg_json = format!("{}{}{}{}{}{}{}",r##"{
+                                      "send": {
+                                        "msg": ""##,base64::encode(msg),r##"",
+                                        "amount": ""##,coin_amount.to_string().as_str(),r##"",
+                                        "contract": ""##,contract_addr_lp,r##""
+                                      }
+                                    }"##);
+
+        let send = MsgExecuteContract::create_from_json(&wallet_acc_address, &contract_addr_anc, &execute_msg_json, &coins)?;
+        return Ok(send);  
+} 
+
+fn anchor_increase_allowance_msg(wallet_acc_address: &str, coin_amount: Decimal) -> anyhow::Result<Message> {
+        let contract_addr_anc = get_contract("anchorprotocol","ANC"); 
+        let contract_addr_lp = get_contract("anchorprotocol","SPEC ANC-UST VAULT");    
+        let coins: [Coin;0] = []; // no coins needed 
+        let execute_msg_json = format!("{}{}{}{}{}",r##"{
+                                      "increase_allowance": {
+                                        "amount": ""##,coin_amount.to_string().as_str(),r##"",
+                                        "spender": ""##,contract_addr_lp,r##""
+                                      }
+                                    }"##);
+        let send = MsgExecuteContract::create_from_json(&wallet_acc_address, &contract_addr_anc, &execute_msg_json, &coins)?;
+        return Ok(send);  
+} 
+
+fn anchor_provide_to_spec_vault_msg(wallet_acc_address: &str, anc_to_keep: Decimal, ust_to_keep: Decimal) -> anyhow::Result<Message> {
+        let contract_addr_anc = get_contract("anchorprotocol","ANC"); 
+        let contract_addr_lp = get_contract("anchorprotocol","SPEC ANC-UST VAULT");    
+        let coins: [Coin;1] = [Coin::create("uusd", ust_to_keep)];
+        let execute_msg_json = format!("{}{}{}{}{}",r##"{
+              "bond": {
+                "assets": [
+                  {
+                    "amount": ""##,anc_to_keep.to_string().as_str(),r##"",
+                    "info": {
+                      "token": {
+                        "contract_addr": "terra14z56l0fp2lsf86zy3hty2z47ezkhnthtr9yq76"
+                      }
+                    }
+                  },
+                  {
+                    "amount": ""##,ust_to_keep.to_string().as_str(),r##"",
+                    "info": {
+                      "native_token": {
+                        "denom": "uusd"
+                      }
+                    }
+                  }
+                ],
+                "compound_rate": "1",
+                "contract": "terra1ukm33qyqx0qcz7rupv085rgpx0tp5wzkhmcj3f",
+                "slippage_tolerance": "0.01"
+              }
+            }"##);
+        let send = MsgExecuteContract::create_from_json(&wallet_acc_address, &contract_addr_lp, &execute_msg_json, &coins)?;
+        return Ok(send);  
+} 
+
 pub async fn anchor_claim_and_stake_airdrop_tx(from_account: &str, proof: &Vec<String>, stage: &Vec<u64>, amount: &Vec<String>, gas_price_uusd: Decimal, max_tx_fee: Decimal, gas_adjustment: Decimal) -> anyhow::Result<String>{
  
         let mut messages = Vec::new();
@@ -283,6 +353,52 @@ pub async fn anchor_repay_stable_tx(mnemonics: &str, coin_amount_repay: Decimal,
 
         execute_messages(mnemonics,messages,gas_opts).await
 }
+
+pub async fn anchor_governance_claim_and_provide_to_spec_vault(mnemonics: &str, anc_to_keep: Decimal, ust_to_keep: Decimal, anc_to_swap: Decimal, belief_price: Decimal, max_spread: Decimal, gas_price_uusd: Decimal, max_tx_fee: Decimal, gas_adjustment: Decimal, only_estimate: bool) -> anyhow::Result<String>{
+         
+        let from_account = match mnemonics.len() {
+            44 => {
+                // wallet_acc_address
+                mnemonics.to_string()
+            },
+            _ => {
+                // seed phrase
+                let secp = Secp256k1::new();
+                let from_key = PrivateKey::from_words(&secp,mnemonics,0,0)?;
+                let from_public_key = from_key.public_key(&secp);
+                from_public_key.account()?
+            }
+        };
+
+        let send_claim = anchor_governance_claim_msg(&from_account)?;
+        let send_swap = astroport_swap_msg(&from_account,anc_to_swap,max_spread,belief_price)?;
+        let send_increase_allowance = anchor_increase_allowance_msg(&from_account,anc_to_keep)?;
+        let send_provide = anchor_provide_to_spec_vault_msg(&from_account,anc_to_keep, ust_to_keep)?;
+
+        
+        let messages: Vec<Message> = vec![send_claim,send_swap,send_increase_allowance,send_provide];
+
+        let res = estimate_messages(&from_account,messages,gas_price_uusd,gas_adjustment).await?;
+
+        //let estimate_json = serde_json::to_string(&res.result); 
+        //{"fee":{"amount":[{"amount":"90462","denom":"uusd"}],"gas":"603080"}}
+        let gas_opts = match estimate_to_gas_opts(res,only_estimate,max_tx_fee) {
+            Err(err) => {
+                return Err(anyhow!(format!("{:?} (gas_adjustment: {})",err,gas_adjustment)));
+            },
+            Ok(e) => {e}
+        };
+
+        let send_claim = anchor_governance_claim_msg(&from_account)?;
+        let send_swap = astroport_swap_msg(&from_account,anc_to_swap,max_spread,belief_price)?;
+        let send_increase_allowance = anchor_increase_allowance_msg(&from_account,anc_to_keep)?;
+        let send_provide = anchor_provide_to_spec_vault_msg(&from_account,anc_to_keep, ust_to_keep)?;
+
+        let messages: Vec<Message> = vec![send_claim,send_swap,send_increase_allowance,send_provide];
+
+        execute_messages(mnemonics,messages,gas_opts).await
+}
+
 
 pub async fn anchor_governance_claim_and_stake(mnemonics: &str, coin_amount: Decimal, gas_price_uusd: Decimal, max_tx_fee: Decimal, gas_adjustment: Decimal, only_estimate: bool) -> anyhow::Result<String>{
 	 	 

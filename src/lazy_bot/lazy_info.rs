@@ -206,7 +206,7 @@ pub async fn display_anchor_account(tasks: &Arc<RwLock<HashMap<String, MaybeOrPr
     *offset += 1;
 
     anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
-    let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"loan_amount","apr",2));
+    let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"staking","loan_amount","apr",2));
     let f = Box::pin(add_format_to_result("    +".to_string(),"".to_string(),f));
     let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset,f);
@@ -214,7 +214,7 @@ pub async fn display_anchor_account(tasks: &Arc<RwLock<HashMap<String, MaybeOrPr
     *offset += 1;
 
     anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
-    let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"loan_amount","total_returns",2));
+    let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"staking","loan_amount","total_returns",2));
     let f = Box::pin(add_format_to_result(" (=".to_string()," UST)".to_string(),f));
     let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset,f);
@@ -222,7 +222,7 @@ pub async fn display_anchor_account(tasks: &Arc<RwLock<HashMap<String, MaybeOrPr
     *offset += 1;
 
     anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
-    let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"loan_amount","date_next",2));
+    let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"staking","loan_amount","date_next",2));
     let f = Box::pin(add_format_to_result(" Next Auto Stake: ".to_string(),"".to_string(),f));
     let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset,f);
@@ -230,7 +230,7 @@ pub async fn display_anchor_account(tasks: &Arc<RwLock<HashMap<String, MaybeOrPr
     *offset += 1;
 
     anchor_view.push((display_add("--".purple().to_string(), 23 as usize,1 as usize),*offset));
-    let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"loan_amount","duration_next",2));
+    let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"staking","loan_amount","duration_next",2));
     let f = Box::pin(add_format_to_result(" (every ".to_string(),")".to_string(),f));
     let f = Box::pin(add_table_formatting(f, 23 as usize,1 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset,f);
@@ -272,7 +272,7 @@ pub async fn display_anchor_account(tasks: &Arc<RwLock<HashMap<String, MaybeOrPr
     *offset += 1;
 
     anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
-    let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"target_ltv","apr",2));
+    let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"staking","target_ltv","apr",2));
     let f = Box::pin(add_format_to_result("    +".to_string(),"".to_string(),f));
     let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset,f);
@@ -281,7 +281,7 @@ pub async fn display_anchor_account(tasks: &Arc<RwLock<HashMap<String, MaybeOrPr
 
 
     anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
-    let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"target_ltv","total_returns",2));
+    let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"staking","target_ltv","total_returns",2));
     let f = Box::pin(add_format_to_result(" (=".to_string()," UST)".to_string(),f));
     let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset,f);
@@ -289,7 +289,7 @@ pub async fn display_anchor_account(tasks: &Arc<RwLock<HashMap<String, MaybeOrPr
     *offset += 1;
 
     anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
-    let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"target_ltv","date_next",2));
+    let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"staking","target_ltv","date_next",2));
     let f = Box::pin(add_format_to_result(" Next Auto Stake: ".to_string(),"".to_string(),f));
     let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset,f);
@@ -297,7 +297,7 @@ pub async fn display_anchor_account(tasks: &Arc<RwLock<HashMap<String, MaybeOrPr
     *offset += 1;
 
     anchor_view.push((display_add("--".purple().to_string(), 23 as usize,1 as usize),*offset));
-    let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"target_ltv","duration_next",2));
+    let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"staking","target_ltv","duration_next",2));
     let f = Box::pin(add_format_to_result(" (every ".to_string(),")".to_string(),f));
     let f = Box::pin(add_table_formatting(f, 23 as usize,1 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset,f);
@@ -339,7 +339,7 @@ pub async fn display_anchor_account(tasks: &Arc<RwLock<HashMap<String, MaybeOrPr
     *offset += 1;
 
     anchor_view.push((display_add("--".purple().to_string(), 23 as usize,1 as usize),*offset));
-    let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"loan_amount","apr",2));
+    let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"staking","loan_amount","apr",2));
     let f = Box::pin(add_format_to_result("    +".to_string(),"".to_string(),f));
     let f = Box::pin(add_table_formatting(f, 23 as usize,1 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset,f);
@@ -534,7 +534,7 @@ pub async fn display_market_info(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
     *offset += 1;
 
     market_view.push(("--".purple().to_string(),*offset));
-    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(simulation_swap_return_amount_to_string(tasks.clone(),"simulation anchorprotocol uluna terraswapblunaLunaPair",4)));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(simulation_swap_return_amount_to_string(tasks.clone(),"simulation anchorprotocol uluna terraswapblunaLunaPair",false,4)));
     market_tasks.push(t);
     *offset += 1;
 
@@ -550,7 +550,7 @@ pub async fn display_market_info(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
     *offset += 1;
 
     market_view.push(("--".purple().to_string(),*offset));
-    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(simulation_swap_return_amount_to_string(tasks.clone(),"simulation_cw20 anchorprotocol ANC terraswapAncUstPair",2)));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(simulation_swap_return_amount_to_string(tasks.clone(),"simulation_cw20 anchorprotocol ANC terraswapAncUstPair",false,2)));
     market_tasks.push(t);
     *offset += 1; 
 
@@ -566,7 +566,7 @@ pub async fn display_market_info(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
     *offset += 1;
 
     market_view.push(("--".purple().to_string(),*offset));
-    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(simulation_swap_return_amount_to_string(tasks.clone(), "simulation_cw20 nexusprotocol nLunaToken Psi-nLuna_Pair",2)));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(simulation_swap_return_amount_to_string(tasks.clone(), "simulation_cw20 nexusprotocol nLunaToken Psi-nLuna_Pair",false,2)));
     market_tasks.push(t);
     *offset += 1;
     
@@ -574,7 +574,7 @@ pub async fn display_market_info(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
     *offset += 1;
 
     market_view.push(("--".purple().to_string(),*offset));
-    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(simulation_swap_return_amount_to_string(tasks.clone(), "simulation_cw20 nexusprotocol PsiToken Psi-UST_Pair",4)));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(simulation_swap_return_amount_to_string(tasks.clone(), "simulation_cw20 nexusprotocol PsiToken Psi-UST_Pair",false,4)));
     market_tasks.push(t);
     *offset += 1;
 
@@ -582,7 +582,7 @@ pub async fn display_market_info(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
     *offset += 1;
 
     market_view.push(("--".purple().to_string(),*offset));
-    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(simulation_swap_return_amount_to_string(tasks.clone(),"simulation_cw20 uusd mir",2)));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(simulation_swap_return_amount_to_string(tasks.clone(),"simulation_cw20 uusd mir",false,2)));
     market_tasks.push(t);
     *offset += 1;
 
@@ -590,7 +590,7 @@ pub async fn display_market_info(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
     *offset += 1;
 
     market_view.push(("--".purple().to_string(),*offset));
-    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(simulation_swap_return_amount_to_string(tasks.clone(),"simulation_cw20 uusd m_tsla",2)));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(simulation_swap_return_amount_to_string(tasks.clone(),"simulation_cw20 uusd m_tsla",false,2)));
     market_tasks.push(t);
     *offset += 1; 
 
@@ -598,7 +598,7 @@ pub async fn display_market_info(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
     *offset += 1;
 
     market_view.push(("--".purple().to_string(),*offset));
-    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(simulation_swap_return_amount_to_string(tasks.clone(),"simulation_cw20 uusd m_spy",2)));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(simulation_swap_return_amount_to_string(tasks.clone(),"simulation_cw20 uusd m_spy",false,2)));
     market_tasks.push(t);
     *offset += 1;
 
@@ -606,7 +606,7 @@ pub async fn display_market_info(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
     *offset += 1;
 
     market_view.push(("--".purple().to_string(),*offset));
-    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(simulation_swap_return_amount_to_string(tasks.clone(),"simulation_cw20 uusd m_btc",2)));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(simulation_swap_return_amount_to_string(tasks.clone(),"simulation_cw20 uusd m_btc",false,2)));
     market_tasks.push(t);
     *offset += 1;
      
@@ -614,7 +614,7 @@ pub async fn display_market_info(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
     *offset += 1;
 
     market_view.push(("--".purple().to_string(),*offset));
-    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(simulation_swap_return_amount_to_string(tasks.clone(),"simulation_cw20 uusd m_eth",2)));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(simulation_swap_return_amount_to_string(tasks.clone(),"simulation_cw20 uusd m_eth",false,2)));
     market_tasks.push(t);
     *offset += 1; 
 

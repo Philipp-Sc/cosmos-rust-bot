@@ -16,7 +16,9 @@ use services::blockchain::smart_contracts::objects::meta::api::{fetch_gas_price,
 use services::{
     query_api_distribution_apy,
     query_api_gov_reward,
-    query_anchor_airdrops};
+    query_anchor_airdrops,
+    query_api_anc_ust_lp_reward,
+    query_api_spec_anc_ust_lp_reward};
 
 
 use services::blockchain::{ 
@@ -554,6 +556,28 @@ pub async fn await_function(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,
                        
                             map.insert("api/v2/distribution-apy".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
                     },
+                    "api/data?type=lpVault" => { 
+                        let handle = tokio::spawn(async move { 
+                            {    
+                                
+                                return query_api_spec_anc_ust_lp_reward().await;   
+                            }
+                        });
+                       
+                            map.insert("api/data?type=lpVault".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
+                         
+                    },  
+                    "api/v2/ust-lp-reward" => { 
+                        let handle = tokio::spawn(async move { 
+                            {    
+                                
+                                return query_api_anc_ust_lp_reward().await;   
+                            }
+                        });
+                       
+                            map.insert("api/v2/ust-lp-reward".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
+                         
+                    }, 
                     "api/v2/gov-reward" => { 
                         let handle = tokio::spawn(async move { 
                             {    
@@ -633,6 +657,16 @@ pub async fn await_function(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,
                             }
                         });
                             map.insert("anchor_protocol_txs_provide_liquidity".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
+                         
+                    }, 
+                    "txs_provide_to_spec_anc_ust_vault" => {  
+                        let handle = tokio::spawn(async move { 
+                            {    
+                                
+                                return get_block_txs_fee_data("provide_to_spec_anc_ust_vault").await;   
+                            }
+                        });
+                            map.insert("txs_provide_to_spec_anc_ust_vault".to_string(), MaybeOrPromise::Data(QueryData::Task(handle)));
                          
                     }, 
                     "anchor_protocol_txs_staking_lp" => {  

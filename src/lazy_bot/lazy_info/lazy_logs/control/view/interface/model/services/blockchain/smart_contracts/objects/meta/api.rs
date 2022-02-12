@@ -148,6 +148,16 @@ pub async fn query_api(api: &str) -> anyhow::Result<String> {
 	let response = reqwest::get(api).await?.text().await?; 
     Ok(response)
 }
+
+pub async fn query_api_with_post(api: &str, body: &str) -> anyhow::Result<String> {
+	let client = reqwest::Client::new();
+	let res = client.post(api)
+	    .body(body.to_owned())
+	    .send()
+	    .await?
+	    .text().await?;  
+    Ok(res)
+}
  
 pub async fn get_fcd_query(contract_addr: &str, query_msg: &str) -> anyhow::Result<String> {
 	// https://docs.terraswap.io/docs/howto/query/   
