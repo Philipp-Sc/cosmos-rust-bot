@@ -9,7 +9,10 @@ edition = "2021"
 [[bin]] 
 name = "terra-rust-bot"
 
-[dependencies]
+[dependencies] 
+anchor-token = { git = "https://github.com/anchor-protocol/anchor-token-contracts" }
+moneymarket = { git = "https://github.com/Anchor-Protocol/money-market-contracts" }
+cw20-legacy = { version = "0.2.0", features = ["library"]}
 terra-rust-api="1.1.8"
 tokio = { version = "1.4", features = ["full"] }
 anyhow="1.0"  
@@ -21,6 +24,7 @@ secp256k1 = { version = "0.20.3", default-features = false }
 reqwest="0.11.6"   
 chrono = "0.4"
 enum-as-inner = "0.3.3" 
+cosmwasm-bignumber = "2.2.0"
 cosmwasm-std = "0.16"
 num-format = "0.4.0"
 secstr = "0.4.0"

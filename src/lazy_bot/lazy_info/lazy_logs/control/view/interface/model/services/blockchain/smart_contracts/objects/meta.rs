@@ -20,6 +20,19 @@ use core::str::FromStr;
 use anyhow::anyhow;
 
 
+use rust_decimal::prelude::ToPrimitive;
+use cosmwasm_bignumber::{Uint256};
+use cosmwasm_std::Uint128;
+
+use cosmwasm_std::{
+    to_binary
+};
+
+use cw20_legacy::msg::ExecuteMsg as LegacyExecuteMsg;
+use moneymarket::market::{ExecuteMsg,Cw20HookMsg};
+
+//use anchor_token::airdrop::{ExecuteMsg};
+
 /*
 fn anchor_liquidation_queue_withdraw_luna_msg(wallet_acc_address: &str, coin_amount: Decimal) -> anyhow::Result<Message> {
         let contract = get_contract("anchorprotocol","mmMarket"); 
@@ -35,6 +48,13 @@ fn anchor_liquidation_queue_withdraw_luna_msg(wallet_acc_address: &str, coin_amo
 
 fn anchor_claim_airdrop_msg(wallet_acc_address: &str, proof: &str, stage: u64, amount: &str) -> anyhow::Result<Message> {
         let contract = get_contract("anchorprotocol","airdrop"); 
+        
+        /*ExecuteMsg::Claim {
+            stage: stage,
+            amount: amount,
+            proof: proof,
+        }*/
+        //serde_json::to_string();
         let execute_msg_json = format!("{}{}{}{}{}{}{}", r##"{
                                         "claim": {
                                             "proof": "##,proof.replace("\\",""),r##",
@@ -53,27 +73,29 @@ fn anchor_claim_airdrop_msg(wallet_acc_address: &str, proof: &str, stage: u64, a
 
 fn anchor_repay_stable_msg(wallet_acc_address: &str, coin_amount: Decimal) -> anyhow::Result<Message> {
 		let contract = get_contract("anchorprotocol","mmMarket"); 
-        let execute_msg_json = r##"{"repay_stable":{}}"##;
+        let execute_msg = ExecuteMsg::RepayStable {};
+        let execute_msg_json = serde_json::to_string(&execute_msg)?;
         let coins: [Coin;1] = [Coin::create("uusd", coin_amount)];
-        let send = MsgExecuteContract::create_from_json(&wallet_acc_address, &contract, execute_msg_json, &coins)?;
+        let send = MsgExecuteContract::create_from_json(&wallet_acc_address, &contract, &execute_msg_json, &coins)?;
         return Ok(send);
 }
 
 fn anchor_deposit_stable_msg(wallet_acc_address: &str, coin_amount: Decimal) -> anyhow::Result<Message> {
         let contract = get_contract("anchorprotocol","mmMarket"); 
-        let execute_msg_json = r##"{"deposit_stable":{}}"##;
+        let execute_msg = ExecuteMsg::DepositStable {};
+        let execute_msg_json = serde_json::to_string(&execute_msg)?;
         let coins: [Coin;1] = [Coin::create("uusd", coin_amount)];
-        let send = MsgExecuteContract::create_from_json(&wallet_acc_address, &contract, execute_msg_json, &coins)?;
+        let send = MsgExecuteContract::create_from_json(&wallet_acc_address, &contract, &execute_msg_json, &coins)?;
         return Ok(send);
 }
 
 fn anchor_borrow_stable_msg(wallet_acc_address: &str, coin_amount: Decimal) -> anyhow::Result<Message> {
         let contract = get_contract("anchorprotocol","mmMarket"); 
-        let execute_msg_json = format!("{}{}{}", r##"{
-                                        "borrow_stable": {
-                                            "borrow_amount": ""##,coin_amount.to_string().as_str(),r##""
-                                        }
-                                    }"##);
+        let execute_msg = ExecuteMsg::BorrowStable {
+            borrow_amount: Uint256::from(coin_amount.to_u128().ok_or(anyhow!("incorrect coin_amount format"))?),
+            to: None,
+        };
+        let execute_msg_json = serde_json::to_string(&execute_msg)?;
         let coins: [Coin;0] = []; // no coins needed
         let send = MsgExecuteContract::create_from_json(&wallet_acc_address, &contract, &execute_msg_json, &coins)?;
         return Ok(send);
@@ -83,6 +105,18 @@ fn anchor_redeem_stable_msg(wallet_acc_address: &str, coin_amount: Decimal) -> a
 		let contract_addr_a_ust = get_contract("anchorprotocol","aTerra"); 
 		let contract_addr_mm_market = get_contract("anchorprotocol","mmMarket"); 
         let coins: [Coin;0] = []; // no coins needed
+
+/*
+https://github.com/Anchor-Protocol/money-market-contracts/blob/fd70cc551dbe81d655cabf09808203fa88c0c38a/contracts/market/src/testing/tests.rs
+        let msg = Cw20HookMsg::RedeemStable {};
+
+        let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
+            sender: "addr0000".to_string(),
+            amount: Uint128::from(1000000u128),
+            msg: to_binary(&Cw20HookMsg::RedeemStable {}).unwrap(),
+        });
+*/
+
         /* JSON: "{"redeem_stable":{}}"
   		 * Base64-encoded JSON: "eyJyZWRlZW1fc3RhYmxlIjp7fX0="
   		 */
@@ -99,7 +133,10 @@ fn anchor_redeem_stable_msg(wallet_acc_address: &str, coin_amount: Decimal) -> a
 
 fn anchor_governance_claim_msg(wallet_acc_address: &str) -> anyhow::Result<Message> {
 		let contract_addr_mm_market = get_contract("anchorprotocol","mmMarket"); 
-        let execute_msg_json = r##"{"claim_rewards":{}}"##;
+
+        let execute_msg = ExecuteMsg::ClaimRewards { to: None };
+        let execute_msg_json = serde_json::to_string(&execute_msg)?; 
+
         let coins: [Coin;0] = []; // no coins needed
         let send = MsgExecuteContract::create_from_json(&wallet_acc_address, &contract_addr_mm_market, &execute_msg_json, &coins)?;
         return Ok(send);
@@ -151,12 +188,14 @@ fn anchor_increase_allowance_msg(wallet_acc_address: &str, coin_amount: Decimal)
         let contract_addr_anc = get_contract("anchorprotocol","ANC"); 
         let contract_addr_lp = get_contract("anchorprotocol","SPEC ANC-UST VAULT");    
         let coins: [Coin;0] = []; // no coins needed 
-        let execute_msg_json = format!("{}{}{}{}{}",r##"{
-                                      "increase_allowance": {
-                                        "amount": ""##,coin_amount.to_string().as_str(),r##"",
-                                        "spender": ""##,contract_addr_lp,r##""
-                                      }
-                                    }"##);
+
+        let execute_msg = LegacyExecuteMsg::IncreaseAllowance {
+            spender: contract_addr_lp,
+            amount: Uint128::from(coin_amount.to_u128().ok_or(anyhow!("incorrect coin_amount format"))?),
+            expires: None,
+        };
+
+        let execute_msg_json = serde_json::to_string(&execute_msg)?; 
         let send = MsgExecuteContract::create_from_json(&wallet_acc_address, &contract_addr_anc, &execute_msg_json, &coins)?;
         return Ok(send);  
 } 
