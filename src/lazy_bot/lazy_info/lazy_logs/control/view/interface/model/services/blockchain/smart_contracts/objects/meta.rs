@@ -1,6 +1,10 @@
 /*
  * terra-rust-api utilitiy functions to estimate/execute transactions.
  *
+ * https://docs.rs/cw20/0.8.0/cw20/enum.Cw20ExecuteMsg.html
+ * https://github.com/Anchor-Protocol
+ * https://github.com/astroport-fi/astroport-core/
+ * https://github.com/spectrumprotocol/contracts/
  */
 
 pub mod api;
@@ -22,14 +26,15 @@ use anyhow::anyhow;
 
 use rust_decimal::prelude::ToPrimitive;
 use cosmwasm_bignumber::{Uint256};
-use cosmwasm_std::Uint128;
+use cosmwasm_std::{to_binary,Uint128};
 
-use cosmwasm_std::{
-    to_binary
-};
+//use cosmwasm_std::Binary;
+// Binary::from_base64(&base64::encode(msg))?
 
-use cw20_legacy::msg::ExecuteMsg as LegacyExecuteMsg;
-use moneymarket::market::{ExecuteMsg,Cw20HookMsg};
+use cw20::Cw20ExecuteMsg;
+use moneymarket::market::ExecuteMsg; 
+use terraswap::asset::{Asset,AssetInfo};
+
 
 //use anchor_token::airdrop::{ExecuteMsg};
 
@@ -105,28 +110,16 @@ fn anchor_redeem_stable_msg(wallet_acc_address: &str, coin_amount: Decimal) -> a
 		let contract_addr_a_ust = get_contract("anchorprotocol","aTerra"); 
 		let contract_addr_mm_market = get_contract("anchorprotocol","mmMarket"); 
         let coins: [Coin;0] = []; // no coins needed
-
-/*
-https://github.com/Anchor-Protocol/money-market-contracts/blob/fd70cc551dbe81d655cabf09808203fa88c0c38a/contracts/market/src/testing/tests.rs
-        let msg = Cw20HookMsg::RedeemStable {};
-
-        let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
-            sender: "addr0000".to_string(),
-            amount: Uint128::from(1000000u128),
-            msg: to_binary(&Cw20HookMsg::RedeemStable {}).unwrap(),
-        });
-*/
-
+ 
+        let execute_msg = Cw20ExecuteMsg::Send {
+            contract: contract_addr_mm_market,
+            amount: Uint128::from(coin_amount.to_u128().ok_or(anyhow!("incorrect coin_amount format"))?),
+            msg: to_binary(&moneymarket::market::Cw20HookMsg::RedeemStable {}).unwrap()
+        };
         /* JSON: "{"redeem_stable":{}}"
   		 * Base64-encoded JSON: "eyJyZWRlZW1fc3RhYmxlIjp7fX0="
   		 */
-        let execute_msg_json = format!("{}{}{}{}{}",r##"{
-									  "send": {
-									    "msg": "eyJyZWRlZW1fc3RhYmxlIjp7fX0=",
-									    "amount": ""##,coin_amount.to_string().as_str(),r##"",
-									    "contract": ""##,contract_addr_mm_market,r##""
-									  }
-									}"##);
+        let execute_msg_json = serde_json::to_string(&execute_msg)?;
         let send = MsgExecuteContract::create_from_json(&wallet_acc_address, &contract_addr_a_ust, &execute_msg_json, &coins)?;
         return Ok(send);
 }
@@ -146,17 +139,17 @@ fn anchor_governance_stake_msg(wallet_acc_address: &str, coin_amount: Decimal) -
 		let contract_addr_anc = get_contract("anchorprotocol","ANC"); 
 	 	let contract_addr_gov = get_contract("anchorprotocol","gov"); 	 
         let coins: [Coin;0] = []; // no coins needed
+        
+        let execute_msg = Cw20ExecuteMsg::Send {
+            contract: contract_addr_gov,
+            amount: Uint128::from(coin_amount.to_u128().ok_or(anyhow!("incorrect coin_amount format"))?),
+            msg: to_binary(&anchor_token::gov::Cw20HookMsg::StakeVotingTokens {}).unwrap()
+        };
         /* JSON: "{"stake_voting_tokens":{}}"
-  		 * Base64-encoded JSON: "eyJzdGFrZV92b3RpbmdfdG9rZW5zIjp7fX0="
-  		 */
-        let execute_msg_json = format!("{}{}{}{}{}",r##"{
-									  "send": {
-									    "msg": "eyJzdGFrZV92b3RpbmdfdG9rZW5zIjp7fX0=",
-									    "amount": ""##,coin_amount.to_string().as_str(),r##"",
-									    "contract": ""##,contract_addr_gov,r##""
-									  }
-									}"##);
+         * Base64-encoded JSON: "eyJzdGFrZV92b3RpbmdfdG9rZW5zIjp7fX0="
+         */
 
+        let execute_msg_json = serde_json::to_string(&execute_msg)?; 
         let send = MsgExecuteContract::create_from_json(&wallet_acc_address, &contract_addr_anc, &execute_msg_json, &coins)?;
         return Ok(send);  
 }
@@ -165,32 +158,31 @@ fn astroport_swap_msg(wallet_acc_address: &str, coin_amount: Decimal, max_spread
         let contract_addr_anc = get_contract("anchorprotocol","ANC"); 
         let contract_addr_lp = get_contract("anchorprotocol","ANC-UST LP Minter");    
         let coins: [Coin;0] = []; // no coins needed 
-        let msg = format!("{}{}{}{}{}",r##"{
-            "swap":
-                {
-                    "max_spread":""##,max_spread.to_string().as_str(),r##"",
-                    "belief_price":""##,belief_price.round_dp_with_strategy(18, rust_decimal::RoundingStrategy::ToZero).to_string().as_str(),r##""
-                }
-            }"##);
-        let execute_msg_json = format!("{}{}{}{}{}{}{}",r##"{
-                                      "send": {
-                                        "msg": ""##,base64::encode(msg),r##"",
-                                        "amount": ""##,coin_amount.to_string().as_str(),r##"",
-                                        "contract": ""##,contract_addr_lp,r##""
-                                      }
-                                    }"##);
+
+        let msg = astroport::pair::Cw20HookMsg::Swap { 
+            belief_price: Some(cosmwasm_std::Decimal::from_str(belief_price.round_dp_with_strategy(18, rust_decimal::RoundingStrategy::ToZero).to_string().as_str())?),
+            max_spread: Some(cosmwasm_std::Decimal::from_str(max_spread.to_string().as_str())?),
+            to: None, 
+        };
+        
+        let execute_msg = Cw20ExecuteMsg::Send {
+            contract: contract_addr_lp,
+            amount: Uint128::from(coin_amount.to_u128().ok_or(anyhow!("incorrect coin_amount format"))?),
+            msg: to_binary(&msg).unwrap() 
+        };
+        let execute_msg_json = serde_json::to_string(&execute_msg)?; 
 
         let send = MsgExecuteContract::create_from_json(&wallet_acc_address, &contract_addr_anc, &execute_msg_json, &coins)?;
         return Ok(send);  
-} 
+}
 
 fn anchor_increase_allowance_msg(wallet_acc_address: &str, coin_amount: Decimal) -> anyhow::Result<Message> {
         let contract_addr_anc = get_contract("anchorprotocol","ANC"); 
-        let contract_addr_lp = get_contract("anchorprotocol","SPEC ANC-UST VAULT");    
+        let contract_addr_lp_1 = get_contract("anchorprotocol","SPEC ANC-UST VAULT (1)");    
         let coins: [Coin;0] = []; // no coins needed 
 
-        let execute_msg = LegacyExecuteMsg::IncreaseAllowance {
-            spender: contract_addr_lp,
+        let execute_msg = Cw20ExecuteMsg::IncreaseAllowance {
+            spender: contract_addr_lp_1,
             amount: Uint128::from(coin_amount.to_u128().ok_or(anyhow!("incorrect coin_amount format"))?),
             expires: None,
         };
@@ -202,34 +194,33 @@ fn anchor_increase_allowance_msg(wallet_acc_address: &str, coin_amount: Decimal)
 
 fn anchor_provide_to_spec_vault_msg(wallet_acc_address: &str, anc_to_keep: Decimal, ust_to_keep: Decimal) -> anyhow::Result<Message> {
         let contract_addr_anc = get_contract("anchorprotocol","ANC"); 
-        let contract_addr_lp = get_contract("anchorprotocol","SPEC ANC-UST VAULT");    
+        let contract_addr_lp_1 = get_contract("anchorprotocol","SPEC ANC-UST VAULT (1)");    
+        let contract_addr_lp_2 = get_contract("anchorprotocol","SPEC ANC-UST VAULT (2)");   
         let coins: [Coin;1] = [Coin::create("uusd", ust_to_keep)];
-        let execute_msg_json = format!("{}{}{}{}{}",r##"{
-              "bond": {
-                "assets": [
-                  {
-                    "amount": ""##,anc_to_keep.to_string().as_str(),r##"",
-                    "info": {
-                      "token": {
-                        "contract_addr": "terra14z56l0fp2lsf86zy3hty2z47ezkhnthtr9yq76"
-                      }
-                    }
-                  },
-                  {
-                    "amount": ""##,ust_to_keep.to_string().as_str(),r##"",
-                    "info": {
-                      "native_token": {
-                        "denom": "uusd"
-                      }
-                    }
-                  }
-                ],
-                "compound_rate": "1",
-                "contract": "terra1ukm33qyqx0qcz7rupv085rgpx0tp5wzkhmcj3f",
-                "slippage_tolerance": "0.01"
-              }
-            }"##);
-        let send = MsgExecuteContract::create_from_json(&wallet_acc_address, &contract_addr_lp, &execute_msg_json, &coins)?;
+
+        let execute_msg = spectrum_protocol::staker::ExecuteMsg::bond {
+            contract: contract_addr_lp_2,
+            assets: [
+                Asset {
+                    info: AssetInfo::Token {
+                        contract_addr: contract_addr_anc,
+                    },
+                    amount: Uint128::from(anc_to_keep.to_u128().ok_or(anyhow!("incorrect ust_to_keep format"))?),
+                },
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uusd".to_string(),
+                    },
+                    amount: Uint128::from(ust_to_keep.to_u128().ok_or(anyhow!("incorrect ust_to_keep format"))?),
+                },
+            ],
+            slippage_tolerance: cosmwasm_std::Decimal::from_str("0.01").unwrap(),
+            compound_rate: Some(cosmwasm_std::Decimal::percent(100u64)),
+            staker_addr: None,
+        };
+
+        let execute_msg_json = serde_json::to_string(&execute_msg)?; 
+        let send = MsgExecuteContract::create_from_json(&wallet_acc_address, &contract_addr_lp_1, &execute_msg_json, &coins)?;
         return Ok(send);  
 } 
 

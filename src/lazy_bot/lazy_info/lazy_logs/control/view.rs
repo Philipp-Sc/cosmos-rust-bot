@@ -526,6 +526,7 @@ pub async fn check_anchor_loan_status(tasks: Arc<RwLock<HashMap<String, MaybeOrP
 // for farming:
 // the apy is a function dependend of the amount of days
 // (1+ 0.21 (dpr)) ^ days
+// 120% / Math.pow(1+(compounded_daily_rate),number_of_days)
 pub async fn estimate_anchor_protocol_next_claim_and_stake_tx(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, field_type: &str, field_amount: &str, field: &str, digits_rounded_to: u32) -> String {
   
 

@@ -11,8 +11,11 @@ name = "terra-rust-bot"
 
 [dependencies] 
 anchor-token = { git = "https://github.com/anchor-protocol/anchor-token-contracts" }
-moneymarket = { git = "https://github.com/Anchor-Protocol/money-market-contracts" }
-cw20-legacy = { version = "0.2.0", features = ["library"]}
+moneymarket = { git = "https://github.com/Anchor-Protocol/money-market-contracts" } 
+astroport = { git = "https://github.com/astroport-fi/astroport-core" } 
+terraswap = "2.4.0"
+spectrum-protocol = { git = "https://github.com/spectrumprotocol/contracts" } 
+cw20 = "0.8.0"
 terra-rust-api="1.1.8"
 tokio = { version = "1.4", features = ["full"] }
 anyhow="1.0"  
