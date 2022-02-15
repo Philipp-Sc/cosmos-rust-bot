@@ -25,6 +25,12 @@
  
 ## Features 
 
+
+### Anchor Auto Farm Rewards
+
+ <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/main/terra-rust-bot_v0.3_auto_farm.png" width="380">
+  
+ Checks your pending borrower ANC rewards, considers the gas fees and provides them to the Astroport ANC-UST LP at Spectrum Protocol.
  
 ### Anchor Auto Stake Rewards
 
@@ -156,6 +162,8 @@
 
  * `./terra-rust-bot -b anchor_auto_stake -d test dev` (read only, remove `test` to let the bot sign transactions)
 
+ * `./terra-rust-bot -b anchor_auto_lp -d test dev`  
+ 
  * `./terra-rust-bot -b anchor_auto_repay -d test dev`  
  
  * `./terra-rust-bot -b anchor_auto_borrow -d test dev` 
