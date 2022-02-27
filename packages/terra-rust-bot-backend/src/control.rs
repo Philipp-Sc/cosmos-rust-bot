@@ -5,7 +5,7 @@ use secstr::*;
 
 use rust_decimal::Decimal;
 use core::str::FromStr; 
-use view::interface::model::services::blockchain::smart_contracts::objects::meta::{
+use terra_rust_api_layer::services::blockchain::smart_contracts::objects::meta::{
 	anchor_borrow_and_deposit_stable_tx,
 	anchor_redeem_and_repay_stable_tx, 
 	anchor_repay_stable_tx, 
@@ -32,7 +32,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock; 
 
 
-use view::interface::model::services::blockchain::smart_contracts::objects::meta::api::data::wallet::{decrypt_text_with_secret};
+use view::interface::model::wallet::{decrypt_text_with_secret};
 
 
 macro_rules! decimal_or_return {
@@ -54,11 +54,29 @@ macro_rules! decimal_or_return_str {
         }
     }
 } 
+ 
+pub async fn anchor_claim_and_stake_airdrops(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> String {
+		let max_tx_fee = decimal_or_return!(max_tx_fee_to_string(tasks.clone(), 4).await.as_ref());
+		let balance = decimal_or_return!(terra_balance_to_string(tasks.clone(),"uusd",false,2).await.as_ref());
+	 	let min_ust_balance = decimal_or_return!(min_ust_balance_to_string(tasks.clone(),false,2).await.as_ref());
 
+	 	if balance < min_ust_balance || balance < max_tx_fee {
+	 		return "Insufficient UST balance, replenish your account!".to_string();
+	 	}
 
-pub async fn anchor_claim_and_stake_airdrops(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,wallet_acc_address: &str /* wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool*/) -> String {
-
-
+	 	// making sure the data is not outdated
+	    match get_meta_data_maybe(&tasks, "latest_transaction").await {
+	    	Ok(maybe) => {
+	    		let req: [&str;2] = ["terra_balances","anchor_airdrops"];
+	    		if get_oldest_timestamps_of_resolved_tasks(&tasks,&req).await <= maybe.timestamp + 10 {
+	    			return "waiting for data to refresh..".to_string();
+	    		}
+	    	},
+	    	Err(_) => {
+	    		// no previous transaction, free to continue.
+	    	}
+	    }
+ 
         match get_data_maybe_or_meta_data_maybe(&tasks,"anchor_airdrops").await {
             Ok(res) => {
                 let anchor_airdrops = res.as_airdrop_response().unwrap();  
@@ -72,10 +90,29 @@ pub async fn anchor_claim_and_stake_airdrops(tasks: Arc<RwLock<HashMap<String, M
                     	vec_amount.push(anchor_airdrops[i].amount.to_owned()); 
                     }
                 }
-                let gas_adjustment = Decimal::from_str("1.0").unwrap();
-                let max_tx_fee = Decimal::from_str("5").unwrap();
-                let gas_fees_uusd = Decimal::from_str("0.15").unwrap();
-                return format!("{:?}",anchor_claim_and_stake_airdrop_tx(wallet_acc_address,&vec_proof, &vec_stage, &vec_amount, gas_fees_uusd, max_tx_fee, gas_adjustment).await);
+                if vec_amount.len() == 0 {
+                	return "waiting for airdrops..".to_string();
+                }
+                let gas_adjustment_preference = decimal_or_return!(gas_adjustment_preference_to_string(tasks.clone(),10).await.as_ref());
+                let gas_fees_uusd = decimal_or_return!(gas_price_to_string(tasks.clone(),10).await.as_ref());
+
+                let mnemonics = match only_estimate {
+					true => {wallet_acc_address.unsecure().to_string()},
+					false => {decrypt_text_with_secret(&wallet_seed_phrase)}
+				};
+
+                match anchor_claim_and_stake_airdrop_tx(&mnemonics,&vec_proof, &vec_stage, &vec_amount, gas_fees_uusd, max_tx_fee, gas_adjustment_preference,only_estimate).await {
+		        	Ok(msg) => {
+		        		register_value(&tasks,"anchor_auto_stake_airdrops".to_string(),msg.to_owned()).await;
+		        		register_value(&tasks,"latest_transaction".to_string(),msg.to_owned()).await;
+		        		return msg;
+		        	},
+		        	Err(msg) => {
+		        		register_value(&tasks,"anchor_auto_stake_airdrops".to_string(),msg.to_string().to_owned()).await;
+		        		register_value(&tasks,"latest_transaction".to_string(),msg.to_string().to_owned()).await;
+		        		return msg.to_string();
+		        	}
+		        }; 
                 //return serde_json::to_string_pretty(&vec_claims).unwrap_or("--".to_string());
  				
  				// checks if funds are enought to proceed
@@ -88,7 +125,7 @@ pub async fn anchor_claim_and_stake_airdrops(tasks: Arc<RwLock<HashMap<String, M
             }
         } 
 
-}
+} 
 
 
 

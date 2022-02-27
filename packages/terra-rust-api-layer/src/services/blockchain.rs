@@ -295,8 +295,8 @@ pub async fn get_block_txs_deposit_stable(height: u64) -> anyhow::Result<Respons
 
     while stablecoin_deposits.len()<1 && start.elapsed().as_secs()<60*3 {
 
-        let transactions = query_core_block_txs(height-count,None, Some(100)).await?; // terra_rust_api::client::tx_types::V1TXSResult
-        let tx_responses = transactions.tx_responses;
+        let transactions: terra_rust_api::client::tx_types::V1TXSResult = query_core_block_txs(height-count,None, Some(100)).await?; // terra_rust_api::client::tx_types::V1TXSResult
+        let tx_responses: Vec<terra_rust_api::client::tx_types::V1TXResponse> = transactions.tx_responses;
 
         for index in 0..tx_responses.len() {
             if tx_responses[index].raw_log.contains("deposit_stable") 
@@ -306,16 +306,18 @@ pub async fn get_block_txs_deposit_stable(height: u64) -> anyhow::Result<Respons
                 let mut mint_amount = "0".to_string();
                 let mut deposit_amount = "0".to_string();
 
-                let fist_tx_log: Log = serde_json::from_str(tx_responses[index].logs[0].to_string().as_str())?;
+                let first_tx_log: &Value = &tx_responses[index].logs[0];
+
+                let first_tx_log: Log = serde_json::from_str(first_tx_log.to_string().as_str())?;
                 
-                for i in 0..fist_tx_log.events.len() {
-                    if fist_tx_log.events[i].type_field == "wasm" {
-                        for ii in 0..fist_tx_log.events[i].attributes.len() {
-                            if fist_tx_log.events[i].attributes[ii].key == "mint_amount" {
-                                mint_amount = fist_tx_log.events[i].attributes[ii].value.to_owned();
+                for i in 0..first_tx_log.events.len() {
+                    if first_tx_log.events[i].type_field == "wasm" {
+                        for ii in 0..first_tx_log.events[i].attributes.len() {
+                            if first_tx_log.events[i].attributes[ii].key == "mint_amount" {
+                                mint_amount = first_tx_log.events[i].attributes[ii].value.to_owned();
                             }
-                            if fist_tx_log.events[i].attributes[ii].key == "deposit_amount" { 
-                                deposit_amount = fist_tx_log.events[i].attributes[ii].value.to_owned();   
+                            if first_tx_log.events[i].attributes[ii].key == "deposit_amount" { 
+                                deposit_amount = first_tx_log.events[i].attributes[ii].value.to_owned();   
                             }
                         }
                     }

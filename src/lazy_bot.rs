@@ -2,11 +2,11 @@ pub mod lazy_info;
 
 use secstr::*;
 use lazy_info::lazy_logs::display::*; 
-use lazy_info::lazy_logs::control::view::interface::model::{MaybeOrPromise,try_register_function,await_function};
+use terra_rust_bot_backend::control::view::interface::model::{MaybeOrPromise,try_register_function,await_function};
   
-use lazy_info::lazy_logs::control::view::*;
-use lazy_info::lazy_logs::control::view::interface::*;
-use lazy_info::lazy_logs::control::*;
+use terra_rust_bot_backend::control::view::*;
+use terra_rust_bot_backend::control::view::interface::*;
+use terra_rust_bot_backend::control::*;
 
 use std::collections::HashMap;
 use core::pin::Pin;

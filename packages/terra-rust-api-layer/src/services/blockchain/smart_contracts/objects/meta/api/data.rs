@@ -1,6 +1,5 @@
 pub mod terra_contracts;
-pub mod endpoints;
-pub mod wallet;
+pub mod endpoints; 
 
 use serde::Deserialize;
 use serde::Serialize;

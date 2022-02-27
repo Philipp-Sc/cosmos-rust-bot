@@ -1,11 +1,10 @@
 pub mod display; 
-pub mod control;
 
  
 use display::*; 
-use control::view::interface::model::{MaybeOrPromise};
+use terra_rust_bot_backend::control::view::interface::model::{MaybeOrPromise};
   
-use control::view::*;  
+use terra_rust_bot_backend::control::view::*;  
 
 use std::collections::HashMap;  
 

@@ -21,6 +21,11 @@ use moneymarket::overseer::QueryMsg as OverseerQueryMsg;
 use anchor_token::collector::QueryMsg as CollectorQueryMsg;
 use anchor_token::gov::QueryMsg as GovQueryMsg;
 
+use anchor_token::airdrop::QueryMsg as AirdropQueryMsg;
+use anchor_token::airdrop::IsClaimedResponse;
+
+
+
 use mirror_protocol::oracle::QueryMsg as MirrorOracleQueryMsg;
 
 use cw20::Cw20QueryMsg;
@@ -39,15 +44,16 @@ use std::str::FromStr;
 
 
 pub async fn airdrop_is_claimed(wallet_acc_address: &str, stage: u64) -> anyhow::Result<ResponseResult> {
-    let query = r#"{"is_claimed":{"stage":stage_id,"address":"wallet_acc_address"}}"#
-                .replace("stage_id", &stage.to_string()) 
-                .replace("wallet_acc_address", &wallet_acc_address);
-
     let contract_addr = get_contract("anchorprotocol","airdrop");
+   
+    let query = AirdropQueryMsg::IsClaimed {
+                    stage: stage as u8,
+                    address: wallet_acc_address.to_string(),
+    };
+    let query_msg_json = serde_json::to_string(&query)?;
     
-    let res: String = get_fcd_or_lcd_query(&contract_addr,&query).await?; 
-    
-    let response: Response<IsClaimedResult> = serde_json::from_str(&res)?;
+    let res: String = get_fcd_or_lcd_query(&contract_addr,&query_msg_json).await?; 
+    let response: Response<IsClaimedResponse> = serde_json::from_str(&res)?; 
     Ok(ResponseResult::IsClaimedResponse(response))
 }
 

@@ -5,6 +5,9 @@ use serde::Serialize;
 use cosmwasm_std::{Uint128,Uint256,Decimal256,Decimal}; 
 use enum_as_inner::EnumAsInner;   
 
+
+use anchor_token::airdrop::IsClaimedResponse;
+
 #[derive(Debug, Clone, Serialize, Deserialize, EnumAsInner)]  
 pub enum ResponseResult {
     Text(String),
@@ -30,15 +33,8 @@ pub enum ResponseResult {
     TaxRate(Response<String>),
     TaxCaps(Response<Vec<TaxCap>>),
     AirdropResponse(AnchorAirdrops),
-    IsClaimedResponse(Response<IsClaimedResult>),
+    IsClaimedResponse(Response<IsClaimedResponse>),
     AnchorWhitelistResponse(Response<AnchorWhitelistResult>)
-}
-
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct IsClaimedResult {
-    #[serde(rename = "is_claimed")]
-    pub is_claimed: bool,
 }
 
 

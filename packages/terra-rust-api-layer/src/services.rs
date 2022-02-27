@@ -58,7 +58,7 @@ pub async fn query_anchor_airdrops(wallet_acc_address: &str) ->  anyhow::Result<
         res[i].claimable = match airdrop_is_claimed(wallet_acc_address,res[i].stage).await {
             Ok(response_result) => {response_result.as_is_claimed_response().unwrap().result.is_claimed == false},
             Err(_) => {false},
-        } ;
-    }
+        };
+    } 
     Ok(ResponseResult::AirdropResponse(res))
 }

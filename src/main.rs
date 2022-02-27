@@ -1,3 +1,12 @@
+use terra_rust_bot_backend::control::view::{timestamp_now_to_string}; 
+use terra_rust_bot_backend::control::view::interface::model::{UserSettings,MaybeOrPromise,requirements,get_keys_of_running_tasks,get_keys_of_failed_tasks,await_running_tasks,get_timestamps_of_resolved_tasks};
+use terra_rust_bot_backend::control::view::interface::model::requirements::{my_requirement_keys, my_requirement_list};
+use terra_rust_bot_backend::control::view::interface::model::wallet::{encrypt_text_with_secret,decrypt_text_with_secret};
+use terra_rust_bot_backend::control::anchor_claim_and_stake_airdrops;
+
+use terra_rust_api_layer::services::blockchain::smart_contracts::objects::meta::api::{get_from_account};
+
+
 mod simple_user_input;
 use simple_user_input::get_input; 
 
@@ -6,11 +15,9 @@ use lazy_bot::*;
 use lazy_bot::lazy_info::*;
 use lazy_bot::lazy_info::lazy_logs::*;
 use lazy_bot::lazy_info::lazy_logs::display::{add_string_to_display,try_add_to_display};
-use lazy_bot::lazy_info::lazy_logs::control::view::{timestamp_now_to_string}; 
-use lazy_bot::lazy_info::lazy_logs::control::view::interface::model::requirements::{my_requirement_keys, my_requirement_list};
-use lazy_bot::lazy_info::lazy_logs::control::view::interface::model::{UserSettings,MaybeOrPromise,requirements,get_keys_of_running_tasks,get_keys_of_failed_tasks,await_running_tasks,get_timestamps_of_resolved_tasks};
-use lazy_bot::lazy_info::lazy_logs::control::view::interface::model::services::blockchain::smart_contracts::objects::meta::api::{get_from_account};
-use lazy_bot::lazy_info::lazy_logs::control::view::interface::model::services::blockchain::smart_contracts::objects::meta::api::data::wallet::{encrypt_text_with_secret,decrypt_text_with_secret};
+
+
+
 
 use std::env;
 use secstr::*;
@@ -55,14 +62,10 @@ extern crate num_cpus;
 // TODO: Long term this will be easier to maintain, and make it much easier to write forks or extensions.
 
 
-#[macro_use]
-extern crate litcrypt;
-//https://github.com/anvie/litcrypt.rs
-use_litcrypt!();
+
 
 /*
 async fn test() -> anyhow::Result<()> {
-    
     let mut tx_data: Vec<String> = Vec::new();
     let mut temp_offset = "0".to_string(); 
     let mut err_count = 0;
@@ -98,9 +101,6 @@ async fn test() -> anyhow::Result<()> {
 
  #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-
-        //test().await.ok();
-        //loop{}
 
         /* Load user settings */
         let mut terra_rust_bot_json_loaded = "terra-rust-bot.json not loaded";
@@ -366,8 +366,9 @@ async fn main() -> anyhow::Result<()> {
                         timestamps_display[t.0] = now;
                     }  
                 }  
-                
-            }   
+            }
+
+            //println!("{:?}", anchor_claim_and_stake_airdrops(tasks.clone(),"***REMOVED***").await); 
             display_all_logs(&tasks ,&new_display, &mut offset, &args_b).await;
             
             display_all_errors(&tasks, &*req_unresolved ,&new_display, &mut offset).await;

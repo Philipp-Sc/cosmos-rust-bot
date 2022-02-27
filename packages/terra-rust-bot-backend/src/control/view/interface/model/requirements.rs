@@ -13,17 +13,17 @@ pub fn requirement_list() ->  Vec<(&'static str, i32, Vec<&'static str>)>  {
         ("trigger_percentage", fast, vec!["anchor_account","anchor_auto_repay"]),
         ("target_percentage", fast, vec!["anchor_auto_repay","anchor_auto_borrow"]),
         ("borrow_percentage", fast, vec!["anchor_auto_borrow"]),
-        ("max_gas_adjustment", fast, vec!["anchor_account","anchor_auto_lp","anchor_auto_stake","anchor_auto_repay","anchor_auto_borrow"]),
-        ("gas_adjustment_preference",fast, vec!["anchor_account","anchor_auto_lp","anchor_auto_stake","anchor_auto_repay","anchor_auto_borrow"]),
-        ("min_ust_balance", fast, vec!["anchor_account","anchor_auto_lp","anchor_auto_stake","anchor_auto_repay","anchor_auto_borrow"]),
+        ("max_gas_adjustment", fast, vec!["anchor_account","anchor_auto_lp","anchor_auto_stake","anchor_auto_stake_airdrops","anchor_auto_repay","anchor_auto_borrow"]),
+        ("gas_adjustment_preference",fast, vec!["anchor_account","anchor_auto_lp","anchor_auto_stake","anchor_auto_stake_airdrops","anchor_auto_repay","anchor_auto_borrow"]),
+        ("min_ust_balance", fast, vec!["anchor_account","anchor_auto_lp","anchor_auto_stake","anchor_auto_stake_airdrops","anchor_auto_repay","anchor_auto_borrow"]),
         ("ust_balance_preference", fast, vec!["anchor_auto_repay"]),
-        ("max_tx_fee", fast, vec!["anchor_auto_lp","anchor_auto_stake","anchor_auto_repay","anchor_auto_borrow"]),
+        ("max_tx_fee", fast, vec!["anchor_auto_lp","anchor_auto_stake","anchor_auto_stake_airdrops","anchor_auto_repay","anchor_auto_borrow"]),
         /* <for gas fees>*/
-        ("gas_fees_uusd", medium, vec!["market","anchor","anchor_account","anchor_auto_lp","anchor_auto_stake","anchor_auto_repay","anchor_auto_borrow"]),
+        ("gas_fees_uusd", medium, vec!["market","anchor","anchor_account","anchor_auto_lp","anchor_auto_stake","anchor_auto_stake_airdrops","anchor_auto_repay","anchor_auto_borrow"]),
         ("tax_rate", medium, vec!["anchor_auto_repay","anchor_auto_borrow"]),
         ("tax_caps", medium, vec!["anchor_auto_repay","anchor_auto_borrow"]),
         /**/
-        ("terra_balances", fast, vec!["anchor_auto_lp","anchor_auto_stake","anchor_auto_repay","anchor_auto_borrow"]),
+        ("terra_balances", fast, vec!["anchor_auto_lp","anchor_auto_stake","anchor_auto_stake_airdrops","anchor_auto_repay","anchor_auto_borrow"]),
         /* <market_info> */
         /* core_tokens */
         ("core_swap uusd usdr", fast, vec!["market"]),
@@ -53,7 +53,7 @@ pub fn requirement_list() ->  Vec<(&'static str, i32, Vec<&'static str>)>  {
         ("config anchorprotocol mmInterestModel", fast, vec!["anchor","anchor_account"]),
         //("config anchorprotocol collector",every_minute),
         /* <anchor_protocol account> */ 
-        ("anchor_airdrops", fast, vec!["anchor_account"]),
+        ("anchor_airdrops", fast, vec!["anchor_auto_stake_airdrops"]),
         ("borrow_limit", fast, vec!["anchor_account","anchor_auto_repay","anchor_auto_borrow"]),
         ("borrow_info", fast, vec!["anchor_account","anchor_auto_lp","anchor_auto_stake","anchor_auto_repay","anchor_auto_borrow"]),
         ("balance", fast, vec!["anchor_account","anchor_auto_repay","anchor_auto_borrow"]),

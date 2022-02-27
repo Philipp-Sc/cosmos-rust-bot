@@ -1,5 +1,4 @@
-
-pub mod services;
+pub mod wallet;
 pub mod requirements;
 use secstr::*;
 
@@ -10,10 +9,10 @@ use serde::Deserialize;
 use serde::Serialize;
 
 
-use services::blockchain::smart_contracts::objects::{ResponseResult};
-use services::blockchain::smart_contracts::objects::meta::api::{fetch_gas_price, get_gas_price}; 
+use terra_rust_api_layer::services::blockchain::smart_contracts::objects::{ResponseResult};
+use terra_rust_api_layer::services::blockchain::smart_contracts::objects::meta::api::{fetch_gas_price, get_gas_price}; 
  
-use services::{
+use terra_rust_api_layer::services::{
     query_api_distribution_apy,
     query_api_gov_reward,
     query_anchor_airdrops,
@@ -21,14 +20,14 @@ use services::{
     query_api_spec_anc_ust_lp_reward};
 
 
-use services::blockchain::{ 
+use terra_rust_api_layer::services::blockchain::{ 
     get_tax_rate,
     get_tax_caps,
     blocks_per_year_query,
     get_block_txs_deposit_stable_apy,
     get_block_txs_fee_data};
 
-use services::blockchain::smart_contracts::{
+use terra_rust_api_layer::services::blockchain::smart_contracts::{
     state_query_msg,
     epoch_state_query_msg,
     config_query_msg,

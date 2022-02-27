@@ -2,10 +2,10 @@ pub mod lazy_logs;
 
  
 use lazy_logs::display::*; 
-use lazy_logs::control::view::interface::model::{MaybeOrPromise};
+use terra_rust_bot_backend::control::view::interface::model::{MaybeOrPromise};
   
-use lazy_logs::control::view::*;
-use lazy_logs::control::view::interface::*; 
+use terra_rust_bot_backend::control::view::*;
+use terra_rust_bot_backend::control::view::interface::*; 
 
 use std::collections::HashMap;
 use core::pin::Pin;

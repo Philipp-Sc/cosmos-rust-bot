@@ -35,6 +35,9 @@ use cw20::Cw20ExecuteMsg;
 use moneymarket::market::ExecuteMsg; 
 use terraswap::asset::{Asset,AssetInfo};
 
+use anchor_token::airdrop::ExecuteMsg as AirdropExecuteMsg;
+
+
 
 //use anchor_token::airdrop::{ExecuteMsg};
 
@@ -52,24 +55,16 @@ fn anchor_liquidation_queue_withdraw_luna_msg(wallet_acc_address: &str, coin_amo
 }*/
 
 fn anchor_claim_airdrop_msg(wallet_acc_address: &str, proof: &str, stage: u64, amount: &str) -> anyhow::Result<Message> {
+        let proof_as_vector: Vec<String> = serde_json::from_str(proof)?; 
+
         let contract = get_contract("anchorprotocol","airdrop"); 
         
-        /*ExecuteMsg::Claim {
-            stage: stage,
-            amount: amount,
-            proof: proof,
-        }*/
-        //serde_json::to_string();
-        let execute_msg_json = format!("{}{}{}{}{}{}{}", r##"{
-                                        "claim": {
-                                            "proof": "##,proof.replace("\\",""),r##",
-                                            "stage": "##,stage,r##",
-                                            "amount": ""##,amount,r##""
-                                        }
-                                    }"##);
-        println!("{}",execute_msg_json);
-        println!("{}",proof);
-        println!("{}",proof.replace("\\",""));
+        let execute_msg = AirdropExecuteMsg::Claim {
+            amount: Uint128::from_str(amount)?,
+            stage: stage as u8,
+            proof: proof_as_vector,
+        };
+        let execute_msg_json = serde_json::to_string(&execute_msg)?;
         let coins: [Coin;0] = []; // no coins needed
         let send = MsgExecuteContract::create_from_json(&wallet_acc_address, &contract, &execute_msg_json, &coins)?;
         return Ok(send);
@@ -224,27 +219,52 @@ fn anchor_provide_to_spec_vault_msg(wallet_acc_address: &str, anc_to_keep: Decim
         return Ok(send);  
 } 
 
-pub async fn anchor_claim_and_stake_airdrop_tx(from_account: &str, proof: &Vec<String>, stage: &Vec<u64>, amount: &Vec<String>, gas_price_uusd: Decimal, max_tx_fee: Decimal, gas_adjustment: Decimal) -> anyhow::Result<String>{
+pub async fn anchor_claim_and_stake_airdrop_tx(mnemonics: &str, proof: &Vec<String>, stage: &Vec<u64>, amount: &Vec<String>, gas_price_uusd: Decimal, max_tx_fee: Decimal, gas_adjustment: Decimal,only_estimate: bool) -> anyhow::Result<String>{
  
+        let from_account = match mnemonics.len() {
+            44 => {
+                // wallet_acc_address
+                mnemonics.to_string()
+            },
+            _ => {
+                // seed phrase
+                let secp = Secp256k1::new();
+                let from_key = PrivateKey::from_words(&secp,mnemonics,0,0)?;
+                let from_public_key = from_key.public_key(&secp);
+                from_public_key.account()?
+            }
+        };
+
         let mut messages = Vec::new();
         let mut sum_anc: u64 = 0;
         for i in 0..stage.len() {
-            messages.push(anchor_claim_airdrop_msg(from_account,&proof[i], stage[i], &amount[i])?); 
+            messages.push(anchor_claim_airdrop_msg(&from_account,&proof[i], stage[i], &amount[i])?); 
             sum_anc += amount[i].parse::<u64>().unwrap_or(0u64);
         }
-        let send_stake = anchor_governance_stake_msg(from_account,Decimal::from_str(sum_anc.to_string().as_str())?)?;
+        let send_stake = anchor_governance_stake_msg(&from_account,Decimal::from_str(sum_anc.to_string().as_str())?)?;
         messages.push(send_stake);
 
-        let res = estimate_messages(from_account,messages,gas_price_uusd,gas_adjustment).await?;
+        ///println!("{}",serde_json::to_string(&messages)?);
 
-        let gas_opts = match estimate_to_gas_opts(res,true,max_tx_fee) {
+        let res = estimate_messages(&from_account,messages,gas_price_uusd,gas_adjustment).await?;
+
+        let gas_opts = match estimate_to_gas_opts(res,only_estimate,max_tx_fee) {
             Err(err) => {
                 return Err(anyhow!(format!("{:?} (gas_adjustment: {})",err,gas_adjustment)));
             },
             Ok(e) => {e}
         };
-        Ok("".to_string())
 
+        let mut messages = Vec::new();
+        let mut sum_anc: u64 = 0;
+        for i in 0..stage.len() {
+            messages.push(anchor_claim_airdrop_msg(&from_account,&proof[i], stage[i], &amount[i])?); 
+            sum_anc += amount[i].parse::<u64>().unwrap_or(0u64);
+        }
+        let send_stake = anchor_governance_stake_msg(&from_account,Decimal::from_str(sum_anc.to_string().as_str())?)?;
+        messages.push(send_stake);
+
+        execute_messages(mnemonics,messages,gas_opts).await
 }
 
 pub async fn anchor_borrow_and_deposit_stable_tx(mnemonics: &str, coin_amount_borrow: Decimal,coin_amount_deposit: Decimal, gas_price_uusd: Decimal, max_tx_fee: Decimal, gas_adjustment: Decimal, only_estimate: bool) -> anyhow::Result<String>{
