@@ -244,7 +244,7 @@ pub async fn anchor_claim_and_stake_airdrop_tx(mnemonics: &str, proof: &Vec<Stri
         let send_stake = anchor_governance_stake_msg(&from_account,Decimal::from_str(sum_anc.to_string().as_str())?)?;
         messages.push(send_stake);
 
-        ///println!("{}",serde_json::to_string(&messages)?);
+        //println!("{}",serde_json::to_string(&messages)?);
 
         let res = estimate_messages(&from_account,messages,gas_price_uusd,gas_adjustment).await?;
 

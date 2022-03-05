@@ -1,27 +1,37 @@
+mod simple_user_input;
+use simple_user_input::get_input; 
+
+use terra_rust_api_layer::services::blockchain::smart_contracts::objects::meta::api::{get_from_account};
+
 use terra_rust_bot_backend::control::view::{timestamp_now_to_string}; 
 use terra_rust_bot_backend::control::view::interface::model::{UserSettings,MaybeOrPromise,requirements,get_keys_of_running_tasks,get_keys_of_failed_tasks,await_running_tasks,get_timestamps_of_resolved_tasks};
 use terra_rust_bot_backend::control::view::interface::model::requirements::{my_requirement_keys, my_requirement_list};
 use terra_rust_bot_backend::control::view::interface::model::wallet::{encrypt_text_with_secret,decrypt_text_with_secret};
-use terra_rust_bot_backend::control::anchor_claim_and_stake_airdrops;
-
-use terra_rust_api_layer::services::blockchain::smart_contracts::objects::meta::api::{get_from_account};
+//use terra_rust_bot_backend::control::anchor_claim_and_stake_airdrops;
 
 
-mod simple_user_input;
-use simple_user_input::get_input; 
-
-mod lazy_bot; 
-use lazy_bot::*;
-use lazy_bot::lazy_info::*;
-use lazy_bot::lazy_info::lazy_logs::*;
-use lazy_bot::lazy_info::lazy_logs::display::{add_string_to_display,try_add_to_display};
+mod logging;
+use logging::logs::*;
+use logging::errors::*; 
 
 
+mod info;
+use info::anchor::general::*;
+use info::anchor::account::*;
+use info::market::general::*;
 
+
+mod bot;  
+use bot::auto_repay::*;
+use bot::auto_borrow::*;
+use bot::auto_stake::*;
+use bot::auto_farm::*; 
+
+
+use display_utils::display::{add_string_to_display,try_add_to_display};
 
 use std::env;
 use secstr::*;
-
 
 use rust_decimal::Decimal;
 use core::str::FromStr; 

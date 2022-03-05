@@ -6,7 +6,7 @@
 pub mod blockchain;
 
 use blockchain::smart_contracts::objects::*; 
-use blockchain::smart_contracts::objects::meta::api::{query_api,query_api_with_post};
+use blockchain::smart_contracts::objects::meta::api::{query_api,/*query_api_with_post*/};
 
 use blockchain::smart_contracts::{airdrop_is_claimed};
 

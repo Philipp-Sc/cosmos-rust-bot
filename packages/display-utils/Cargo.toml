@@ -1,28 +1,17 @@
 [package]
-name = "terra-rust-bot"
+name = "display-utils"
 authors = ["Philipp Schlütermann <philipp.schluetermann@udo.edu>"]
-description = "Lunatics understand the value that a powerful yield optimizing bot brings, as their ever-present gaze over the field of DeFi offers a strategic edge, and helps commanders keep their assets safe."
-repository = "https://github.com/Philipp-Sc/terra-rust-bot"
+description = "Display Utility Functions" 
 version = "0.3.0"
 edition = "2021"
  
-[[bin]] 
-name = "terra-rust-bot"
+[lib]
+crate-type = ["cdylib", "rlib"]
 
-[dependencies] 
-terra-rust-api-layer = { path = "./packages/terra-rust-api-layer"}
-terra-rust-bot-backend = { path = "./packages/terra-rust-bot-backend"}
-display-utils = { path = "./packages/display-utils"}
-
-tokio = { version = "1.4", features = ["full"] }
+[dependencies]  
+tokio = { version = "1.4", features = ["full"] }     
+colored = "2"   
 anyhow="1.0"  
-serde = { version = "1.0", features = ["derive"] } 
-serde_json = "1.0"
-rust_decimal="1.12.2"  
-chrono = "0.4"    
-secstr = "0.4.0" 
-colored = "2" 
-num_cpus = "1.13.1"   
 
 [profile.release]
 # Enable link-time optimization, eliminates more code and inlines across crate boundaries.
