@@ -27,18 +27,34 @@ use anchor_token::airdrop::IsClaimedResponse;
 
 
 use mirror_protocol::oracle::QueryMsg as MirrorOracleQueryMsg;
+use mirror_protocol::oracle::PriceResponse;
 
 use cw20::Cw20QueryMsg;
+use cw20::BalanceResponse;
 
 use terraswap::asset::{Asset,AssetInfo};
 use terraswap::pair::QueryMsg as TerraswapQueryMsg;
+use terraswap::pair::SimulationResponse as TerraswapSimulationResponse;
 
 use cosmwasm_std::{Uint128};
 use std::str::FromStr;
 
+use moneymarket::market::StateResponse as MarketStateResponse;
+
+use basset::hub::StateResponse as BassetHubStateResponse;
+
+use moneymarket::market::EpochStateResponse as MarketEpochStateResponse;
 
 
-//use moneymarket::market::{BorrowerInfoResponse, EpochStateResponse};
+use anchor_token::collector::ConfigResponse as CollectorConfigResponse;
+use moneymarket::interest_model::ConfigResponse as InterestModelConfigResponse;
+
+use moneymarket::market::BorrowerInfoResponse;
+use moneymarket::overseer::BorrowLimitResponse;
+
+use anchor_token::gov:: StakerResponse;
+
+use moneymarket::overseer::WhitelistResponse;
 
 // https://fcd.terra.dev/wasm/contracts/terra146ahqn6d3qgdvmj8cj96hh03dzmeedhsf0kxqm/store?query_msg={%22latest_stage%22:{}}
 
@@ -77,7 +93,7 @@ pub async fn state_query_msg(protocol: String, contract: String) -> anyhow::Resu
             let query_msg_json = serde_json::to_string(&query)?;
 
             let res: String = get_fcd_or_lcd_query(&contract_addr,&query_msg_json).await?; 
-            let response: Response<BLunaStateResponse> = serde_json::from_str(&res)?;
+            let response: Response<BassetHubStateResponse> = serde_json::from_str(&res)?;
             return Ok(ResponseResult::State(StateResponse::bLunaHub(response))); 
         },
         _ => {
@@ -167,7 +183,7 @@ pub async fn native_token_to_swap_pair(protocol: String, native_token: String, p
     let query_msg_json = serde_json::to_string(&query)?;
     
     let res: String = get_fcd_or_lcd_query(&contract_addr,&query_msg_json).await?; 
-    let res: Response<SimulationResponse> = serde_json::from_str(&res)?;
+    let res: Response<TerraswapSimulationResponse> = serde_json::from_str(&res)?;
     Ok(ResponseResult::Simulation(res))
 }
 
@@ -190,7 +206,7 @@ pub async fn cw20_to_swap_pair(protocol: String, token_contract: String, pair_co
     let query_msg_json = serde_json::to_string(&query)?;
 
     let res: String = get_fcd_or_lcd_query(&contract_addr,&query_msg_json).await?;
-    let res: Response<SimulationResponse> = serde_json::from_str(&res)?;
+    let res: Response<TerraswapSimulationResponse> = serde_json::from_str(&res)?;
     Ok(ResponseResult::Simulation(res))
 }
 pub async fn masset_to_ust(masset: String) -> anyhow::Result<ResponseResult> {
@@ -207,7 +223,7 @@ pub async fn masset_to_ust(masset: String) -> anyhow::Result<ResponseResult> {
     let query_msg_json = serde_json::to_string(&query)?;
 
     let res: String = get_fcd_or_lcd_query(&contract_addr,&query_msg_json).await?;
-    let res: Response<SimulationResponse> = serde_json::from_str(&res)?;
+    let res: Response<TerraswapSimulationResponse> = serde_json::from_str(&res)?;
     Ok(ResponseResult::Simulation(res))
 }  
 pub async fn masset_oracle_price(masset: String) ->  anyhow::Result<ResponseResult> {
@@ -254,7 +270,7 @@ pub async fn anchor_protocol_borrower_info(wallet_acc_address: &str) ->  anyhow:
     let query_msg_json = serde_json::to_string(&query)?;
 
     let res: String = get_fcd_or_lcd_query(&contract_addr,&query_msg_json).await?;
-    let res: Response<BorrowInfoResponse> = serde_json::from_str(&res)?;
+    let res: Response<BorrowerInfoResponse> = serde_json::from_str(&res)?;
     Ok(ResponseResult::BorrowInfo(res))
 } 
 pub async fn anchor_protocol_anc_balance(wallet_acc_address: &str) ->  anyhow::Result<ResponseResult> { 
@@ -312,6 +328,6 @@ pub async fn anchor_protocol_whitelist() ->  anyhow::Result<ResponseResult> {
     let query_msg_json = serde_json::to_string(&query)?;
 
     let res: String = get_fcd_or_lcd_query(&contract_addr,&query_msg_json).await?;
-    let res: Response<AnchorWhitelistResult> = serde_json::from_str(&res)?; 
+    let res: Response<WhitelistResponse> = serde_json::from_str(&res)?; 
     Ok(ResponseResult::AnchorWhitelistResponse(res))
 }  

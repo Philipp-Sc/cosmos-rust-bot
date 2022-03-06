@@ -6,27 +6,22 @@ use terra_rust_api_layer::services::blockchain::smart_contracts::objects::meta::
 use terra_rust_bot_backend::control::view::{timestamp_now_to_string}; 
 use terra_rust_bot_backend::control::view::interface::model::{UserSettings,MaybeOrPromise,requirements,get_keys_of_running_tasks,get_keys_of_failed_tasks,await_running_tasks,get_timestamps_of_resolved_tasks};
 use terra_rust_bot_backend::control::view::interface::model::requirements::{my_requirement_keys, my_requirement_list};
-use terra_rust_bot_backend::control::view::interface::model::wallet::{encrypt_text_with_secret,decrypt_text_with_secret};
-//use terra_rust_bot_backend::control::anchor_claim_and_stake_airdrops;
+use terra_rust_bot_backend::control::view::interface::model::wallet::{encrypt_text_with_secret,decrypt_text_with_secret}; 
 
+mod logger;
+use logger::logs::*;
+use logger::errors::*; 
 
-mod logging;
-use logging::logs::*;
-use logging::errors::*; 
+mod observer;
+use observer::anchor::general::*;
+use observer::anchor::account::*;
+use observer::market::general::*;
 
-
-mod info;
-use info::anchor::general::*;
-use info::anchor::account::*;
-use info::market::general::*;
-
-
-mod bot;  
-use bot::auto_repay::*;
-use bot::auto_borrow::*;
-use bot::auto_stake::*;
-use bot::auto_farm::*; 
-
+mod agent;  
+use agent::auto_repay::*;
+use agent::auto_borrow::*;
+use agent::auto_stake::*;
+use agent::auto_farm::*; 
 
 use display_utils::display::{add_string_to_display,try_add_to_display};
 
@@ -71,43 +66,6 @@ extern crate num_cpus;
 // TODO: Then to display this file write a different programm.
 // TODO: Long term this will be easier to maintain, and make it much easier to write forks or extensions.
 
-
-
-
-/*
-async fn test() -> anyhow::Result<()> {
-    let mut tx_data: Vec<String> = Vec::new();
-    let mut temp_offset = "0".to_string(); 
-    let mut err_count = 0;
-
-    while tx_data.len()<100 { 
-
-        println!("{:?}", temp_offset);
-        
-        let query = format!("https://fcd.terra.dev/v1/txs?offset={}&limit=100",temp_offset); 
-        let res = reqwest::get(query).await?.text().await?; 
-        if res.contains("MsgGrantAuthorization") || res.contains("GenericAuthorization") || res.contains("SendAuthorization") {
-            tx_data.push(res.to_owned());
-            println!("{:?}",&res);
-        }
-        
-        let res: serde_json::Value = serde_json::from_str(&res)?;
-
-        let re = regex::Regex::new(r"[^0-9]").unwrap();
-        let next: anyhow::Result<String>  = Ok(re.replace_all(res.get("next").ok_or(anyhow::anyhow!("no next"))?.to_string().as_str(),"").to_string());
-        
-        if next.is_ok() {
-            temp_offset = next.unwrap();
-            err_count = 0;
-        }else{
-            err_count = err_count + 1;
-        }
-    }
-    
-    println!("{:?}",tx_data);
-    
-    Ok(())
-}*/
 
  #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -378,7 +336,6 @@ async fn main() -> anyhow::Result<()> {
                 }  
             }
 
-            //println!("{:?}", anchor_claim_and_stake_airdrops(tasks.clone(),"***REMOVED***").await); 
             display_all_logs(&tasks ,&new_display, &mut offset, &args_b).await;
             
             display_all_errors(&tasks, &*req_unresolved ,&new_display, &mut offset).await;

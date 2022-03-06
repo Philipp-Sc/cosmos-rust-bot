@@ -2,11 +2,30 @@ pub mod meta;
 
 use serde::Deserialize;
 use serde::Serialize; 
-use cosmwasm_std::{Uint128,Uint256,Decimal256,Decimal}; 
+use cosmwasm_std::{Uint128,Decimal}; 
 use enum_as_inner::EnumAsInner;   
 
 
 use anchor_token::airdrop::IsClaimedResponse;
+ 
+//use moneymarket::market::ConfigResponse as MarketConfigResponse;
+use moneymarket::market::EpochStateResponse as MarketEpochStateResponse;
+use moneymarket::market::StateResponse as MarketStateResponse;
+use basset::hub::StateResponse as BassetHubStateResponse;
+use moneymarket::market::BorrowerInfoResponse;
+use moneymarket::overseer::BorrowLimitResponse;
+
+use anchor_token::collector::ConfigResponse as CollectorConfigResponse;
+use moneymarket::interest_model::ConfigResponse as InterestModelConfigResponse;
+
+
+use cw20::BalanceResponse;
+use anchor_token::gov:: StakerResponse;
+
+use moneymarket::overseer::WhitelistResponse;
+use mirror_protocol::oracle::PriceResponse;
+
+use terraswap::pair::SimulationResponse as TerraswapSimulationResponse;
 
 #[derive(Debug, Clone, Serialize, Deserialize, EnumAsInner)]  
 pub enum ResponseResult {
@@ -14,11 +33,11 @@ pub enum ResponseResult {
     State(StateResponse),
     EpochState(EpochStateResponse),
     Config(ConfigResponse),
-    Simulation(Response<SimulationResponse>),
+    Simulation(Response<TerraswapSimulationResponse>),
     CoreSwap(Response<CoreSwapResponse>),
     Price(Response<PriceResponse>),
     BorrowLimit(Response<BorrowLimitResponse>),
-    BorrowInfo(Response<BorrowInfoResponse>),
+    BorrowInfo(Response<BorrowerInfoResponse>),
     Balance(Response<BalanceResponse>),
     Balances(Response<Vec<Coin>>),
     Staker(Response<StakerResponse>), 
@@ -34,7 +53,7 @@ pub enum ResponseResult {
     TaxCaps(Response<Vec<TaxCap>>),
     AirdropResponse(AnchorAirdrops),
     IsClaimedResponse(Response<IsClaimedResponse>),
-    AnchorWhitelistResponse(Response<AnchorWhitelistResult>)
+    AnchorWhitelistResponse(Response<WhitelistResponse>)
 }
 
 
@@ -64,45 +83,14 @@ pub struct Response<T> {
     pub height: String,
     pub result: T
 }  
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct BLunaStateResponse {
-    pub bluna_exchange_rate: Decimal,
-    pub stluna_exchange_rate: Decimal,
-    pub total_bond_bluna_amount: Uint128,
-    pub total_bond_stluna_amount: Uint128,
-    pub last_index_modification: u64,
-    pub prev_hub_balance: Uint128,
-    pub last_unbonded_time: u64,
-    pub last_processed_batch: u64,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct MarketStateResponse {
-    // https://docs.anchorprotocol.com/smart-contracts/money-market/market#stateresponse
-    pub total_liabilities: Decimal256, 
-    pub total_reserves: Decimal256, 
-    pub last_interest_updated: u64, 
-    pub last_reward_updated: u64, 
-    pub global_interest_index: Decimal256, 
-    pub global_reward_index: Decimal256, 
-    pub anc_emission_rate: Decimal256, 
-    pub prev_aterra_supply: Uint256, 
-    pub prev_exchange_rate: Decimal256, 
-}
-
+ 
+ 
 #[derive(Debug, Clone, Serialize, Deserialize, EnumAsInner)]  
 pub enum StateResponse {
     #[allow(non_camel_case_types)]
-    bLunaHub(Response<BLunaStateResponse>),
+    bLunaHub(Response<BassetHubStateResponse>),
     #[allow(non_camel_case_types)]
     mmMarket(Response<MarketStateResponse>), 
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct MarketEpochStateResponse {
-    pub exchange_rate: Decimal256, 
-    pub aterra_supply: Uint256, 
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, EnumAsInner)] 
@@ -110,86 +98,19 @@ pub enum EpochStateResponse {
     #[allow(non_camel_case_types)]
     mmMarket(Response<MarketEpochStateResponse>),
 }
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct InterestModelConfigResponse {
-    pub owner: String, 
-    pub base_rate: Decimal256, 
-    pub interest_multiplier: Decimal256, 
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct CollectorConfigResponse {
-    pub gov_contract: String, 
-    pub terraswap_factory: String,
-    pub anchor_token: String,
-    pub distributor_contract: String,
-    pub reward_factor: Decimal,
-}
-
+ 
 #[derive(Debug, Clone, Serialize, Deserialize, EnumAsInner)] 
 pub enum ConfigResponse { 
     #[allow(non_camel_case_types)]
     mmInterestModel(Response<InterestModelConfigResponse>),
     Collector(Response<CollectorConfigResponse>),
 }
-
-#[derive(Debug, Clone, Serialize, Deserialize)] 
-pub struct SimulationResponse {
-    pub return_amount: Uint128,
-    pub spread_amount: Uint128,
-    pub commission_amount: Uint128,
-}
+ 
 
 #[derive(Debug, Clone, Serialize, Deserialize)] 
 pub struct CoreSwapResponse {
     pub amount: Uint128,
     pub denom: String, 
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct PriceResponse {
-    pub rate: Decimal,
-    pub last_updated_base: u64,
-    pub last_updated_quote: u64,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct BorrowLimitResponse {
-    pub borrower: String, 
-    pub borrow_limit: Uint128, 
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct BorrowInfoResponse {
-    pub borrower: String, 
-    pub interest_index: Decimal256, 
-    pub reward_index: Decimal256, 
-    pub loan_amount: Uint256, 
-    pub pending_rewards: Decimal256, 
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct BalanceResponse {
-    pub balance: Uint128,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct StakerResponse {
-    pub balance: Uint128,
-    pub share: Uint128,
-    pub locked_balance: Vec<(u64, VoterInfo)>, // (Voted Poll's ID, VoterInfo)
-}
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct VoterInfo {
-    pub vote: VoteOption,
-    pub balance: Uint128,
-}
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub enum VoteOption {
-    Yes,
-    No,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -324,22 +245,4 @@ pub struct Claim {
     pub stage: u64,
     pub amount: String,
 }
-
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AnchorWhitelistResult {
-    pub elems: Vec<AnchorWhitelist>,
-}
-
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AnchorWhitelist {
-    pub name: String,
-    pub symbol: String,
-    #[serde(rename = "max_ltv")]
-    pub max_ltv: String,
-    #[serde(rename = "custody_contract")]
-    pub custody_contract: String,
-    #[serde(rename = "collateral_token")]
-    pub collateral_token: String,
-}
+ 

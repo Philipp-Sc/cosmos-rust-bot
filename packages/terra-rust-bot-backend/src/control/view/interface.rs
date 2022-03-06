@@ -12,6 +12,10 @@ use std::sync::Arc;
 use tokio::sync::RwLock; 
 
 pub mod model;
+
+// todo really for each attribute the API Layer should provide a toString function.
+// then remove interface.rs
+
  
 
 pub async fn tax_rate_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
@@ -387,7 +391,7 @@ pub async fn max_ltv_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>
                 let anchor_asstes = &response_result.as_anchor_whitelist_response().unwrap().result.elems;
                 for i in 0..anchor_asstes.len() {
                     if &anchor_asstes[i].symbol == key {
-                        return Decimal::from_str(&anchor_asstes[i].max_ltv).unwrap().round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero).to_string();
+                        return Decimal::from_str(&anchor_asstes[i].max_ltv.to_string().as_str()).unwrap().round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero).to_string();
                     }
                 } 
                 return "--".to_string();
@@ -401,7 +405,7 @@ pub async fn max_ltv_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>
 pub async fn interest_multiplier_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
         match get_data_maybe_or_await_task(&tasks,"config anchorprotocol mmInterestModel").await {
             Ok(response_result) => {
-                let interest_multiplier: cosmwasm_std::Decimal256 = response_result.as_config().unwrap().as_mm_interest_model().unwrap().result.interest_multiplier; 
+                let interest_multiplier = response_result.as_config().unwrap().as_mm_interest_model().unwrap().result.interest_multiplier; 
                 return Decimal::from_str(interest_multiplier.to_string().as_str()).unwrap().round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero).to_string();
             },
             Err(_) => {
@@ -425,7 +429,7 @@ pub async fn blocks_per_year_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOr
 pub async fn base_rate_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
         match get_data_maybe_or_await_task(&tasks,"config anchorprotocol mmInterestModel").await {
             Ok(response_result) => {
-                let base_rate: cosmwasm_std::Decimal256 = response_result.as_config().unwrap().as_mm_interest_model().unwrap().result.base_rate; 
+                let base_rate = response_result.as_config().unwrap().as_mm_interest_model().unwrap().result.base_rate; 
                 return Decimal::from_str(base_rate.to_string().as_str()).unwrap().round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero).to_string();
             },
             Err(_) => {
@@ -438,9 +442,9 @@ pub async fn base_rate_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromis
 pub async fn a_terra_supply_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
         match get_data_maybe_or_await_task(&tasks,"epoch_state anchorprotocol mmMarket").await {
             Ok(response_result) => {
-                let exchange_rate: cosmwasm_std::Decimal256 = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.exchange_rate; 
-                let supply: cosmwasm_std::Uint256 = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.aterra_supply; 
-                let micro: cosmwasm_std::Uint256 = cosmwasm_std::Uint256::from_str("1000000").unwrap();
+                let exchange_rate = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.exchange_rate; 
+                let supply = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.aterra_supply; 
+                let micro = cosmwasm_bignumber::Decimal256::from_str("1000000").unwrap();
                 let supply = Decimal::from_str((supply / (micro * exchange_rate)).to_string().as_str()).unwrap().round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero).to_string();
                 return supply.parse::<u128>().unwrap().to_formatted_string(&Locale::en);
             },
@@ -453,7 +457,7 @@ pub async fn a_terra_supply_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrP
 pub async fn a_terra_exchange_rate_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
         match get_data_maybe_or_await_task(&tasks,"epoch_state anchorprotocol mmMarket").await {
             Ok(response_result) => {
-                let exchange_rate: cosmwasm_std::Decimal256 = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.exchange_rate; 
+                let exchange_rate: cosmwasm_bignumber::Decimal256 = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.exchange_rate; 
                 return Decimal::from_str(exchange_rate.to_string().as_str()).unwrap().round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero).to_string();
             },
             Err(_) => {

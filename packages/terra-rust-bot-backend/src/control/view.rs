@@ -47,6 +47,9 @@ macro_rules! percent_decimal_or_return {
         }
     }
 } 
+
+
+// all data aggregations are made here, move in own package.
  
 // idially only allowed to interact with the model via interface! 
 
@@ -1060,7 +1063,7 @@ pub async fn borrower_deposit_liquidity_to_string(tasks: Arc<RwLock<HashMap<Stri
 
     match get_data_maybe_or_await_task(&tasks,"epoch_state anchorprotocol mmMarket").await {
             Ok(response_result) => {
-                let result: cosmwasm_std::Decimal256 = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.exchange_rate; 
+                let result = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.exchange_rate; 
                 _exchange_rate = Decimal::from_str(result.to_string().as_str()).unwrap();
             },
             Err(_) => {
@@ -1156,7 +1159,7 @@ pub async fn borrower_ust_deposited_to_string(tasks: Arc<RwLock<HashMap<String, 
 
     match get_data_maybe_or_await_task(&tasks,"epoch_state anchorprotocol mmMarket").await {
             Ok(response_result) => {
-                let result: cosmwasm_std::Decimal256 = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.exchange_rate; 
+                let result = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.exchange_rate; 
                 _exchange_rate = Decimal::from_str(result.to_string().as_str()).unwrap();
             },
             Err(_) => {
@@ -1175,10 +1178,10 @@ pub async fn borrow_apr_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromi
         // borrowRate = utilisationRatio * interestMultiplier + baseRate
         // borrow_apr = blocksPerYear * borrowRate
 
-        let mut _total_liabilities: cosmwasm_std::Decimal256 = cosmwasm_std::Decimal256::zero(); 
+        let mut _total_liabilities = cosmwasm_bignumber::Decimal256::zero(); 
 
-        let mut _a_terra_exchange_rate: cosmwasm_std::Decimal256 = cosmwasm_std::Decimal256::zero();
-        let mut _a_terra_supply: cosmwasm_std::Uint256 = cosmwasm_std::Uint256::zero();
+        let mut _a_terra_exchange_rate = cosmwasm_bignumber::Decimal256::zero();
+        let mut _a_terra_supply = cosmwasm_bignumber::Uint256::zero();
                 
         match get_data_maybe_or_await_task(&tasks,"state anchorprotocol mmMarket").await {
             Ok(response_result) => {
@@ -1209,8 +1212,8 @@ pub async fn borrow_apr_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromi
                                          .checked_div(stablecoins_deposited)
                                          .unwrap();
 
-        let mut _interest_multiplier: cosmwasm_std::Decimal256 = cosmwasm_std::Decimal256::zero();
-        let mut _base_rate: cosmwasm_std::Decimal256 = cosmwasm_std::Decimal256::zero();
+        let mut _interest_multiplier = cosmwasm_bignumber::Decimal256::zero();
+        let mut _base_rate = cosmwasm_bignumber::Decimal256::zero();
 
         match get_data_maybe_or_await_task(&tasks,"config anchorprotocol mmInterestModel").await {
             Ok(response_result) => {
@@ -1305,10 +1308,10 @@ pub async fn net_apr_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>
         // borrowRate = utilisationRatio * interestMultiplier + baseRate
         // borrow_apr = blocksPerYear * borrowRate
 
-        let mut _total_liabilities: cosmwasm_std::Decimal256 = cosmwasm_std::Decimal256::zero(); 
+        let mut _total_liabilities = cosmwasm_bignumber::Decimal256::zero(); 
 
-        let mut _a_terra_exchange_rate: cosmwasm_std::Decimal256 = cosmwasm_std::Decimal256::zero();
-        let mut _a_terra_supply: cosmwasm_std::Uint256 = cosmwasm_std::Uint256::zero();
+        let mut _a_terra_exchange_rate = cosmwasm_bignumber::Decimal256::zero();
+        let mut _a_terra_supply  = cosmwasm_bignumber::Uint256::zero();
                 
         match get_data_maybe_or_await_task(&tasks,"state anchorprotocol mmMarket").await {
             Ok(response_result) => {
@@ -1339,8 +1342,8 @@ pub async fn net_apr_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>
                                          .checked_div(stablecoins_deposited)
                                          .unwrap();
 
-        let mut _interest_multiplier: cosmwasm_std::Decimal256 = cosmwasm_std::Decimal256::zero();
-        let mut _base_rate: cosmwasm_std::Decimal256 = cosmwasm_std::Decimal256::zero();
+        let mut _interest_multiplier = cosmwasm_bignumber::Decimal256::zero();
+        let mut _base_rate = cosmwasm_bignumber::Decimal256::zero();
 
         match get_data_maybe_or_await_task(&tasks,"config anchorprotocol mmInterestModel").await {
             Ok(response_result) => {
@@ -1390,8 +1393,8 @@ pub async fn net_apr_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>
 
 pub async fn borrow_rate_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: &str, key_1: &str, key_2: &str, digits_rounded_to: u32) -> String { 
         
-        let mut _interest_multiplier: cosmwasm_std::Decimal256 = cosmwasm_std::Decimal256::zero();
-        let mut _base_rate: cosmwasm_std::Decimal256 = cosmwasm_std::Decimal256::zero();
+        let mut _interest_multiplier = cosmwasm_bignumber::Decimal256::zero();
+        let mut _base_rate = cosmwasm_bignumber::Decimal256::zero();
 
         match get_data_maybe_or_await_task(&tasks,key).await {
             Ok(response_result) => {
@@ -1403,10 +1406,10 @@ pub async fn borrow_rate_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrProm
             }
         }
 
-        let mut _total_liabilities: cosmwasm_std::Decimal256 = cosmwasm_std::Decimal256::zero(); 
+        let mut _total_liabilities = cosmwasm_bignumber::Decimal256::zero(); 
 
-        let mut _a_terra_exchange_rate: cosmwasm_std::Decimal256 = cosmwasm_std::Decimal256::zero();
-        let mut _a_terra_supply: cosmwasm_std::Uint256 = cosmwasm_std::Uint256::zero();
+        let mut _a_terra_exchange_rate = cosmwasm_bignumber::Decimal256::zero();
+        let mut _a_terra_supply = cosmwasm_bignumber::Uint256::zero();
                 
         match get_data_maybe_or_await_task(&tasks,key_1).await {
             Ok(response_result) => {
@@ -1434,10 +1437,10 @@ pub async fn borrow_rate_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrProm
 
 pub async fn utilization_ratio_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key_1: &str,key_2: &str, digits_rounded_to: u32) -> String { 
         
-        let mut _total_liabilities: cosmwasm_std::Decimal256 = cosmwasm_std::Decimal256::zero(); 
+        let mut _total_liabilities = cosmwasm_bignumber::Decimal256::zero(); 
 
-        let mut _a_terra_exchange_rate: cosmwasm_std::Decimal256 = cosmwasm_std::Decimal256::zero();
-        let mut _a_terra_supply: cosmwasm_std::Uint256 = cosmwasm_std::Uint256::zero();
+        let mut _a_terra_exchange_rate = cosmwasm_bignumber::Decimal256::zero();
+        let mut _a_terra_supply = cosmwasm_bignumber::Uint256::zero();
                 
         match get_data_maybe_or_await_task(&tasks,key_1).await {
             Ok(response_result) => {
