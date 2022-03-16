@@ -1,7 +1,7 @@
 [package]
 name = "terra-rust-api-layer"
 authors = ["Philipp Schlütermann <philipp.schluetermann@udo.edu>"]
-description = "A layer on top of the terra-rust-api"
+description = "A layer on top of the terra-rust-api to interact with the terra ecosystem."
 version = "0.3.0"
 edition = "2021"
  

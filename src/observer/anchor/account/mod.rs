@@ -1,5 +1,5 @@
 use display_utils::display::*; 
-use terra_rust_bot_controller::control::view::interface::model::{MaybeOrPromise};
+use terra_rust_bot_memory::model::{MaybeOrPromise};
   
 use terra_rust_bot_controller::control::view::*;
 use terra_rust_bot_controller::control::view::interface::*; 

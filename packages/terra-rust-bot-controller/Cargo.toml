@@ -10,6 +10,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies] 
 terra-rust-api-layer = { path = "../../packages/terra-rust-api-layer"}
+terra-rust-bot-memory = { path = "../../packages/terra-rust-bot-memory"}
 tokio = { version = "1.4", features = ["full"] }
 anyhow="1.0"  
 serde = { version = "1.0", features = ["derive"] } 

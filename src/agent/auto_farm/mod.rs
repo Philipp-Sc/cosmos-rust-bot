@@ -1,6 +1,6 @@
 use secstr::*;
 use display_utils::display::*; 
-use terra_rust_bot_controller::control::view::interface::model::{MaybeOrPromise,try_register_function,await_function};
+use terra_rust_bot_memory::model::{MaybeOrPromise,try_register_function,await_function};
   
 use terra_rust_bot_controller::control::view::*;
 use terra_rust_bot_controller::control::view::interface::*;

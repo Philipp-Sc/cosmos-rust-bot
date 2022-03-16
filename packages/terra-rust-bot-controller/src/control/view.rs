@@ -2,7 +2,7 @@
 
 pub mod interface;
 
-use interface::model::{
+use terra_rust_bot_memory::model::{
     MaybeOrPromise,
     get_data_maybe_or_meta_data_maybe,
     get_data_maybe_or_await_task,

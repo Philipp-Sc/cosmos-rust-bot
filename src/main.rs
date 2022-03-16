@@ -4,9 +4,9 @@ use simple_user_input::get_input;
 use terra_rust_api_layer::services::blockchain::smart_contracts::objects::meta::api::{get_from_account};
 
 use terra_rust_bot_controller::control::view::{timestamp_now_to_string}; 
-use terra_rust_bot_controller::control::view::interface::model::{UserSettings,MaybeOrPromise,requirements,get_keys_of_running_tasks,get_keys_of_failed_tasks,await_running_tasks,get_timestamps_of_resolved_tasks};
-use terra_rust_bot_controller::control::view::interface::model::requirements::{my_requirement_keys, my_requirement_list};
-use terra_rust_bot_controller::control::view::interface::model::wallet::{encrypt_text_with_secret,decrypt_text_with_secret}; 
+use terra_rust_bot_memory::model::{UserSettings,MaybeOrPromise,requirements,get_keys_of_running_tasks,get_keys_of_failed_tasks,await_running_tasks,get_timestamps_of_resolved_tasks};
+use terra_rust_bot_memory::model::requirements::{my_requirement_keys, my_requirement_list};
+use terra_rust_bot_memory::model::wallet::{encrypt_text_with_secret,decrypt_text_with_secret}; 
 
 mod logger;
 use logger::logs::*;
@@ -265,6 +265,8 @@ async fn main() -> anyhow::Result<()> {
             }
 
             requirements(&tasks,&user_settings,&wallet_acc_address,&req_to_update).await;  
+            // instead of calculating what req should be updated here, it should be part of _memory
+            // so here only requirements_next() needs to be called.
              
             let mut offset: usize = 2;
 

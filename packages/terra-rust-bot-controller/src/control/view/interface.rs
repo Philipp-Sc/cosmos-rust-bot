@@ -1,4 +1,10 @@
-use model::{MaybeOrPromise,get_data_maybe_or_await_task,get_meta_data_maybe_or_await_task};  
+/*
+ * Provides helper functions to access key attributes without the need to know the underlying data structure.
+ * Values are returned as Strings.
+ * 
+ */
+
+use terra_rust_bot_memory::model::{MaybeOrPromise,get_data_maybe_or_await_task,get_meta_data_maybe_or_await_task};  
 
 use std::collections::HashMap;
 use rust_decimal::Decimal;
@@ -6,8 +12,7 @@ use core::str::FromStr;
 use num_format::{Locale, ToFormattedString}; 
 use std::sync::Arc; 
 use tokio::sync::RwLock; 
-
-pub mod model;
+ 
 
 macro_rules! try_get_data_by_key {
     ( $e:expr, $d:expr ) => {

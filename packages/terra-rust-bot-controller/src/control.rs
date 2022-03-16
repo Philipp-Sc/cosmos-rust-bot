@@ -15,7 +15,7 @@ use terra_rust_api_layer::services::blockchain::smart_contracts::objects::meta::
 	anchor_governance_claim_and_provide_to_spec_vault,
 	anchor_claim_and_stake_airdrop_tx};
 
-use view::interface::model::{
+use terra_rust_bot_memory::model::{
 	MaybeOrPromise,
 	register_value,
 	get_meta_data_maybe,
@@ -32,7 +32,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock; 
 
 
-use view::interface::model::wallet::{decrypt_text_with_secret};
+use terra_rust_bot_memory::model::wallet::{decrypt_text_with_secret};
 
 
 macro_rules! decimal_or_return {

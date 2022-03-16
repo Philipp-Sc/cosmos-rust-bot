@@ -11,6 +11,7 @@ name = "terra-rust-bot"
 
 [dependencies] 
 terra-rust-api-layer = { path = "./packages/terra-rust-api-layer"}
+terra-rust-bot-memory = { path = "./packages/terra-rust-bot-memory"}
 terra-rust-bot-controller = { path = "./packages/terra-rust-bot-controller"}
 display-utils = { path = "./packages/display-utils"}
 
