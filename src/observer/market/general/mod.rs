@@ -1,7 +1,7 @@
 use display_utils::display::*; 
-use terra_rust_bot_backend::control::view::interface::model::{MaybeOrPromise};
+use terra_rust_bot_controller::control::view::interface::model::{MaybeOrPromise};
   
-use terra_rust_bot_backend::control::view::interface::*; 
+use terra_rust_bot_controller::control::view::interface::*; 
 
 use std::collections::HashMap;
 use core::pin::Pin;

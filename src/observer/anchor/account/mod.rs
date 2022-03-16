@@ -1,8 +1,8 @@
 use display_utils::display::*; 
-use terra_rust_bot_backend::control::view::interface::model::{MaybeOrPromise};
+use terra_rust_bot_controller::control::view::interface::model::{MaybeOrPromise};
   
-use terra_rust_bot_backend::control::view::*;
-use terra_rust_bot_backend::control::view::interface::*; 
+use terra_rust_bot_controller::control::view::*;
+use terra_rust_bot_controller::control::view::interface::*; 
 
 use std::collections::HashMap;
 use core::pin::Pin;
@@ -44,7 +44,7 @@ pub async fn display_anchor_account(tasks: &Arc<RwLock<HashMap<String, MaybeOrPr
     *offset += 1;
 
     anchor_view.push(("--".purple().to_string(),*offset));
-    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(borrower_loan_amount_to_string(tasks.clone(),2)));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(borrower_loan_amount_to_string(tasks.clone(),false,2)));
     anchor_tasks.push(t);
     *offset += 1;
 
@@ -52,7 +52,7 @@ pub async fn display_anchor_account(tasks: &Arc<RwLock<HashMap<String, MaybeOrPr
     *offset += 1;
 
     anchor_view.push(("--".purple().to_string(),*offset));
-    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(borrow_limit_to_string(tasks.clone(),2)));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(borrow_limit_to_string(tasks.clone(),false,2)));
     anchor_tasks.push(t);
     *offset += 1;
 
@@ -122,7 +122,7 @@ pub async fn display_anchor_account(tasks: &Arc<RwLock<HashMap<String, MaybeOrPr
     *offset += 1;
 
     anchor_view.push(("--".purple().to_string(),*offset));
-    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(borrower_balance_to_string(tasks.clone(),2)));
+    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(borrower_balance_to_string(tasks.clone(),false,2)));
     anchor_tasks.push(t);
     *offset += 1;
 

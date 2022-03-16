@@ -5,6 +5,9 @@
 
 pub mod smart_contracts;
 
+
+use smart_contracts::objects::meta::api::data::endpoints::{get_terra_lcd,get_terra_fcd};
+
 use smart_contracts::objects::*; 
 
 use serde_json::Value; 
@@ -23,13 +26,13 @@ use std::time::{Instant};
 
 
 pub async fn get_tax_rate() -> anyhow::Result<ResponseResult> { 
-        let res: String = query_api("https://lcd.terra.dev/treasury/tax_rate").await?;
+        let res: String = query_api(format!("{}/treasury/tax_rate",get_terra_lcd()).as_str()).await?;
         let res: Response<String> = serde_json::from_str(&res)?;
         return Ok(ResponseResult::TaxRate(res));
 }
 
 pub async fn get_tax_caps() -> anyhow::Result<ResponseResult> { 
-        let res: String = query_api("https://lcd.terra.dev/treasury/tax_caps").await?;
+        let res: String = query_api(format!("{}/treasury/tax_caps",get_terra_lcd()).as_str()).await?;
         let res: Response<Vec<TaxCap>> = serde_json::from_str(&res)?;
         return Ok(ResponseResult::TaxCaps(res));
 }
@@ -120,7 +123,7 @@ pub async fn get_block_txs_fee_data(key: &str) -> anyhow::Result<ResponseResult>
 
 pub async fn get_txs_fee_data(offset: &str, tx_data: &mut Vec<TXLog>,account: &str, query_msg: &str, amount_field: &str) -> anyhow::Result<String> {
 
-        let query = format!("https://fcd.terra.dev/v1/txs?offset={}&limit=100&account={}",offset, account); 
+        let query = format!("{}/v1/txs?offset={}&limit=100&account={}",get_terra_fcd(),offset, account); 
         let res: String = query_api(query.as_str()).await?;
         let res: Value = serde_json::from_str(&res)?;
 

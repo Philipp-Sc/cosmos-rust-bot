@@ -11,7 +11,7 @@ name = "terra-rust-bot"
 
 [dependencies] 
 terra-rust-api-layer = { path = "./packages/terra-rust-api-layer"}
-terra-rust-bot-backend = { path = "./packages/terra-rust-bot-backend"}
+terra-rust-bot-controller = { path = "./packages/terra-rust-bot-controller"}
 display-utils = { path = "./packages/display-utils"}
 
 tokio = { version = "1.4", features = ["full"] }
