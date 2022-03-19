@@ -1,5 +1,8 @@
 <div align="center">
+  
+  <p>🌕🍇🤖🚀🔩🛠️</p>
   <h1>terra-rust-bot</h1> 
+  <p>Get the most out of your Luna bag by automating the low hanging fruits.</p> 
     <img src="https://img.shields.io/github/languages/top/Philipp-Sc/terra-rust-bot"> 
     <img src="https://img.shields.io/github/repo-size/Philipp-Sc/terra-rust-bot"> 
     <img src="https://img.shields.io/github/commit-activity/m/Philipp-Sc/terra-rust-bot"> 
