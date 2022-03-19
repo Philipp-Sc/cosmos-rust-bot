@@ -1,29 +1,54 @@
-mod simple_user_input;
-use simple_user_input::get_input; 
+// entrypoint of the application
+// user data/settings are loaded
+// arguments read
+// loop: 
+//   -  display state
+//   -  bot execution
+
+#[macro_use]
+extern crate litcrypt;
+//https://github.com/anvie/litcrypt.rs
+use_litcrypt!();
+ 
 
 use terra_rust_api_layer::services::blockchain::smart_contracts::objects::meta::api::{get_from_account};
 
-use terra_rust_bot_controller::control::view::{timestamp_now_to_string}; 
-use terra_rust_bot_memory::model::{UserSettings,MaybeOrPromise,requirements,get_keys_of_running_tasks,get_keys_of_failed_tasks,await_running_tasks,get_timestamps_of_resolved_tasks};
-use terra_rust_bot_memory::model::requirements::{my_requirement_keys, my_requirement_list};
-use terra_rust_bot_memory::model::wallet::{encrypt_text_with_secret,decrypt_text_with_secret}; 
+// Model
+mod state;
 
-mod logger;
-use logger::logs::*;
-use logger::errors::*; 
+use crate::state::control::model::{UserSettings,MaybeOrPromise,requirements,get_keys_of_running_tasks,get_keys_of_failed_tasks,await_running_tasks,get_timestamps_of_resolved_tasks};
 
-mod observer;
-use observer::anchor::general::*;
-use observer::anchor::account::*;
-use observer::market::general::*;
+use crate::state::control::model::requirements::{my_requirement_keys, my_requirement_list};
 
-mod agent;  
-use agent::auto_repay::*;
-use agent::auto_borrow::*;
-use agent::auto_stake::*;
-use agent::auto_farm::*; 
+use crate::state::control::model::wallet::{encrypt_text_with_secret,decrypt_text_with_secret}; 
 
-use display_utils::display::{add_string_to_display,try_add_to_display};
+use crate::state::control::try_run_function;
+
+// View -> Model (Read Data)
+mod view;
+use crate::view::{timestamp_now_to_string}; 
+
+// Action -> (View, Model)
+mod bot;  
+use bot::action::*;
+
+mod ui;  // -> View
+
+use ui::user_input::get_input; 
+
+use ui::info::auto_repay::*;
+use ui::info::auto_borrow::*;
+use ui::info::auto_stake::*;
+use ui::info::auto_farm::*; 
+
+use ui::info::anchor::general::*;
+use ui::info::anchor::account::*;
+use ui::info::market::general::*;
+
+use ui::logs::*;
+use ui::errors::*; 
+ 
+use ui::display::{add_string_to_display,try_add_to_display};
 
 use std::env;
 use secstr::*;
@@ -42,6 +67,10 @@ use colored::*;
  
 use chrono::{Utc};
 use std::fs;
+
+
+use core::pin::Pin;
+use core::future::Future;
 
 extern crate num_cpus;
 
@@ -300,7 +329,14 @@ async fn main() -> anyhow::Result<()> {
             }
 
             if args_b.contains(&"anchor_auto_stake") {
-                let anchor_auto_stake = lazy_anchor_account_auto_stake_rewards(&tasks, &wallet_acc_address, &wallet_seed_phrase, &new_display, &mut offset, is_test, is_first_run).await;
+
+                // starts the bot specific function as task.
+                // (only if previous task of the same key has finished)
+                let task: Pin<Box<dyn Future<Output = String> + Send + 'static>> = Box::pin(anchor_borrow_claim_and_stake_rewards(tasks.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(),is_test));
+                try_run_function(&tasks,task,"anchor_auto_stake",is_test).await;  
+   
+                // checks if data for the display is available
+                let anchor_auto_stake = lazy_anchor_account_auto_stake_rewards(&tasks, &new_display, &mut offset, is_test, is_first_run).await;
                 for t in anchor_auto_stake {
                     if timestamps_display[t.0] == 0i64 || now - timestamps_display[t.0] > 1i64 { 
                         try_add_to_display(&new_display,t.0,Box::pin(t.1)).await.ok();
@@ -309,7 +345,11 @@ async fn main() -> anyhow::Result<()> {
                 }                    
             }  
             if args_b.contains(&"anchor_auto_lp") {
-                let anchor_auto_lp = lazy_anchor_account_auto_farm_rewards(&tasks, &wallet_acc_address, &wallet_seed_phrase, &new_display, &mut offset, is_test, is_first_run).await;
+
+                let task: Pin<Box<dyn Future<Output = String> + Send + 'static>> = Box::pin(anchor_borrow_claim_and_farm_rewards(tasks.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(),is_test));
+                try_run_function(&tasks,task,"anchor_auto_farm",is_test).await;  
+      
+                let anchor_auto_lp = lazy_anchor_account_auto_farm_rewards(&tasks, &new_display, &mut offset, is_test, is_first_run).await;
                 for t in anchor_auto_lp {
                     if timestamps_display[t.0] == 0i64 || now - timestamps_display[t.0] > 1i64 { 
                         try_add_to_display(&new_display,t.0,Box::pin(t.1)).await.ok();
@@ -319,7 +359,11 @@ async fn main() -> anyhow::Result<()> {
             }   
 
             if args_b.contains(&"anchor_auto_repay") {
-                let anchor_auto_repay = lazy_anchor_account_auto_repay(&tasks, &wallet_acc_address, &wallet_seed_phrase, &new_display, &mut offset, is_test, is_first_run).await;
+
+                let task: Pin<Box<dyn Future<Output = String> + Send + 'static>> = Box::pin(anchor_redeem_and_repay_stable(tasks.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(),is_test));
+                try_run_function(&tasks,task,"anchor_auto_repay",is_test).await;  
+
+                let anchor_auto_repay = lazy_anchor_account_auto_repay(&tasks, &new_display, &mut offset, is_test, is_first_run).await;
                 for t in anchor_auto_repay {
                     if timestamps_display[t.0] == 0i64 || now - timestamps_display[t.0] > 1i64 { 
                         try_add_to_display(&new_display,t.0,Box::pin(t.1)).await.ok();
@@ -329,7 +373,11 @@ async fn main() -> anyhow::Result<()> {
                 
             }   
             if args_b.contains(&"anchor_auto_borrow") {
-                let anchor_auto_borrow = lazy_anchor_account_auto_borrow(&tasks, &wallet_acc_address, &wallet_seed_phrase, &new_display, &mut offset, is_test, is_first_run).await;
+
+                let task: Pin<Box<dyn Future<Output = String> + Send + 'static>> = Box::pin(anchor_borrow_and_deposit_stable(tasks.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(),is_test));
+                try_run_function(&tasks,task,"anchor_auto_borrow",is_test).await;  
+    
+                let anchor_auto_borrow = lazy_anchor_account_auto_borrow(&tasks, &new_display, &mut offset, is_test, is_first_run).await;
                 for t in anchor_auto_borrow {
                     if timestamps_display[t.0] == 0i64 || now - timestamps_display[t.0] > 1i64 { 
                         try_add_to_display(&new_display,t.0,Box::pin(t.1)).await.ok();

@@ -10,11 +10,7 @@ edition = "2021"
 name = "terra-rust-bot"
 
 [dependencies] 
-terra-rust-api-layer = { path = "./packages/terra-rust-api-layer"}
-terra-rust-bot-memory = { path = "./packages/terra-rust-bot-memory"}
-terra-rust-bot-controller = { path = "./packages/terra-rust-bot-controller"}
-display-utils = { path = "./packages/display-utils"}
-
+terra-rust-api-layer = { path = "./packages/terra-rust-api-layer"}  
 tokio = { version = "1.4", features = ["full"] }
 anyhow="1.0"  
 serde = { version = "1.0", features = ["derive"] } 
@@ -24,6 +20,15 @@ chrono = "0.4"
 secstr = "0.4.0" 
 colored = "2" 
 num_cpus = "1.13.1"   
+rust_decimal_macros="1.12.2"    
+enum-as-inner = "0.3.3" 
+cosmwasm-bignumber = "2.2.0"
+cosmwasm-std = "0.16"
+num-format = "0.4.0" 
+regex = "1.5.4" 
+litcrypt = "0.3"  
+ 
+
 
 [profile.release]
 # Enable link-time optimization, eliminates more code and inlines across crate boundaries.
