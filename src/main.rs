@@ -75,6 +75,21 @@ use core::future::Future;
 extern crate num_cpus;
 
 
+// TODOS NOW:
+
+// clean up: bot/action (multiple modules, separation into utility functions)
+
+// clean up: view/mod.rs (multiple modules, separation into utility functions)
+
+// clean up info/..  reduce code, 
+
+// find out why auto_farm fails.
+
+
+// NOTE NEW DEV FEATURE:
+// watch all APIs, notfiy if one fails -> EMAIL
+
+
 
 // TODO: Error handling. Every Unwrapp needs to be inspected.
 // Some unwraps panic if the request fail or return an error.

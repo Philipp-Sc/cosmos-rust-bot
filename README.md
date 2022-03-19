@@ -9,8 +9,8 @@
 <br/>
 
 
-> :warning: You will need to provide your **seed phrase** to let the bot *create and sign transactions*.  
-> :arrow_right_hook: Terra-rust-bot can be used without a *seed phrase* in view mode. **It is recommended to test this first.**  
+> :warning: The bot needs your **seed phrase** to create and sign transactions.  
+> :arrow_right_hook: You can use Terra-rust-bot without a seed phrase in view mode. Test this first.  
 
 > :warning: No security audit has been performed. (*Disclaimer: This may steal your money. Do your own research. Take a look at the code.*)
  
@@ -18,8 +18,7 @@
 
 ## Why
 
-* Power to the people. 
-* The Terra ecosystem needs accessible open source bots to thrive.
+* Open source bots accessible to all will empower the Terra ecosystem.
 * A single executable that is easy to use with few dependencies.
 
  
