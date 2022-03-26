@@ -32,7 +32,7 @@ use colored::*;
     anchor_view.push(("\n  **Anchor Protocol Auto Repay**\n\n".truecolor(75,219,75).to_string(),*offset)); 
     *offset += 1;
 
-    anchor_view.push((format!("{}{}","\n\n   [Auto Repay]".truecolor(75,219,75),"                    loan amount:              ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n\n   [Auto Repay]\n".truecolor(75,219,75),"   loan amount:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}".purple().to_string()),*offset));
     *offset += 1;
 
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -40,7 +40,7 @@ use colored::*;
     anchor_tasks.push(t);
     *offset += 1;
 
-    anchor_view.push((" UST (borrow limit: ".purple().to_string(),*offset));
+    anchor_view.push((" UST \n   borrow limit:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}".purple().to_string(),*offset));
     *offset += 1;
 
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -48,10 +48,10 @@ use colored::*;
     anchor_tasks.push(t);
     *offset += 1;
 
-    anchor_view.push((" UST)".purple().to_string(),*offset));
+    anchor_view.push((" UST".purple().to_string(),*offset));
     *offset += 1;
 
-    anchor_view.push((format!("{}{}","\n   [Auto Repay]".truecolor(75,219,75),"                    loan to borrow limit:     ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n".truecolor(75,219,75),"   loan to borrow limit:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}".purple().to_string()),*offset));
     *offset += 1;
 
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -60,7 +60,7 @@ use colored::*;
     *offset += 1;
 
 
-    anchor_view.push((format!("{}{}","\n\n   [Auto Repay]".truecolor(75,219,75),"                    left to trigger:          ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n\n".truecolor(75,219,75),"   left to trigger:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}".purple().to_string()),*offset));
     *offset += 1;
  
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -69,7 +69,7 @@ use colored::*;
     *offset += 1;
 
 
-    anchor_view.push((format!("{}{}","\n   [Auto Repay]".truecolor(75,219,75),"                    to repay:                 ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n".truecolor(75,219,75),"   to repay:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}".purple().to_string()),*offset));
     *offset += 1;
  
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -89,7 +89,7 @@ use colored::*;
     add_string_to_display(new_display,*offset,format!("{}{}","\n   [Auto Repay UST]                available UST:                   ".truecolor(75,219,75), format!("{} UST",available_to_repay).yellow())).await.ok(); 
     *offset += 1;
 */
-    anchor_view.push((format!("{}{}","\n\n   [Auto Repay UST]".truecolor(75,219,75),"                amount:                   ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n\n   [Auto Repay UST]\n".truecolor(75,219,75),"   amount:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}".purple().to_string()),*offset));
     *offset += 1;
  
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -105,7 +105,7 @@ use colored::*;
     add_string_to_display(new_display,*offset,format!("{}{}","\n\n   [Auto Repay Redeem]         max amount:                      ".truecolor(75,219,75), format!("{} UST",available_in_deposit).yellow())).await.ok(); 
     *offset += 1;
 */
-    anchor_view.push((format!("{}{}","\n   [Auto Repay Redeem]".truecolor(75,219,75),"             amount:                   ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n   [Auto Repay Redeem]\n".truecolor(75,219,75),"   amount:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}".purple().to_string()),*offset));
     *offset += 1;
  
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -117,7 +117,7 @@ use colored::*;
     *offset += 1;
 
     // does include gas_adjustment 
-    anchor_view.push((format!("{}{}","\n   [Auto Repay Redeem]".truecolor(75,219,75),"             est. gas:                 ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n".truecolor(75,219,75),"   est. gas:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}".purple().to_string()),*offset));
     *offset += 1;
  
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -125,7 +125,7 @@ use colored::*;
     anchor_tasks.push(t);
     *offset += 1;
 
-    anchor_view.push((format!("{}{}","\n\n   [Auto Repay]".truecolor(75,219,75),"                    repay:                    ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n\n   [Auto Repay]\n".truecolor(75,219,75),"   repay:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}".purple().to_string()),*offset));
     *offset += 1;
  
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -136,7 +136,7 @@ use colored::*;
     anchor_view.push((" UST".purple().to_string(),*offset));
     *offset += 1;
  
-    anchor_view.push((format!("{}{}","\n   [Auto Repay]".truecolor(75,219,75),"                    est. gas:                 ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n".truecolor(75,219,75),"   est. gas:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}".purple().to_string()),*offset));
     *offset += 1;
  
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -145,7 +145,7 @@ use colored::*;
     *offset += 1;
 
     // min(to_repay * tax_rate , tax_cap)
-    anchor_view.push((format!("{}{}","\n   [Auto Repay]".truecolor(75,219,75),"                    est. stability fee:       ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n".truecolor(75,219,75),"   est. stability fee:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}".purple().to_string()),*offset));
     *offset += 1;
  
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -156,7 +156,7 @@ use colored::*;
     anchor_view.push((" UST".purple().to_string(),*offset));
     *offset += 1;
 
-    anchor_view.push((format!("{}{}","\n\n   [Auto Repay Transaction]".truecolor(75,219,75),"        amount:                   ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n\n   [Auto Repay Transaction]\n".truecolor(75,219,75),"   amount:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}".purple().to_string()),*offset));
     *offset += 1;
  
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -168,7 +168,7 @@ use colored::*;
     *offset += 1;
 
     // total fee
-    anchor_view.push((format!("{}{}","\n   [Auto Repay Transaction]".truecolor(75,219,75),"        est. fee:                 ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n".truecolor(75,219,75),"   est. fee:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}".purple().to_string()),*offset));
     *offset += 1;
  
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -179,13 +179,13 @@ use colored::*;
     anchor_view.push((" UST".purple().to_string(),*offset));
     *offset += 1;
  
-    let mut field = "result:  ";
+    let mut field = "   result:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}";
 
     if is_test {
-        field = "estimate:";
+        field = "   estimate:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}";
     }
 
-    anchor_view.push((format!("{}{}","\n\n   [Auto Repay]".truecolor(75,219,75),format!("                    {}                 ",field.purple())),*offset));
+    anchor_view.push((format!("{}{}","\n\n   [Auto Repay]\n".truecolor(75,219,75),format!("{}",field.purple())),*offset));
     *offset += 1;
 
     anchor_view.push(("--".purple().to_string(),*offset));

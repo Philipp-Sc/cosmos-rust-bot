@@ -25,7 +25,7 @@ pub async fn lazy_anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<S
     anchor_view.push(("\n  **Anchor Protocol Auto Stake**\n\n".truecolor(75,219,75).to_string(),*offset)); 
     *offset += 1;
 
-    anchor_view.push((format!("{}{}","\n\n   [Auto Stake UST]".truecolor(75,219,75),"         balance:           ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n\n   [Auto Stake UST]\n".truecolor(75,219,75),"   balance:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}".purple().to_string()),*offset));
     *offset += 1;
  
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -33,7 +33,7 @@ pub async fn lazy_anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<S
     anchor_tasks.push(t);
     *offset += 1;
 
-    anchor_view.push((format!("{}{}","\n\n   [Auto Stake Gov]".truecolor(75,219,75),"         balance:           ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n\n   [Auto Stake Gov]\n".truecolor(75,219,75),"   balance:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}".purple().to_string()),*offset));
     *offset += 1;
  
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -44,7 +44,7 @@ pub async fn lazy_anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<S
     anchor_view.push((" ANC".purple().to_string(),*offset));
     *offset += 1;
  
-    anchor_view.push((format!("{}{}","\n   [Auto Stake Gov]".truecolor(75,219,75),"         staked:            ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n".truecolor(75,219,75),"   staked:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}".purple().to_string()),*offset));
     *offset += 1;
 
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -63,7 +63,7 @@ pub async fn lazy_anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<S
     anchor_view.push((" ANC)\n".purple().to_string(),*offset));
     *offset += 1;
     
-    anchor_view.push((format!("{}{}","\n   [Auto Stake Rewards]".truecolor(75,219,75),"     amount:            ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n   [Auto Stake Rewards]\n".truecolor(75,219,75),"   amount:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}".purple().to_string()),*offset));
     *offset += 1;
 
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -74,7 +74,7 @@ pub async fn lazy_anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<S
     anchor_view.push((" UST".purple().to_string(),*offset));
     *offset += 1;
  
-    anchor_view.push((format!("{}{}","\n   [Auto Stake Rewards]".truecolor(75,219,75),"     target:            ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n".truecolor(75,219,75),"   target:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}".purple().to_string()),*offset));
     *offset += 1;
 
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -85,7 +85,7 @@ pub async fn lazy_anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<S
     anchor_view.push((" UST".purple().to_string(),*offset));
     *offset += 1;
 
-    anchor_view.push((format!("{}{}","\n   [Auto Stake]".truecolor(75,219,75),"             next:              ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n   [Auto Stake]\n".truecolor(75,219,75),"   next:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}".purple().to_string()),*offset));
     *offset += 1;
 
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -94,7 +94,7 @@ pub async fn lazy_anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<S
     *offset += 1;
 
     // est fees.
-    anchor_view.push((format!("{}{}","\n\n   [Auto Stake Claim Tx]".truecolor(75,219,75),"    est. gas:          ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n\n   [Auto Stake Claim Tx]\n".truecolor(75,219,75),"   est. gas:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}".purple().to_string()),*offset));
     *offset += 1;
 
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -102,7 +102,7 @@ pub async fn lazy_anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<S
     anchor_tasks.push(t);
     *offset += 1;
 
-    anchor_view.push((format!("{}{}","\n   [Auto Stake Stake Tx]".truecolor(75,219,75),"    est. gas:          ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n   [Auto Stake Stake Tx]\n".truecolor(75,219,75),"   est. gas:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}".purple().to_string()),*offset));
     *offset += 1;
 
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -110,7 +110,7 @@ pub async fn lazy_anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<S
     anchor_tasks.push(t);
     *offset += 1;
 
-    anchor_view.push((format!("{}{}","\n   [Auto Stake Tx]".truecolor(75,219,75),"          est. fee:          ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n   [Auto Stake Tx]\n".truecolor(75,219,75),"   est. fee:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}".purple().to_string()),*offset));
     *offset += 1;
 
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -121,13 +121,13 @@ pub async fn lazy_anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<S
     anchor_view.push((" UST".purple().to_string(),*offset));
     *offset += 1;
     
-    let mut field = "result:  ";
+    let mut field = "   result:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}";
 
     if is_test {
-        field = "estimate:";
+        field = "   estimate:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}";
     }
 
-    anchor_view.push((format!("{}{}","\n\n   [Auto Stake]".truecolor(75,219,75),format!("             {}          ",field.purple())),*offset));
+    anchor_view.push((format!("{}{}","\n\n   [Auto Stake]\n".truecolor(75,219,75),format!("{}",field.purple())),*offset));
     *offset += 1;
 
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -137,8 +137,6 @@ pub async fn lazy_anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<S
     anchor_tasks.push(t);
     *offset += 1;
 
-
-    
     anchor_view.push(("\n\n".to_string(),*offset));
     *offset += 1;
 

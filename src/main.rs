@@ -1,10 +1,3 @@
-// entrypoint of the application
-// user data/settings are loaded
-// arguments read
-// loop: 
-//   -  display state
-//   -  bot execution
-
 #[macro_use]
 extern crate litcrypt;
 //https://github.com/anvie/litcrypt.rs
@@ -74,7 +67,6 @@ use core::future::Future;
 
 extern crate num_cpus;
 
-
 // TODOS NOW:
 
 // clean up: bot/action (multiple modules, separation into utility functions)
@@ -115,7 +107,7 @@ extern crate num_cpus;
 async fn main() -> anyhow::Result<()> {
 
         /* Load user settings */
-        let mut terra_rust_bot_json_loaded = "terra-rust-bot.json not loaded";
+        let mut terra_rust_bot_json_loaded = "\nterra-rust-bot.json not loaded\n";
 
         let mut user_settings: UserSettings = UserSettings {
             trigger_percentage: Decimal::from_str("0.9").unwrap(),  
@@ -132,7 +124,7 @@ async fn main() -> anyhow::Result<()> {
             Ok(file) => {
                 user_settings = match serde_json::from_str(&file) {
                     Ok(res) => {
-                        terra_rust_bot_json_loaded="terra-rust-bot.json loaded.";
+                        terra_rust_bot_json_loaded="\nterra-rust-bot.json loaded.\n";
                         res
                     },
                     Err(err) => {println!("{:?}",err);user_settings}
@@ -185,6 +177,7 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
         } 
+
         /* Get wallet details */
 
         let mut wallet_seed_phrase = SecUtf8::from("".to_string());
@@ -225,7 +218,7 @@ async fn main() -> anyhow::Result<()> {
         // using timestamps to update each slot with a short delay.
         let mut timestamps_display: Vec<i64> = vec![0i64; display_slots];
         let mut display_out_timestamp = 0i64;
-
+       
         add_string_to_display(&new_display, 0, format!("{}\n\n",terra_rust_bot_json_loaded.truecolor(77, 77, 237))).await.ok();
         
         let num_cpus = num_cpus::get();
@@ -289,7 +282,7 @@ async fn main() -> anyhow::Result<()> {
                     req_to_update.len().to_string().purple(),
                     ", total requirements: ".to_string().purple(),
                     req_keys.len().to_string().purple(),
-                    format!("{:?}\n",req_failed).to_string().red(),
+                    format!("\n{:?}\n",req_failed).to_string().red(),
                     format!("{:?}\n",req_unresolved).to_string().yellow(),
                     format!("{:?}",req_to_update).to_string().purple()
                     )).await.ok(); 
@@ -416,7 +409,7 @@ async fn main() -> anyhow::Result<()> {
                 // writing display to file.
                 let new_line = format!("{esc}c", esc = 27 as char);
                 let line = format!("{}{}",new_line,new_display.read().await.join(""));
-                fs::write("./terra-rust-bot-display.txt", &line).ok();  
+                fs::write("./packages/terra-rust-hook/terra-rust-bot-display.txt", &line).ok();  
                 display_out_timestamp = now;        
             }
         } 

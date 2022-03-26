@@ -25,7 +25,7 @@ use colored::*;
     anchor_view.push(("\n  **Anchor Protocol Auto Borrow**\n\n".truecolor(75,219,75).to_string(),*offset)); 
     *offset += 1;
 
-     anchor_view.push((format!("{}{}","\n\n   [Auto Borrow]".truecolor(75,219,75),"                    loan amount:              ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n\n   [Auto Borrow]\n".truecolor(75,219,75),"   loan amount:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}".purple().to_string()),*offset));
     *offset += 1;
 
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -33,7 +33,7 @@ use colored::*;
     anchor_tasks.push(t);
     *offset += 1;
 
-    anchor_view.push((" UST (borrow limit: ".purple().to_string(),*offset));
+    anchor_view.push((" UST \n   borrow limit:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}".purple().to_string(),*offset));
     *offset += 1;
 
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -41,10 +41,10 @@ use colored::*;
     anchor_tasks.push(t);
     *offset += 1;
 
-    anchor_view.push((" UST)".purple().to_string(),*offset));
+    anchor_view.push((" UST".purple().to_string(),*offset));
     *offset += 1;
 
-    anchor_view.push((format!("{}{}","\n   [Auto Borrow]".truecolor(75,219,75),"                    loan to borrow limit:     ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n".truecolor(75,219,75),"   loan to borrow limit:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}".purple().to_string()),*offset));
     *offset += 1;
 
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -52,9 +52,7 @@ use colored::*;
     anchor_tasks.push(t);
     *offset += 1;
 
-
-
-    anchor_view.push((format!("{}{}","\n\n   [Auto Borrow]".truecolor(75,219,75),"                    left to trigger:          ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n".truecolor(75,219,75),"   left to trigger:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}".purple().to_string()),*offset));
     *offset += 1;
  
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -63,7 +61,7 @@ use colored::*;
     *offset += 1;
 
 
-    anchor_view.push((format!("{}{}","\n   [Auto Borrow]".truecolor(75,219,75),"                    to borrow:                ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n".truecolor(75,219,75),"   to borrow:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}".purple().to_string()),*offset));
     *offset += 1;
  
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -75,7 +73,7 @@ use colored::*;
     *offset += 1;
 
     // does include gas_adjustment
-    anchor_view.push((format!("{}{}","\n   [Auto Borrow]".truecolor(75,219,75),"                    est. gas:                 ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n".truecolor(75,219,75),"   est. gas:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}".purple().to_string()),*offset));
     *offset += 1;
  
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -84,7 +82,7 @@ use colored::*;
     *offset += 1;
  
      // min(to_repay * tax_rate , tax_cap)
-    anchor_view.push((format!("{}{}","\n   [Auto Borrow]".truecolor(75,219,75),"                    est. stability fee:       ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n".truecolor(75,219,75),"   est. stability fee:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}".purple().to_string()),*offset));
     *offset += 1;
  
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -95,7 +93,7 @@ use colored::*;
     anchor_view.push((" UST".purple().to_string(),*offset));
     *offset += 1;
 
-    anchor_view.push((format!("{}{}","\n\n   [Auto Borrow]".truecolor(75,219,75),"                    to deposit:               ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n".truecolor(75,219,75),"   to deposit:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}".purple().to_string()),*offset));
     *offset += 1;
  
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -106,7 +104,7 @@ use colored::*;
     anchor_view.push((" UST".purple().to_string(),*offset));
     *offset += 1;
  
-    anchor_view.push((format!("{}{}","\n   [Auto Borrow Deposit]".truecolor(75,219,75),"            est. gas:                 ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n   [Auto Borrow Deposit]\n".truecolor(75,219,75),"   est. gas:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}".purple().to_string()),*offset));
     *offset += 1;
  
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -115,7 +113,7 @@ use colored::*;
     *offset += 1;
 
     // min(to_repay * tax_rate , tax_cap)
-    anchor_view.push((format!("{}{}","\n   [Auto Borrow Deposit]".truecolor(75,219,75),"            est. stability fee:       ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n".truecolor(75,219,75),"   est. stability fee:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}".purple().to_string()),*offset));
     *offset += 1;
  
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -127,7 +125,7 @@ use colored::*;
     *offset += 1;
 
     // total fee
-    anchor_view.push((format!("{}{}","\n\n   [Auto Borrow Transaction]".truecolor(75,219,75),"        est. fee:                 ".purple().to_string()),*offset));
+    anchor_view.push((format!("{}{}","\n\n   [Auto Borrow Transaction]\n".truecolor(75,219,75),"   est. fee:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}".purple().to_string()),*offset));
     *offset += 1;
  
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -138,13 +136,13 @@ use colored::*;
     anchor_view.push((" UST".purple().to_string(),*offset));
     *offset += 1;
  
-    let mut field = "result:  ";
+    let mut field = "   result:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}";
 
     if is_test {
-        field = "estimate:";
+        field = "   estimate:\n\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}\u{2007}";
     }
 
-    anchor_view.push((format!("{}{}","\n\n   [Auto Borrow]".truecolor(75,219,75),format!("                    {}                 ",field.purple())),*offset));
+    anchor_view.push((format!("{}{}","\n\n   [Auto Borrow]\n".truecolor(75,219,75),format!("{}",field.purple())),*offset));
     *offset += 1;
 
     anchor_view.push(("--".purple().to_string(),*offset));
@@ -155,8 +153,7 @@ use colored::*;
     *offset += 1;
 
     anchor_view.push(("\n\n".to_string(),*offset));
-    *offset += 1;
-
+    *offset += 1; 
 
     if is_first_run {
         add_view_to_display(&new_display, anchor_view).await; 
