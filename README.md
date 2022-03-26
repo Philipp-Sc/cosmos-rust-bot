@@ -89,7 +89,7 @@
 
 ### Configuration
 * The configuration can be customized via the **terra-rust-bot.json** file.
-* The current state is written to **terra-rust-bot-display.txt** instead of the console.
+* The current state is written to **./packages/terra-rust-hook/terra-rust-bot-display.txt** instead of the console.
  
 
 ## Manual - Just Read The Instructions
@@ -180,7 +180,7 @@
 
  **View the current state**
 
-* `while sleep 0.1; do cat terra-rust-bot-display.txt; done` (watch the display output of terra-rust-bot)
+* `while sleep 0.1; do cat ./packages/terra-rust-hook/terra-rust-bot-display.txt; done` (watch the display output of terra-rust-bot)
 
 
 **Server Environment Example**
