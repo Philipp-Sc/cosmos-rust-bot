@@ -90,6 +90,10 @@
 ### Configuration
 * The configuration can be customized via the **terra-rust-bot.json** file.
 * The current state is written to **./packages/terra-rust-hook/terra-rust-bot-display.txt** instead of the console.
+
+
+### Notifications/ Slack Webhook
+* In addition to the terra-rust-bot a notification package is now available. **./packages/terra-rust-hook/** You will need to add your secret webhook URL into the file **main.rs**, then run the install script with `./install.sh native` afterwards you can run the program with `./run.sh` and stop it with `./stop.sh`. This notification bot will run independently of terra-rust-bot.
  
 
 ## Manual - Just Read The Instructions
@@ -221,4 +225,4 @@
 ## Similar projects
 - https://github.com/ALPAC-4/auto_repay
 - https://github.com/RomainLanz/anchor-borrow-bot
-- https://github.com/unl1k3ly/AnchorHODL  (AnchorHODL is a good choice, it offers Telegram/Slack Notification as well as a webview.)
+- https://github.com/unl1k3ly/AnchorHODL

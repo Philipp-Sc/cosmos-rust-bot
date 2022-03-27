@@ -30,8 +30,9 @@ async fn main() -> anyhow::Result<()> {
 		            }
 		        };
                 let result = regex.replace_all(&display, "").to_string();
-                let result = (result.as_str()[3..result.as_str().len()]).to_string();
-
+                if result.as_str().len() > 3 {
+                    result = (result.as_str()[3..result.as_str().len()]).to_string();
+                }
                 let p = PayloadBuilder::new()
                   .text(result)
                   .channel("#terra-rust-bot") 
