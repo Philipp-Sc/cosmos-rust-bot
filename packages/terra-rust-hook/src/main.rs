@@ -29,7 +29,7 @@ async fn main() -> anyhow::Result<()> {
 		                format!("{:?}",err)
 		            }
 		        };
-                let result = regex.replace_all(&display, "").to_string();
+                let mut result = regex.replace_all(&display, "").to_string();
                 if result.as_str().len() > 3 {
                     result = (result.as_str()[3..result.as_str().len()]).to_string();
                 }
