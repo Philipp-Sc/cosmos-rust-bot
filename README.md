@@ -1,8 +1,8 @@
 <div align="center">
   
-  <p>🌕🍇🤖🚀🔩🛠️</p>
-  <h1>terra-rust-bot</h1> 
-  <p>Get the most out of your Luna bag by automating the low hanging fruits.</p> 
+  <p>🌕🍇🤖</p>
+  <h1>TRB - Terra Rust Bot</h1> 
+  <p>Get the most bang for your buck by automating the low hanging fruits of the Terra Ecosystem.</p> 
     <img src="https://img.shields.io/github/languages/top/Philipp-Sc/terra-rust-bot"> 
     <img src="https://img.shields.io/github/repo-size/Philipp-Sc/terra-rust-bot"> 
     <img src="https://img.shields.io/github/commit-activity/m/Philipp-Sc/terra-rust-bot"> 
@@ -11,62 +11,32 @@
   </div>
 <br/>
 
-
 > :warning: The bot needs your **seed phrase** to create and sign transactions.  
 > :arrow_right_hook: You can use Terra-rust-bot without a seed phrase in view mode. Test this first.  
 
 > :warning: No security audit has been performed. (*Disclaimer: This may steal your money. Do your own research. Take a look at the code.*)
- 
-
-
-## Why
-
-* Open source bots accessible to all will empower the Terra ecosystem.
-* A single executable that is easy to use with few dependencies.
-
- 
-## Features 
-
-
-### Anchor Auto Farm Rewards
-
- <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/main/terra-rust-bot_v0.3_auto_farm.png" width="380">
   
- Checks your pending borrower ANC rewards, considers the gas fees and provides them to the Astroport ANC-UST LP at Spectrum Protocol.
+### [Install](#install) · [Config](#config) · [Usage](#usage) · [Summary](#summary)
  
-### Anchor Auto Stake Rewards
+
+**TRB** can be used to connect with a terra wallet to keep potential loans safe *(Auto Repay)*, maximise their utility *(Auto Borrow)* and more *(Auto Stake, Auto Farm,..)*. If conncted it provides convinient access, status updates and notifications using the Signal messenger.    
+
+It is intended to be used by **coders, developers and technically-skilled users** to make use of automation.    
+At the same time **TRB** can be compiled to a single executable that is easy to use with few dependencies. Making it easy to use.    
+
+Current feature list:    
+
+- Anchor Protocol: Auto Repay (1), Auto Borrow (2), Auto Stake (3), Auto Farm (4).
+- (1) Keeps your loan safe by sourcing money from your balance (UST) or Anchor Deposit (aUST).     
+- (2) Optimizes your LTV by automatically borrowing additional UST and depositing it into Anchor Earn (aUST).
+- (3) Checks your pending borrower ANC rewards, considers the gas fees and stakes them automatically. 
+- (4) Checks your pending borrower ANC rewards, considers the gas fees and provides them to the Astroport ANC-UST LP at Spectrum Protocol.
 
 
- <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/main/terra-rust-bot_v0.3_auto_stake.png" width="380">
+- Dashboards: Market, Anchor | providing general information
+
+
   
- Checks your pending borrower ANC rewards, considers the gas fees and stakes them automatically. 
- 
-### Anchor Auto Loan Repay 
-
- <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/main/terra-rust-bot_v0.3_auto_repay.png" width="380">
- 
- Keeps your loan safe by sourcing money from your balance (UST) or Anchor Deposit (aUST). 
-  
-### Anchor Auto Borrow
-
- <img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/main/terra-rust-bot_v0.3_auto_borrow.png" width="380">
- 
- Optimizes your LTV by automatically borrowing additional UST and depositing it into Anchor Earn (aUST).
-
-
-### Market Dashboard 
-
-
-<img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/development/terra-rust-bot_v0.1_terra.png" width="280">
- 
-
-### Anchor Dashboard 
-
-
-<img src="https://github.com/Philipp-Sc/terra-rust-bot/blob/development/terra-rust-bot_v0.1_anchor.png" width="980">
-  
-(* the collateral value is calculated with the max_ltv, once the max_ltv for BLUNA and BETH are different, the collateral will be incorrect, this effects some of the APYs. TODO: query collateral value for BETH and LUNA.)
- 
 
 ## How it works
  
@@ -75,9 +45,18 @@
 * Sensitive information is gathered at runtime via user input. This avoids storing sensitive information within config files.
 * The encrypted seed phrase is stored safely in memory with <a href="https://github.com/unrelentingtech/secstr">secstr</a>.
 * The seed phrase is encrypted using a simple XOR Cipher and only decrypted when used.
-* Terra-rust-bot uses <a href="https://github.com/anvie/litcrypt.rs">litcrypt</a> to hide the encryption key from naughty eyes and protect the program from illegal cracking activity.
+* Terra-rust-bot uses <a href="https://github.com/anvie/litcrypt.rs">litcrypt</a> to hide the encryption key from naughty eyes and protect the program from illegal cracking activity.   
 
-> :arrow_down: Check out the *Additional Security Measures* described below. 
+#### Additional Security Measures
+
+> There is no easy way for an attacker to extract your seed phrase, BUT given enough time and root access to your system it is certainly possible someone experienced can hack their way into the RAM, modify the code or introduce memory leaks to steal the seed. Everything CAN be hacked. Here are some security measures you might want to consider.
+
+- Always clear your copy/paste clipboard.
+- Use a dedicated wallet.
+- Avoid vserver and use a dedicated root server. (RAM snapshots are a security risk)
+- Harden your system. (Firewall, SSH, SELinux, Filesystem Encryption, VPN)
+- Hide the fact that you are using terra-rust-bot: Rename the executable to something (un)expected.  
+ 
 
 
 #### Requests
@@ -87,18 +66,13 @@
 * Looking at past transactions terra-rust-bot estimates a reasonable transaction fee. In particually by looking at the actual gas amounts that were used in past transactions. This estimate can be used to offset the fee, keeping the account balance stable. For each transaction the fees are simulated using the prefered gas adjustment and double checked with the set maximum transaction fee.  
 * If possible transactions are grouped together, to further reduce the gas fees.
 
-### Configuration
+#### Configuration
 * The configuration can be customized via the **terra-rust-bot.json** file.
-* The current state is written to **./packages/terra-rust-hook/terra-rust-bot-display.txt** instead of the console.
-
-
-### Notifications/ Slack Webhook
-* In addition to the terra-rust-bot a notification package is now available. **./packages/terra-rust-hook/** You will need to add your secret webhook URL into the file **main.rs**, then run the install script with `./install.sh native` afterwards you can run the program with `./run.sh` and stop it with `./stop.sh`. This notification bot will run independently of terra-rust-bot.
+* The current state is written to **./packages/terra-rust-signal-bot/terra-rust-bot-state.json**.
  
 
-## Manual - Just Read The Instructions
 
-### Step 1: Build
+## Install
 
 > Tested on Linux.
 > Tested on Windows Subsystem for Linux / Ubuntu.
@@ -127,25 +101,29 @@
  *You can choose between three different build options:*
 * `./install.sh dev` fast build
 * `./install.sh prod` optimized build
-* `./install.sh native` optimize the build for your CPU
+* `./install.sh native` optimize the build for your CPU    
+ 
  
 
-### Step 2: terra-rust-bot.json
+## Config
 
- > :warning: If this file does not exist hard coded values from the terra-rust-bot implementation are used.
- 
+### terra-rust-bot.json
+
  > :arrow_right: This file needs to be in the working directory, from where you execute the command to run terra-rust-bot.
+ 
 
- * `trigger_percentage:` at which point you want to repay (1 equals a LTV of 60%).
- * `borrow_percentage:` at which point you want to borrow (1 equals a LTV of 60%).
- * `target_percentage:` the LTV do you want to maintain (1 equals a LTV of 60%).
- * `max_tx_fee:` the maximum UST amount you want to spend per transaction per fee.
- * `max_gas_adjustment:` currently not used by the bot.
- * `gas_adjustment_preference:` the gas_adjustment you want to use, recommended value is "1.2" or higher.
- * `min_ust_balance:` the minimum UST balance, if below this value no further transactions will be made. If min_ust_balance is 10 UST then you should have more than that deposited for the bot to be able to execute transactions, around 15 or 20 UST. It is your job to make sure the balance is sufficient.
- * `ust_balance_preference:` should be higher than min_ust_balance. For example 20 UST. Auto Repay will try to maintain the balance at that value.
+ * `trigger_percentage:` recommended value not greater than 0.95 (= trigger repay at 95% of the borrow limit).
+ * `borrow_percentage:` recommended value around 0.7 (= trigger borrow at 70% of the borrow limit).
+ * `target_percentage:` recommended value 0.8 (= repay position to 80% of the borrow limit).
+ * `max_tx_fee:` safeguard parameter: max. UST amount to spend per transaction for the fees. recommended value 5.
+ * `gas_adjustment_preference:` the gas_adjustment you want to use, recommended value is "1.2" or higher to ensure transactions go through.
+ * `min_ust_balance:` min. UST balance, if below this value no further transactions will be made. If min_ust_balance is 10 UST then you should have more than that deposited for the bot to be able to execute transactions, around 15 or 20 UST. It is your job to make sure the balance is sufficient.
+ * `ust_balance_preference:` greater than min_ust_balance, the bot will try to maintain the balance at the given value.
 
-### Step 3: Run terra-rust-bot
+
+## Usage
+
+### Run terra-rust-bot
 
 
 > :arrow_right: To optimize terra-rust-bot's response time run it on a multi-core system for the best performance.  
@@ -200,20 +178,6 @@
 *The ./stop.sh script simply stops the bot.*
 * `./stop.sh` (stops the bot)
 
- 
-
-## Additional Security Measures
-
-> There is no easy way for an attacker to extract your seed phrase, BUT given enough time and root access to your system it is certainly possible someone experienced can hack their way into the RAM, modify the code or introduce memory leaks to steal the seed. Everything CAN be hacked. Here are some security measures you might want to consider.
-
-- Always clear your copy/paste clipboard.
-- Use a dedicated wallet.
-- Avoid vserver and use a dedicated root server. (RAM snapshots are a security risk)
-- Harden your system. (Firewall, SSH, SELinux, Filesystem Encryption, VPN)
-- Minimize your attack surface.
-- Hide the fact that you are using terra-rust-bot: Rename the executable to something (un)expected. 
-- Prepare a Honeypot/Decoy
- 
 
 ## Summary
 
