@@ -5,7 +5,7 @@ edition = "2021"
 
 
 [dependencies]
-presage = { path = "./packages/presage"}   
+presage = { git = "https://github.com/Philipp-Sc/presage.git"}   
 anyhow = "1.0"
 directories = "3.0"
 env_logger = "0.7"
