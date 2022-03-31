@@ -97,7 +97,7 @@ Current feature list:
 
 **Build terra-rust-bot**
 
- *To make the process as simple as possible I created a bash script: ./install.sh*
+ *To make the process as simple as possiblethe following bash script is provided: ./install.sh*
  *You can choose between three different build options:*
 * `./install.sh dev` fast build
 * `./install.sh prod` optimized build
@@ -111,7 +111,7 @@ Current feature list:
 * `cd ./packages/terra-rust-signal-bot`
 * `./install.sh dev`
 
-* After that you should be able to run:*   
+* After that you should be able to run:  
 * `./terra-rust-signal-bot help` 
 
 * To link your signal account you will need to scan a QR-Code with your phone.   
