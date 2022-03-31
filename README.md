@@ -22,7 +22,7 @@
 **TRB** can be used to connect with a terra wallet tgo keep potential loans safe *(Auto Repay)*, maximise their utility *(Auto Borrow)* and more *(Auto Stake, Auto Farm,..)*. This repository includes a Signal Messenger integration that can be used to obtain the latest informaction directly from the bot. 
 
 
-> :warning: Currently there is no local encryption for the linked Signal account. If the system is compromised so is your Signal account. This will be addressed in upcoming releases.
+> :warning: Currently there is no local encryption for the linked Signal account. If the system is compromised so is your Signal account. This will be addressed in upcoming releases. It is recommended to use a dedicated Signal account for terra-rust-bot.
 
 
 It is intended to be used by **coders, developers and technically-skilled users** to make use of automation.    
