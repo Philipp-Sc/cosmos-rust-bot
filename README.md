@@ -19,7 +19,7 @@
 ### [Install](#install) · [Config](#config) · [Usage](#usage) · [Summary](#summary)
  
 
-**TRB** can be used to connect with a terra wallet to keep potential loans safe *(Auto Repay)*, maximise their utility *(Auto Borrow)* and more *(Auto Stake, Auto Farm,..)*. If conncted it provides convinient access, status updates and notifications using the Signal messenger.    
+**TRB** can be used to connect with a terra wallet tgo keep potential loans safe *(Auto Repay)*, maximise their utility *(Auto Borrow)* and more *(Auto Stake, Auto Farm,..)*. If conncted it provides convinient access, status updates and notifications using the Signal messenger.    
 
 It is intended to be used by **coders, developers and technically-skilled users** to make use of automation.    
 At the same time **TRB** can be compiled to a single executable that is easy to use with few dependencies. Making it easy to use.    
@@ -33,7 +33,7 @@ Current feature list:
 - (4) Checks your pending borrower ANC rewards, considers the gas fees and provides them to the Astroport ANC-UST LP at Spectrum Protocol.
 
 
-- Dashboards: Market, Anchor | providing general information
+- Dashboards: Market, Anchor Info, Anchor Account
 
 
   
@@ -95,7 +95,7 @@ Current feature list:
 * `cd terra-rust-bot`
 
 
-**Build**
+**Build terra-rust-bot**
 
  *To make the process as simple as possible I created a bash script: ./install.sh*
  *You can choose between three different build options:*
@@ -103,6 +103,20 @@ Current feature list:
 * `./install.sh prod` optimized build
 * `./install.sh native` optimize the build for your CPU    
  
+
+**Build terra-rust-signal-bot**
+
+  *To reveive notifications via signal build this package as well.*  
+
+* `cd ./packages/terra-rust-signal-bot`
+* `./install.sh dev`
+
+* After that you should be able to run:*   
+* `./terra-rust-signal-bot help` 
+
+* To link your signal account you will need to scan a QR-Code with your phone.   
+* `./terra-rust-signal-bot link-device`
+* You can use the *send* and *receive* command to test the connection.
  
 
 ## Config
@@ -131,52 +145,45 @@ Current feature list:
 
 **Location of the executable**
 
-* `./target/debug/terra-rust-bot `,
-* `./target/release/terra-rust-bot ` or
-* `./my-bot` (if you use the install script)
+* `./my-bot` (if you used the install script)
+
+**Server Environment**
+
+*For convinience the following two bash scripts are available: ./run.sh and ./stop.sh*
+*./run.sh makes sure the seed phrase stays secure and starts the bot as a background process*
+*It will also automatically stop any running instance of ./my-bot first before creating a new process*
+
+ **Common Use Cases**
+* Auto Repay/Borrow `./run.sh -b anchor_auto_repay anchor_auto_borrow -d test`    
+* Auto Repay/Borrow + Auto Staking `./run.sh -b anchor_auto_stake anchor_auto_repay anchor_auto_borrow -d test`    
+* Everything `./run.sh -i market anchor -a anchor_account -b anchor_auto_stake anchor_auto_repay anchor_auto_borrow -d test`    
+
+*the above commands are read only, remove `-d test` to let the bot sign transactions*
 
 **Command line args**
 
  * `-i` show **info** dashboards: `market` or `anchor`.  
  * `-a` show **account** dashboards: `anchor_account`.  
- * `-b` enable **bot**: `anchor_auto_stake`, `anchor_auto_borrow`  or `anchor_auto_repay`.
- * `-d` enable additional development/debugging output. Currently `test` and `dev` are available. `test` will only simulate or estimate transaction fees. `dev` will output additional information to show what is happening in the background. 
-
- **Examples**
-
- * `./terra-rust-bot -b anchor_auto_stake -d test dev` (read only, remove `test` to let the bot sign transactions)
-
- * `./terra-rust-bot -b anchor_auto_lp -d test dev`  
+ * `-b` enable **bot**: `anchor_auto_lp`,`anchor_auto_stake`, `anchor_auto_borrow`  or `anchor_auto_repay`.
+ * `-d` enable additional development/debugging output. Currently only `test` is available. `test` will only simulate or estimate transaction fees.
  
- * `./terra-rust-bot -b anchor_auto_repay -d test dev`  
- 
- * `./terra-rust-bot -b anchor_auto_borrow -d test dev` 
-
- * `./terra-rust-bot -b anchor_auto_stake anchor_auto_repay anchor_auto_borrow -d test dev`
-
- * `./terra-rust-bot -i market` (market information)
-
- * `./terra-rust-bot -i anchor` (anchor information)
-
- * `./terra-rust-bot -i anchor -a anchor_account` (for account specific information)
 
  **View the current state**
 
-* `while sleep 0.1; do cat ./packages/terra-rust-hook/terra-rust-bot-display.txt; done` (watch the display output of terra-rust-bot)
+* Use the terra-rust-signal-bot to view the state.
 
 
-**Server Environment Example**
+### Run terra-rust-signal-bot
 
-*For convinience the following two bash scripts are available: ./run.sh and ./stop.sh*
-*./run.sh makes sure the seed phrase stays secure and starts the bot as a background process*
-*It will also automatically stop any running instance of ./my-bot first before creating a new process*
- **Common Use Cases**
-* Auto Repay/Borrow `./run.sh -b anchor_auto_repay anchor_auto_borrow -d test dev` (read only, remove `test` to let the bot sign transactions)
-* Auto Repay/Borrow + Auto Staking `./run.sh -b anchor_auto_stake anchor_auto_repay anchor_auto_borrow -d test dev` (read only, remove `test` to let the bot sign transactions)
+* terra-rust-signal-bot relies on the file **./packages/terra-rust-signal-bot/terra-rust-bot-state.json** to read the state of the terra-rust-bot.
+* If you already started the terra-rust-bot as shown above then you can use the terra-rust-signal-bot to either directly view the state or to activate the signal-bot.
 
+* `cd ./packages/terra-rust-signal-bot`
+* `./run.sh receive-loop` (run the signal-bot)
+* `./stop.sh` (stop the signal-bot)
 
-*The ./stop.sh script simply stops the bot.*
-* `./stop.sh` (stops the bot)
+* `./terra-rust-signal-bot local-display -m "\help"  ` (to view the state directly)
+* replace `"\help"` with any other command to view the state.
 
 
 ## Summary
