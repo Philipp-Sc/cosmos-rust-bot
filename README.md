@@ -19,7 +19,11 @@
 ### [Install](#install) · [Config](#config) · [Usage](#usage) · [Summary](#summary)
  
 
-**TRB** can be used to connect with a terra wallet tgo keep potential loans safe *(Auto Repay)*, maximise their utility *(Auto Borrow)* and more *(Auto Stake, Auto Farm,..)*. If conncted it provides convinient access, status updates and notifications using the Signal messenger.    
+**TRB** can be used to connect with a terra wallet tgo keep potential loans safe *(Auto Repay)*, maximise their utility *(Auto Borrow)* and more *(Auto Stake, Auto Farm,..)*. This repository includes a Signal Messenger integration that can be used to obtain the latest informaction directly from the bot. 
+
+
+> :warning: Currently there is no local encryption for the linked Signal account. If the system is compromised so is your Signal account. This will be addressed in upcoming releases.
+
 
 It is intended to be used by **coders, developers and technically-skilled users** to make use of automation.    
 At the same time **TRB** can be compiled to a single executable that is easy to use with few dependencies. Making it easy to use.    
@@ -97,7 +101,7 @@ Current feature list:
 
 **Build terra-rust-bot**
 
- *To make the process as simple as possiblethe following bash script is provided: ./install.sh*
+ *To make the process as simple as possiblethe following bash script is: ./install.sh*
  *You can choose between three different build options:*
 * `./install.sh dev` fast build
 * `./install.sh prod` optimized build
@@ -115,7 +119,7 @@ Current feature list:
 * `./terra-rust-signal-bot help` 
 
 * To link your signal account you will need to scan a QR-Code with your phone.   
-* `./terra-rust-signal-bot link-device`
+* `./terra-rust-signal-bot link-device -s production -n terra-rust-signal-bot`
 * You can use the *send* and *receive* command to test the connection.
  
 
