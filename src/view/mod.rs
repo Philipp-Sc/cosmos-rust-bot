@@ -1442,14 +1442,14 @@ pub async fn borrow_rate_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrProm
         return Decimal::from_str(_interest_multiplier.to_string().as_str()).unwrap().checked_mul(utilization_ratio).unwrap().checked_add(Decimal::from_str(_base_rate.to_string().as_str()).unwrap()).unwrap().round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero).to_string();  
 }
 
-pub async fn utilization_ratio_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key_1: &str,key_2: &str, digits_rounded_to: u32) -> String { 
+pub async fn utilization_ratio_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
         
         let mut _total_liabilities = cosmwasm_bignumber::Decimal256::zero(); 
 
         let mut _a_terra_exchange_rate = cosmwasm_bignumber::Decimal256::zero();
         let mut _a_terra_supply = cosmwasm_bignumber::Uint256::zero();
                 
-        match get_data_maybe_or_await_task(&tasks,key_1).await {
+        match get_data_maybe_or_await_task(&tasks,"state anchorprotocol mmMarket").await {
             Ok(response_result) => {
                 _total_liabilities = response_result.as_state().unwrap().as_mm_market().unwrap().result.total_liabilities; 
             },
@@ -1458,7 +1458,7 @@ pub async fn utilization_ratio_to_string(tasks: Arc<RwLock<HashMap<String, Maybe
             }
         }
 
-        match get_data_maybe_or_await_task(&tasks,key_2).await {
+        match get_data_maybe_or_await_task(&tasks,"epoch_state anchorprotocol mmMarket").await {
             Ok(response_result) => {
                 _a_terra_exchange_rate = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.exchange_rate; 
                 _a_terra_supply = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.aterra_supply; 

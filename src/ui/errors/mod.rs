@@ -9,20 +9,15 @@ use crate::view::*;
 use std::collections::HashMap;  
 
 use std::sync::Arc; 
-use tokio::sync::RwLock;   
-use colored::*;
+use tokio::sync::RwLock;    
+use chrono::Utc;
 
-pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, req: &[&str], new_display: &Arc<RwLock<Vec<String>>> ,offset: &mut usize) {
+
+pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, req: &[&str], state: &Arc<RwLock<Vec<Option<Entry>>>> ,offset: &mut usize) {
    
-    let mut error_view: Vec<(String,usize)> = Vec::new();
+    clear_after_index(state,*offset).await;
 
-    error_view.push(("\n\n  **Errors**\n\n".red().to_string(),*offset));
-    *offset += 1;
-  
-    // clear the previous error messages. 
-    for x in *offset..new_display.read().await.len(){
-        error_view.push(("".to_string(),x));
-    }
+    let mut error_view: Vec<(Entry,usize)> = Vec::new();
 
     let mut error_count = 0;
     for key in req {
@@ -32,16 +27,18 @@ pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromis
             e => {
                 if !e.contains("Info: Key '"){
                     error_count = error_count +1;
-                    error_view.push((format!("\n   [Key] '{}'\n   {}\n",key,e).yellow().to_string(),*offset));
+                    error_view.push((Entry {
+                        timestamp: Utc::now().timestamp(), 
+                        key: key.to_string(),
+                        prefix: None,
+                        value: e.to_string(),
+                        suffix: None,
+                        group: Some("[Errors]".to_string()),
+                    },*offset));
                     *offset += 1; 
                 }
             }
         } 
-    }
-    if error_count == 0 {
-        error_view.push(("\n   None \n\n".red().to_string(),*offset)); 
-        *offset += 1; 
-    }
-
-    add_view_to_display(&new_display, error_view).await; 
+    } 
+    add_view_to_state(&state, error_view).await; 
 } 

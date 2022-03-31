@@ -4,19 +4,19 @@ case $1 in
 	"dev")
 	echo "development build"
 	cargo build
-	mv ./target/debug/terra-rust-hook my-hook
+	mv ./target/debug/terra-rust-signal-bot terra-rust-signal-bot
 	;;
 
 	"prod")
 	echo "release build"
 	cargo build --release
-	mv ./target/release/terra-rust-hook my-hook
+	mv ./target/release/terra-rust-signal-bot terra-rust-signal-bot
 	;;
 
 	"native")
 	echo "optimized release build"
 	RUSTFLAGS="-C target-cpu=native" cargo build --release
-	mv ./target/release/terra-rust-hook my-hook
+	mv ./target/release/terra-rust-signal-bot terra-rust-signal-bot
 	;;
 	
 	"")
@@ -27,10 +27,10 @@ esac
 
 echo "install.sh finished"
 
-echo "terra-rust-hook executable available as ./my-hook"
-echo $(ls -lh my-hook)
+echo "terra-rust-signal-bot executable available as ./terra-rust-signal-bot"
+echo $(ls -lh terra-rust-signal-bot)
 echo ""
-echo "for convinience use ./run.sh to start the hook and ./stop.sh to stop the hook."
+echo "for convinience use ./run.sh to start the bot and ./stop.sh to stop it."
 echo ""
 echo "e.g. './run.sh'"
 echo "e.g. './stop.sh'"

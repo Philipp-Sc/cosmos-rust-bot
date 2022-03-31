@@ -18,8 +18,7 @@ use crate::state::control::model::wallet::{encrypt_text_with_secret,decrypt_text
 use crate::state::control::try_run_function;
 
 // View -> Model (Read Data)
-mod view;
-use crate::view::{timestamp_now_to_string}; 
+mod view; 
 
 // Action -> (View, Model)
 mod bot;  
@@ -41,7 +40,7 @@ use ui::info::market::general::*;
 use ui::logs::*;
 use ui::errors::*; 
  
-use ui::display::{add_string_to_display,try_add_to_display};
+use ui::display::*;
 
 use std::env;
 use secstr::*;
@@ -56,8 +55,6 @@ use std::sync::Arc;
 use tokio::sync::RwLock;  
 use tokio::time::timeout; 
 
-use colored::*;
- 
 use chrono::{Utc};
 use std::fs;
 
@@ -143,10 +140,9 @@ async fn main() -> anyhow::Result<()> {
         let mut args_a: Vec<&str> = Vec::new();
         let mut args_b: Vec<&str> = Vec::new();
         let mut args_d: Vec<&str> = Vec::new();
-        let mut arg_w: String = "".to_string();
+        let mut arg_w = "".to_string();
 
-        let mut is_test = false;
-        let mut is_debug = false;
+        let mut is_test = false; 
 
         let mut last_item = 0;
         for x in 1..args.len() {
@@ -168,10 +164,7 @@ async fn main() -> anyhow::Result<()> {
                 if &args[last_item] == "-d" {
                     if &args[x] == "test" {
                         is_test = true;
-                    }
-                    if &args[x] == "dev" {
-                        is_debug = true;
-                    }
+                    } 
                     args_d.push(&args[x]);
 
                 }
@@ -214,13 +207,22 @@ async fn main() -> anyhow::Result<()> {
         /* Display */
         // object that stores the terminal output
         let display_slots = 1000;
-        let new_display: Arc<RwLock<Vec<String>>> = Arc::new(RwLock::new(vec!["".to_string(); display_slots])); 
+        let state: Arc<RwLock<Vec<Option<Entry>>>> = Arc::new(RwLock::new(vec![None; display_slots])); 
+        
         // using timestamps to update each slot with a short delay.
         let mut timestamps_display: Vec<i64> = vec![0i64; display_slots];
         let mut display_out_timestamp = 0i64;
        
-        add_string_to_display(&new_display, 0, format!("{}\n\n",terra_rust_bot_json_loaded.truecolor(77, 77, 237))).await.ok();
-        
+        let entry = Entry {
+            timestamp: Utc::now().timestamp(), 
+            key: "terra_rust_bot_json_loaded".to_string(),
+            prefix: None,
+            value: terra_rust_bot_json_loaded.to_string(),
+            suffix: None,
+            group: None,
+        };
+        add_entry_to_state(&state, 0, entry).await.ok();
+ 
         let num_cpus = num_cpus::get();
 
         /* Tasks */
@@ -239,6 +241,9 @@ async fn main() -> anyhow::Result<()> {
          * */
         loop {  
 
+
+            let mut offset: usize = 0;
+
             let req_unresolved = get_keys_of_running_tasks(&tasks,&req_keys_status).await;
             let req_failed = get_keys_of_failed_tasks(&tasks, &req_keys_status).await;
 
@@ -250,7 +255,22 @@ async fn main() -> anyhow::Result<()> {
             } 
 
             let req_resolved_timestamps = get_timestamps_of_resolved_tasks(&tasks,&req_keys).await;
+            
             let now = Utc::now().timestamp();
+
+            for x in 0..req_resolved_timestamps.len() {
+                 let entry = Entry {
+                    timestamp: now, 
+                    key: req_keys[x].to_string(),
+                    prefix: None,
+                    value: req_resolved_timestamps[x].to_string(),
+                    suffix: None,
+                    group: Some("[Task][History]".to_string()),
+                };
+                add_entry_to_state(&state, offset, entry).await.ok(); 
+                offset += 1;
+            }
+
 
             let mut req_to_update: Vec<&str> = Vec::new(); 
             for i in 0..req.len() {
@@ -270,67 +290,122 @@ async fn main() -> anyhow::Result<()> {
                 
             } 
 
-           if is_debug {
-               add_string_to_display(&new_display,1,format!(
-                    "{}{}{}{}{}{}{}{}{}\n\n{}\n{}\n{}\n\n",
-                    timestamp_now_to_string().yellow(),
-                    " -  failed: ".purple(), 
-                    req_failed.len().to_string().red(),
-                    ", pending: ".purple(),
-                    req_unresolved.len().to_string().yellow(),
-                    ", waiting: ".purple(),
-                    req_to_update.len().to_string().purple(),
-                    ", total requirements: ".to_string().purple(),
-                    req_keys.len().to_string().purple(),
-                    format!("\n{:?}\n",req_failed).to_string().red(),
-                    format!("{:?}\n",req_unresolved).to_string().yellow(),
-                    format!("{:?}",req_to_update).to_string().purple()
-                    )).await.ok(); 
-            }else{
-                add_string_to_display(&new_display,1,format!(
-                    "{}{}{}{}{}{}{}{}{}\n\n",
-                    timestamp_now_to_string().yellow(),
-                    " -  failed: ".purple(), 
-                    req_failed.len().to_string().red(),
-                    ", pending: ".purple(),
-                    req_unresolved.len().to_string().yellow(),
-                    ", waiting: ".purple(),
-                    req_to_update.len().to_string().purple(),
-                    ", total requirements: ".to_string().purple(),
-                    req_keys.len().to_string().purple()
-                    )).await.ok(); 
-            }
+            let entry = Entry {
+                    timestamp: now, 
+                    key: "failed".to_string(),
+                    prefix: None,
+                    value: req_failed.len().to_string(),
+                    suffix: None,
+                    group: Some("[Task][Count]".to_string()),
+                };
+            add_entry_to_state(&state, offset, entry).await.ok(); 
+            offset += 1;
+
+            let entry = Entry {
+                    timestamp: now, 
+                    key: "pending".to_string(),
+                    prefix: None,
+                    value: req_unresolved.len().to_string(),
+                    suffix: None,
+                    group: Some("[Task][Count]".to_string()),
+                };
+            add_entry_to_state(&state, offset, entry).await.ok(); 
+            offset += 1;
+            let entry = Entry {
+                    timestamp: now, 
+                    key: "upcoming".to_string(),
+                    prefix: None,
+                    value: req_to_update.len().to_string(),
+                    suffix: None,
+                    group: Some("[Task][Count]".to_string()),
+                };
+            add_entry_to_state(&state, offset, entry).await.ok(); 
+            offset += 1;
+
+            let entry = Entry {
+                    timestamp: now, 
+                    key: "all".to_string(),
+                    prefix: None,
+                    value: req_keys.len().to_string(),
+                    suffix: None,
+                    group: Some("[Task][Count]".to_string()),
+                };
+            add_entry_to_state(&state, offset, entry).await.ok(); 
+            offset += 1;
+
+            let entry = Entry {
+                    timestamp: now, 
+                    key: "failed".to_string(),
+                    prefix: None,
+                    value: format!("{:?}",req_failed),
+                    suffix: None,
+                    group: Some("[Task][List]".to_string()),
+                };
+            add_entry_to_state(&state, offset, entry).await.ok(); 
+            offset += 1;
+
+            let entry = Entry {
+                    timestamp: now, 
+                    key: "pending".to_string(),
+                    prefix: None,
+                    value: format!("{:?}",req_unresolved),
+                    suffix: None,
+                    group: Some("[Task][List]".to_string()),
+                };
+            add_entry_to_state(&state, offset, entry).await.ok(); 
+            offset += 1;
+
+            let entry = Entry {
+                    timestamp: now, 
+                    key: "upcoming".to_string(),
+                    prefix: None,
+                    value: format!("{:?}",req_to_update),
+                    suffix: None,
+                    group: Some("[Task][List]".to_string()),
+                };
+            add_entry_to_state(&state, offset, entry).await.ok(); 
+            offset += 1;
+
+            let entry = Entry {
+                    timestamp: now, 
+                    key: "all".to_string(),
+                    prefix: None,
+                    value: format!("{:?}",req_keys),
+                    suffix: None,
+                    group: Some("[Task][List]".to_string()),
+                };
+            add_entry_to_state(&state, offset, entry).await.ok(); 
+            offset += 1;
 
             requirements(&tasks,&user_settings,&wallet_acc_address,&req_to_update).await;  
             // instead of calculating what req should be updated here, it should be part of _memory
             // so here only requirements_next() needs to be called.
              
-            let mut offset: usize = 2;
 
             // waiting for all open **display** updates.
             // if one task is slow, because the requirement is not yet resolved, it slows down the whole loop, 
             // therefore it will timeout after 0.1s, so the loop can continue.  
  
             if args_i.contains(&"market") {        
-                for t in display_market_info(&tasks, &new_display, &mut offset, is_first_run).await {
+                for t in display_market_info(&tasks, &state, &mut offset, is_first_run).await {
                     if timestamps_display[t.0] == 0i64 || now - timestamps_display[t.0] > 1i64 {
-                        try_add_to_display(&new_display,t.0,Box::pin(t.1)).await.ok();
+                        try_add_to_state(&state,t.0,Box::pin(t.1)).await.ok();
                         timestamps_display[t.0] = now;
                     }
                 }
             }
             if args_i.contains(&"anchor") {        
-                for t in display_anchor_info(&tasks, &new_display, &mut offset, is_first_run).await {
+                for t in display_anchor_info(&tasks, &state, &mut offset, is_first_run).await {
                     if timestamps_display[t.0] == 0i64 || now - timestamps_display[t.0] > 1i64 {
-                        try_add_to_display(&new_display,t.0,Box::pin(t.1)).await.ok();
+                        try_add_to_state(&state,t.0,Box::pin(t.1)).await.ok();
                         timestamps_display[t.0] = now;
                     } 
                 }
             }
             if args_a.contains(&"anchor_account") {        
-                for t in display_anchor_account(&tasks, &new_display, &mut offset, is_first_run).await {
+                for t in display_anchor_account(&tasks, &state, &mut offset, is_first_run).await {
                     if timestamps_display[t.0] == 0i64 || now - timestamps_display[t.0] > 1i64 {
-                        try_add_to_display(&new_display,t.0,Box::pin(t.1)).await.ok();
+                        try_add_to_state(&state,t.0,Box::pin(t.1)).await.ok();
                         timestamps_display[t.0] = now;
                     } 
                 }
@@ -344,10 +419,10 @@ async fn main() -> anyhow::Result<()> {
                 try_run_function(&tasks,task,"anchor_auto_stake",is_test).await;  
    
                 // checks if data for the display is available
-                let anchor_auto_stake = lazy_anchor_account_auto_stake_rewards(&tasks, &new_display, &mut offset, is_test, is_first_run).await;
+                let anchor_auto_stake = lazy_anchor_account_auto_stake_rewards(&tasks, &state, &mut offset, is_test, is_first_run).await;
                 for t in anchor_auto_stake {
                     if timestamps_display[t.0] == 0i64 || now - timestamps_display[t.0] > 1i64 { 
-                        try_add_to_display(&new_display,t.0,Box::pin(t.1)).await.ok();
+                        try_add_to_state(&state,t.0,Box::pin(t.1)).await.ok();
                         timestamps_display[t.0] = now;
                     }  
                 }                    
@@ -357,10 +432,10 @@ async fn main() -> anyhow::Result<()> {
                 let task: Pin<Box<dyn Future<Output = String> + Send + 'static>> = Box::pin(anchor_borrow_claim_and_farm_rewards(tasks.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(),is_test));
                 try_run_function(&tasks,task,"anchor_auto_farm",is_test).await;  
       
-                let anchor_auto_lp = lazy_anchor_account_auto_farm_rewards(&tasks, &new_display, &mut offset, is_test, is_first_run).await;
+                let anchor_auto_lp = lazy_anchor_account_auto_farm_rewards(&tasks, &state, &mut offset, is_test, is_first_run).await;
                 for t in anchor_auto_lp {
                     if timestamps_display[t.0] == 0i64 || now - timestamps_display[t.0] > 1i64 { 
-                        try_add_to_display(&new_display,t.0,Box::pin(t.1)).await.ok();
+                        try_add_to_state(&state,t.0,Box::pin(t.1)).await.ok();
                         timestamps_display[t.0] = now;
                     }  
                 }                    
@@ -371,10 +446,10 @@ async fn main() -> anyhow::Result<()> {
                 let task: Pin<Box<dyn Future<Output = String> + Send + 'static>> = Box::pin(anchor_redeem_and_repay_stable(tasks.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(),is_test));
                 try_run_function(&tasks,task,"anchor_auto_repay",is_test).await;  
 
-                let anchor_auto_repay = lazy_anchor_account_auto_repay(&tasks, &new_display, &mut offset, is_test, is_first_run).await;
+                let anchor_auto_repay = lazy_anchor_account_auto_repay(&tasks, &state, &mut offset, is_test, is_first_run).await;
                 for t in anchor_auto_repay {
                     if timestamps_display[t.0] == 0i64 || now - timestamps_display[t.0] > 1i64 { 
-                        try_add_to_display(&new_display,t.0,Box::pin(t.1)).await.ok();
+                        try_add_to_state(&state,t.0,Box::pin(t.1)).await.ok();
                         timestamps_display[t.0] = now;
                     }  
                 }  
@@ -385,31 +460,33 @@ async fn main() -> anyhow::Result<()> {
                 let task: Pin<Box<dyn Future<Output = String> + Send + 'static>> = Box::pin(anchor_borrow_and_deposit_stable(tasks.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(),is_test));
                 try_run_function(&tasks,task,"anchor_auto_borrow",is_test).await;  
     
-                let anchor_auto_borrow = lazy_anchor_account_auto_borrow(&tasks, &new_display, &mut offset, is_test, is_first_run).await;
+                let anchor_auto_borrow = lazy_anchor_account_auto_borrow(&tasks, &state, &mut offset, is_test, is_first_run).await;
                 for t in anchor_auto_borrow {
                     if timestamps_display[t.0] == 0i64 || now - timestamps_display[t.0] > 1i64 { 
-                        try_add_to_display(&new_display,t.0,Box::pin(t.1)).await.ok();
+                        try_add_to_state(&state,t.0,Box::pin(t.1)).await.ok();
                         timestamps_display[t.0] = now;
                     }  
                 }  
             }
 
-            display_all_logs(&tasks ,&new_display, &mut offset, &args_b).await;
+            display_all_logs(&tasks ,&state, &mut offset, &args_b).await;
             
-            display_all_errors(&tasks, &*req_unresolved ,&new_display, &mut offset).await;
+            display_all_errors(&tasks, &*req_unresolved ,&state, &mut offset).await;
 
             if is_first_run {
                 is_first_run = false;
             }
             
-            // ensuring one file write per 100ms, not faster.
+            // ensuring one file write per 300ms, not faster.
             let now = Utc::now().timestamp_millis();
 
-            if display_out_timestamp== 0i64 || now - display_out_timestamp > 100i64 {
+            if display_out_timestamp== 0i64 || now - display_out_timestamp > 300i64 {
                 // writing display to file.
-                let new_line = format!("{esc}c", esc = 27 as char);
-                let line = format!("{}{}",new_line,new_display.read().await.join(""));
-                fs::write("./packages/terra-rust-hook/terra-rust-bot-display.txt", &line).ok();  
+                // let new_line = format!("{esc}c", esc = 27 as char);
+                let vec: Vec<Option<Entry>> = state.read().await.to_vec();
+                let vec: Vec<Entry> = vec.into_iter().filter_map(|x| x).collect();
+                let line = format!("{}",serde_json::to_string(&*vec).unwrap());
+                fs::write("./packages/terra-rust-signal-bot/terra-rust-bot-state.json", &line).ok();  
                 display_out_timestamp = now;        
             }
         } 

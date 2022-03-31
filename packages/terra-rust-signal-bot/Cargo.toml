@@ -1,0 +1,21 @@
+[package] 
+name = "terra-rust-signal-bot"
+version = "0.2.0" 
+edition = "2021"
+
+
+[dependencies]
+presage = { path = "./packages/presage"}   
+anyhow = "1.0"
+directories = "3.0"
+env_logger = "0.7"
+futures = "0.3"
+hex = "0.4"
+log = "0.4"
+rand = "0.7"
+serde = { version = "1.0", features = ["derive"] } 
+serde_json = "1.0"
+structopt = "0.3"
+tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
+url = "2.2.2"
+chrono = "0.4"
