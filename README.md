@@ -22,9 +22,6 @@
 **TRB** can be used to connect with a terra wallet tgo keep potential loans safe *(Auto Repay)*, maximise their utility *(Auto Borrow)* and more *(Auto Stake, Auto Farm,..)*. This repository includes a Signal Messenger integration that can be used to obtain the latest informaction directly from the bot. 
 
 
-> :warning: Currently there is no local encryption for the linked Signal account. If the system is compromised so is your Signal account. This will be addressed in upcoming releases. It is recommended to use a dedicated Signal account for terra-rust-bot.
-
-
 It is intended to be used by **coders, developers and technically-skilled users** to make use of automation.    
 At the same time **TRB** can be compiled to a single executable that is easy to use with few dependencies. Making it easy to use.    
 
@@ -108,21 +105,6 @@ Current feature list:
 * `./install.sh native` optimize the build for your CPU    
  
 
-**Build terra-rust-signal-bot**
-
-  *To reveive notifications via signal build this package as well.*  
-
-* `cd ./packages/terra-rust-signal-bot`
-* `./install.sh dev`
-
-* After that you should be able to run:  
-* `./terra-rust-signal-bot help` 
-
-* To link your signal account you will need to scan a QR-Code with your phone.   
-* `./terra-rust-signal-bot link-device -s production -n terra-rust-signal-bot`
-* You can use the *send* and *receive* command to test the connection.
- 
-
 ## Config
 
 ### terra-rust-bot.json
@@ -174,22 +156,9 @@ Current feature list:
 
  **View the current state**
 
-* Use the terra-rust-signal-bot to view the state.
+* Use the [terra-rust-signal-bot](https://github.com/Philipp-Sc/terra-rust-bot/tree/main/packages/terra-rust-signal-bot) to view the state. 
 
-
-### Run terra-rust-signal-bot
-
-* terra-rust-signal-bot relies on the file **./packages/terra-rust-signal-bot/terra-rust-bot-state.json** to read the state of the terra-rust-bot.
-* If you already started the terra-rust-bot as shown above then you can use the terra-rust-signal-bot to either directly view the state or to activate the signal-bot.
-
-* `cd ./packages/terra-rust-signal-bot`
-* `./run.sh receive-loop` (run the signal-bot)
-* `./stop.sh` (stop the signal-bot)
-
-* `./terra-rust-signal-bot local-display -m "\help"  ` (to view the state directly)
-* replace `"\help"` with any other command to view the state.
-
-
+ 
 ## Summary
 
 - I created this bot to learn about smart contracts, the terra blockchain and to get to know the Rust programming language.
