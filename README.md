@@ -153,6 +153,12 @@ Current feature list:
  * `-b` enable **bot**: `anchor_auto_lp`,`anchor_auto_stake`, `anchor_auto_borrow`  or `anchor_auto_repay`.
  * `-d` enable additional development/debugging output. Currently only `test` is available. `test` will only simulate or estimate transaction fees.
  
+ **Process**
+
+*Only works if you used the ./run.sh script*    
+ * `ps -p $(cat my-bot.pid)` check if the bot is still running.
+ * `kill -TSTP $(cat my-bot.pid) ` pause the bot
+ * `kill -CONT $(cat my-bot.pid) ` resume the bot
 
  **View the current state**
 
