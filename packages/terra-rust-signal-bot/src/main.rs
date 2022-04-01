@@ -214,7 +214,7 @@ async fn main() -> anyhow::Result<()> {
             println!("{}", terra_rust_bot_state(&message).await);
         }
         Subcommand::ReceiveLoop => {
-            loop {
+            loop { 
                 println!("{}","whoami()");
                 let mut my_uuid = None;
                 while my_uuid.is_none() {
@@ -296,10 +296,11 @@ async fn main() -> anyhow::Result<()> {
                                     }
                                 }
                             }
-                        }
-                    },
-                    _ => {}
+                        },
+                        _ => {}
+                    }
                 }
+            
             }
         } 
     };
