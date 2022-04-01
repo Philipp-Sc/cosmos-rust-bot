@@ -103,6 +103,12 @@ Current feature list:
 * `./install.sh dev` fast build
 * `./install.sh prod` optimized build
 * `./install.sh native` optimize the build for your CPU    
+
+## Update
+
+* To update save your local changes with  `git stash`.
+* Get the latest code with `git pull`.
+* Then build the package again.
  
 
 ## Config
@@ -168,10 +174,19 @@ Current feature list:
 ## Summary
 
 - I created this bot to learn about smart contracts, the terra blockchain and to get to know the Rust programming language.
-- This is a constant work in progress: **Bug Reports** and **Feature Requests** are welcome!
+- Terra-rust-bot is a constant work in progress: **Bug Reports** and **Feature Requests** are welcome!
 - Thanks to the people who helped me along the way on the <a href="https://discord.com/invite/EuKCeGFb93">terra discord </a>. :heart: 
  
+## Support!
 
+You do not need to donate to me, but I will be very happy if you can.  
+
+- `terra1q0n5e43mmz8ddra8554xkxsvelnz4evwukxkht`
+
+Thanks a lot,     
+Philipp.
+ 
+ 
 ## Similar projects
 - https://github.com/ALPAC-4/auto_repay
 - https://github.com/RomainLanz/anchor-borrow-bot

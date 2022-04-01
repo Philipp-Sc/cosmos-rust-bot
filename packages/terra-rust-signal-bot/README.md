@@ -13,10 +13,9 @@ This package includes a Signal Messenger integration that can be used to obtain 
 
 > :warning: Currently there is no local encryption for the linked Signal account. If the system is compromised your Signal account is vulnerable. This will be addressed in upcoming releases. 
 
-
-Current feature list:    
-
-* `[Available Commands]
+\help
+ ```
+ [Available Commands]
 SYSTEM TIME AND LATEST TIMESTAMP 
     \ping      
 MARKET INFO    
@@ -48,7 +47,8 @@ TIMESTAMPS WHEN TASKS WERE RESOLVED
 TIMESTAMPS WHEN ENTRIES WERE WRITTEN TO STATE
     \state history        
 DEBUG (SHOWS ABSOLUTLY EVERYTHING)
-    \debug   `
+    \debug
+```
 
 
 ## How it works
