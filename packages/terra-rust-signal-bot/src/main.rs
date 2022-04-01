@@ -214,84 +214,86 @@ async fn main() -> anyhow::Result<()> {
             println!("{}", terra_rust_bot_state(&message).await);
         }
         Subcommand::ReceiveLoop => {
-            println!("{}","whoami()");
-            let mut my_uuid = None;
-            while my_uuid.is_none() {
-                match manager.whoami().await {
-                    Ok(uuid) => {
-                        my_uuid = Some(uuid);
-                    },
-                    Err(e) => {
-                        println!("{:?}",e);
-                        thread::sleep(millis);
-                    }
-                };
-            }
-            let my_uuid = my_uuid.unwrap().uuid;
+            loop {
+                println!("{}","whoami()");
+                let mut my_uuid = None;
+                while my_uuid.is_none() {
+                    match manager.whoami().await {
+                        Ok(uuid) => {
+                            my_uuid = Some(uuid);
+                        },
+                        Err(e) => {
+                            println!("{:?}",e);
+                            thread::sleep(millis);
+                        }
+                    };
+                }
+                let my_uuid = my_uuid.unwrap().uuid;
 
-            println!("{}","receive_messages()");
-            let mut messages = None;
-            while messages.is_none() {
-                match manager
-                .clone()
-                .receive_messages()
-                .await
-                .context("failed to initialize messages stream") {
-                    Ok(m) => {
-                        messages = Some(m);
-                    },
-                    Err(e) => {
-                        println!("{:?}",e);
-                        thread::sleep(millis);
-                    }
-                };
-            }
-            let messages = messages.unwrap(); 
- 
-            pin_mut!(messages);
+                println!("{}","receive_messages()");
+                let mut messages = None;
+                while messages.is_none() {
+                    match manager
+                    .clone()
+                    .receive_messages()
+                    .await
+                    .context("failed to initialize messages stream") {
+                        Ok(m) => {
+                            messages = Some(m);
+                        },
+                        Err(e) => {
+                            println!("{:?}",e);
+                            thread::sleep(millis);
+                        }
+                    };
+                }
+                let messages = messages.unwrap(); 
+     
+                pin_mut!(messages);
 
-            while let Some(Content { metadata, body }) = messages.next().await {
-                println!("{}","messages.next()"); 
-                match body {
-                    // ContentBody::DataMessage(message) |
-                    ContentBody::SynchronizeMessage(SyncMessage {
-                        sent:
-                            Some(Sent {
-                                destination_uuid: Some(destination_uuid),
-                                message: Some(message),
-                                ..
-                            }),
-                        ..
-                    }) => {
-                        if let Some(sender_uuid) = metadata.sender.uuid {
-                            if sender_uuid == my_uuid && my_uuid == Uuid::parse_str(&destination_uuid).unwrap() { 
-                                // message from and to self
-                                if let Some(_quote) = &message.quote { 
-                                    // quote
-                                } else if let Some(_reaction) = message.reaction { 
-                                    // reaction
-                                } else {
-                                    // default
-                                    if let Some(sender_message) = message.body {
-                                        println!("Message from myself ({:?}): {:?}", sender_uuid, sender_message); 
-                                        let timestamp = std::time::SystemTime::now()
-                                            .duration_since(UNIX_EPOCH).unwrap()
-                                            .as_millis() as u64;
+                while let Some(Content { metadata, body }) = messages.next().await {
+                    println!("{}","messages.next()"); 
+                    match body {
+                        // ContentBody::DataMessage(message) |
+                        ContentBody::SynchronizeMessage(SyncMessage {
+                            sent:
+                                Some(Sent {
+                                    destination_uuid: Some(destination_uuid),
+                                    message: Some(message),
+                                    ..
+                                }),
+                            ..
+                        }) => {
+                            if let Some(sender_uuid) = metadata.sender.uuid {
+                                if sender_uuid == my_uuid && my_uuid == Uuid::parse_str(&destination_uuid).unwrap() { 
+                                    // message from and to self
+                                    if let Some(_quote) = &message.quote { 
+                                        // quote
+                                    } else if let Some(_reaction) = message.reaction { 
+                                        // reaction
+                                    } else {
+                                        // default
+                                        if let Some(sender_message) = message.body {
+                                            println!("Message from myself ({:?}): {:?}", sender_uuid, sender_message); 
+                                            let timestamp = std::time::SystemTime::now()
+                                                .duration_since(UNIX_EPOCH).unwrap()
+                                                .as_millis() as u64;
 
-                                        let mut msg_sent = false;
-                                        while !msg_sent {
-                                            let message = ContentBody::DataMessage(DataMessage {
-                                                body: Some(terra_rust_bot_state(&sender_message).await),
-                                                timestamp: Some(timestamp),
-                                                ..Default::default()
-                                            });
-                                            msg_sent = match manager.send_message(my_uuid, message, timestamp).await {
-                                                Ok(_) => true,
-                                                _ => false,
-                                            };
-                                        }
-                                        
-                                    }  
+                                            let mut msg_sent = false;
+                                            while !msg_sent {
+                                                let message = ContentBody::DataMessage(DataMessage {
+                                                    body: Some(terra_rust_bot_state(&sender_message).await),
+                                                    timestamp: Some(timestamp),
+                                                    ..Default::default()
+                                                });
+                                                msg_sent = match manager.send_message(my_uuid, message, timestamp).await {
+                                                    Ok(_) => true,
+                                                    _ => false,
+                                                };
+                                            }
+                                            
+                                        }  
+                                    }
                                 }
                             }
                         }
