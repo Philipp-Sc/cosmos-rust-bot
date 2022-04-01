@@ -103,6 +103,12 @@ Current feature list:
 * `./install.sh dev` fast build
 * `./install.sh prod` optimized build
 * `./install.sh native` optimize the build for your CPU    
+
+## Update
+
+* To update save your local changes with  `git stash`.
+* Get the latest code with `git pull`.
+* Then build the package again.
  
 
 ## Config
