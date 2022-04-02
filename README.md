@@ -1,8 +1,8 @@
 <div align="center">
   
-  <p>🌕🍇🤖</p>
-  <h1>TRB - Terra Rust Bot</h1> 
-  <p>Get the most bang for your buck by automating the low hanging fruits of the Terra Ecosystem.</p> 
+  <p>🤖</p>
+  <h1>TRB - Terra Rust Bot™</h1> 
+  <p>If you can't beat them join them!</p> 
     <img src="https://img.shields.io/github/languages/top/Philipp-Sc/terra-rust-bot"> 
     <img src="https://img.shields.io/github/repo-size/Philipp-Sc/terra-rust-bot"> 
     <img src="https://img.shields.io/github/commit-activity/m/Philipp-Sc/terra-rust-bot"> 
@@ -19,25 +19,29 @@
 ### [Install](#install) · [Config](#config) · [Usage](#usage) · [Summary](#summary)
  
 
-**TRB** can be used to connect with a terra wallet tgo keep potential loans safe *(Auto Repay)*, maximise their utility *(Auto Borrow)* and more *(Auto Stake, Auto Farm,..)*. This repository includes a Signal Messenger integration that can be used to obtain the latest informaction directly from the bot. 
+**TRB** can be used to connect with a terra wallet to keep potential loans safe *(Auto Repay)*, maximise their utility *(Auto Borrow)* and more *(Auto Stake, Auto Farm,..)*. This repository includes a Signal Messenger integration that can be used to obtain the latest informaction directly from the bot. 
 
 
 It is intended to be used by **coders, developers and technically-skilled users** to make use of automation.    
 At the same time **TRB** can be compiled to a single executable that is easy to use with few dependencies. Making it easy to use.    
 
-Current feature list:    
+ In short it's purpose is to: 
+- Save you the hassle of managing your positions manually
+- Enable you to run strategies only bots can execute
+- Take commands
+- Send alerts and notifications
+- Provide insights into the Terra Ecosystem
 
-- Anchor Protocol: Auto Repay (1), Auto Borrow (2), Auto Stake (3), Auto Farm (4).
-- (1) Keeps your loan safe by sourcing money from your balance (UST) or Anchor Deposit (aUST).     
-- (2) Optimizes your LTV by automatically borrowing additional UST and depositing it into Anchor Earn (aUST).
-- (3) Checks your pending borrower ANC rewards, considers the gas fees and stakes them automatically. 
-- (4) Checks your pending borrower ANC rewards, considers the gas fees and provides them to the Astroport ANC-UST LP at Spectrum Protocol.
+ Feature list:    
 
+ **Automation**
+- Anchor Protocol Auto Repay/Borrow: Keeps your loan safe by sourcing money from your balance (UST) or Anchor Deposit (aUST) and automatically borrows additional UST and depositing it into Anchor Earn (aUST). 
+- Anchor Protocol Auto Stake/Farm: Checks your pending borrower ANC rewards, considers the gas fees and stakes them automatically or provides them to the Astroport ANC-UST LP at Spectrum Protocol.
 
-- Dashboards: Market, Anchor Info, Anchor Account
+**View Token Prices, Collateral Information, Pending Rewards, etc.**
 
-
-  
+- Market, Anchor 
+- Anchor Account  
 
 ## How it works
  
