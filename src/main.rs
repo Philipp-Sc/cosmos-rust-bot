@@ -40,7 +40,9 @@ use ui::info::market::general::*;
 use ui::logs::*;
 use ui::errors::*; 
  
-use ui::display::*;
+use terra_rust_bot_output::output::*;
+use terra_rust_bot_output::output::pretty::Entry;
+
 
 use std::env;
 use secstr::*;
@@ -486,7 +488,7 @@ async fn main() -> anyhow::Result<()> {
                 let vec: Vec<Option<Entry>> = state.read().await.to_vec();
                 let vec: Vec<Entry> = vec.into_iter().filter_map(|x| x).collect();
                 let line = format!("{}",serde_json::to_string(&*vec).unwrap());
-                fs::write("./packages/terra-rust-signal-bot/terra-rust-bot-state.json", &line).ok();  
+                fs::write("./packages/terra-rust-bot-output/terra-rust-bot-state.json", &line).ok();  
                 display_out_timestamp = now;        
             }
         } 

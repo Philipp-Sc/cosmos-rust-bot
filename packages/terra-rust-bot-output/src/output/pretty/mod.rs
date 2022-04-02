@@ -6,21 +6,19 @@ use serde::Serialize;
 use chrono::Utc;
 use chrono::{NaiveDateTime};
 
-pub type State = Vec<Option<Entry>>;
-
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Entry {
-    pub timestamp: i64,
-    pub key: String,
+    pub timestamp: i64, 
+    pub key: String, 
     pub prefix: Option<String>,
-    pub value: String,
+    pub value: String,  
     pub suffix: Option<String>,
     pub group: Option<String>,
 }
 
+pub type State = Vec<Option<Entry>>;
 
-pub async fn terra_rust_bot_state(context: &str) -> String {
+pub async fn terra_rust_bot_state(context: &str, path: &str) -> String {
     
     let identifier = match context { 
         "\\debug" => {
@@ -102,7 +100,7 @@ DEBUG (SHOWS ABSOLUTLY EVERYTHING)
             let mut timestamp = 0i64;
             let mut display = "".to_string();
             let empty = "".to_string();
-            match fs::read_to_string("./terra-rust-bot-state.json") {
+            match fs::read_to_string(path) {
                     Ok(file) => { 
                         let state: State = match serde_json::from_str(&file) {
                             Ok(res) => {res},
@@ -133,7 +131,7 @@ DEBUG (SHOWS ABSOLUTLY EVERYTHING)
         "\\ping" => {
             let signal_bot = Utc::now().format("%d/%m/%y %H:%M:%S").to_string();
             let mut timestamp = 0i64;  
-            match fs::read_to_string("./terra-rust-bot-state.json") {
+            match fs::read_to_string(path) {
                     Ok(file) => { 
                         let state: State = match serde_json::from_str(&file) {
                             Ok(res) => {res},
@@ -158,7 +156,7 @@ DEBUG (SHOWS ABSOLUTLY EVERYTHING)
             let mut timestamp = -1i64;
             let mut display = "".to_string();
             let empty = "".to_string();
-            match fs::read_to_string("./terra-rust-bot-state.json") {
+            match fs::read_to_string(path) {
                     Ok(file) => { 
                         let state: State = match serde_json::from_str(&file) {
                             Ok(res) => {res},
@@ -193,7 +191,7 @@ DEBUG (SHOWS ABSOLUTLY EVERYTHING)
         }
     };
 
-    let display = match fs::read_to_string("./terra-rust-bot-state.json") {
+    let display = match fs::read_to_string(path) {
         Ok(file) => { 
             let state: State = match serde_json::from_str(&file) {
                 Ok(res) => {res},

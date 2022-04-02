@@ -1,6 +1,4 @@
-mod state;
-
-use state::*;
+use terra_rust_bot_output::output::pretty::*;
 
 use std::{path::PathBuf, time::UNIX_EPOCH};
 
@@ -84,12 +82,7 @@ enum Subcommand {
         message: String,
     }, 
     #[structopt(about = "Terra-rust-bot feature: Reply with status information to incoming messages.")]
-    ReceiveLoop, 
-    #[structopt(about = "Terra-rust-bot feature: print information directly to the console.")]
-    LocalDisplay {
-        #[structopt(long, short = "m", help = "message")]
-        message: String,
-    }
+    Activate, 
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -208,12 +201,8 @@ async fn main() -> anyhow::Result<()> {
         } 
         Subcommand::Whoami => {
             println!("{:?}", &manager.whoami().await?)
-        }
-        Subcommand::LocalDisplay {message} => {
-            println!("{esc}c", esc = 27 as char); 
-            println!("{}", terra_rust_bot_state(&message).await);
-        }
-        Subcommand::ReceiveLoop => {
+        } 
+        Subcommand::Activate => {
             loop { 
                 println!("{}","whoami()");
                 let mut my_uuid = None;
@@ -282,7 +271,7 @@ async fn main() -> anyhow::Result<()> {
                                             let mut msg_sent = false;
                                             while !msg_sent {
                                                 let message = ContentBody::DataMessage(DataMessage {
-                                                    body: Some(terra_rust_bot_state(&sender_message).await),
+                                                    body: Some(terra_rust_bot_state(&sender_message,"./../terra-rust-bot-output/terra-rust-bot-state.json").await),
                                                     timestamp: Some(timestamp),
                                                     ..Default::default()
                                                 });

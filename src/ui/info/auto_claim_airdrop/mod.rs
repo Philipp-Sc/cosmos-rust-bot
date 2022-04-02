@@ -1,4 +1,5 @@
-use crate::ui::display::*;
+use terra_rust_bot_output::output::*;
+use terra_rust_bot_output::output::pretty::Entry;
 use crate::state::control::model::{MaybeOrPromise};
 
 use crate::view::*;
@@ -12,16 +13,22 @@ use core::future::Future;
 
 use std::sync::Arc; 
 use tokio::sync::RwLock;   
-use colored::*;
+use chrono::Utc;
  
-pub async fn lazy_anchor_account_auto_claim_airdrop(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_acc_address: &Arc<SecUtf8>, wallet_seed_phrase: &Arc<SecUtf8>,  new_display: &Arc<RwLock<Vec<String>>>,offset: &mut usize, is_test: bool, is_first_run: bool) -> Vec<(usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>)> {
+pub async fn lazy_anchor_account_auto_claim_airdrop(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_acc_address: &Arc<SecUtf8>, wallet_seed_phrase: &Arc<SecUtf8>, state: &Arc<RwLock<Vec<Option<Entry>>>>,offset: &mut usize, is_test: bool, is_first_run: bool) -> Vec<(usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>)> {
      
-    let mut anchor_view: Vec<(String,usize)> = Vec::new();
+    let mut anchor_view: Vec<(Entry,usize)> = Vec::new();
     let mut anchor_tasks: Vec<(usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>)> = Vec::new();
 
-
-    anchor_view.push(("\n  **Anchor Protocol Auto Claim Airdrop**\n\n".truecolor(75,219,75).to_string(),*offset)); 
-    *offset += 1;
+    anchor_view.push((Entry {
+        timestamp: Utc::now().timestamp(), 
+        key: "balance".to_string(),
+        prefix: None,
+        value: "--".to_string(),
+        suffix: Some("UST".to_string()),
+        group: Some("[Anchor Protocol][Auto Claim Airdrops]".to_string()),
+    },*offset));
+ 
 
     anchor_view.push((format!("{}{}","\n\n   [Auto Stake UST]".truecolor(75,219,75),"         balance:           ".purple().to_string()),*offset));
     *offset += 1;
@@ -71,7 +78,7 @@ pub async fn lazy_anchor_account_auto_claim_airdrop(tasks: &Arc<RwLock<HashMap<S
 
 
     if is_first_run {
-        add_view_to_display(&new_display, anchor_view).await; 
+        add_view_to_state(&state, anchor_view).await; 
     }     
 
     return anchor_tasks;

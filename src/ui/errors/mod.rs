@@ -1,6 +1,7 @@
 
 
-use crate::ui::display::*;
+use terra_rust_bot_output::output::*;
+use terra_rust_bot_output::output::pretty::Entry;
 
 use crate::state::control::model::{MaybeOrPromise};
   

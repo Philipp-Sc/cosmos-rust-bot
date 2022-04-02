@@ -54,13 +54,11 @@ DEBUG (SHOWS ABSOLUTLY EVERYTHING)
 ## How it works
  
 #### Configuration
-* The current state from terra-rust-bot is written to **./packages/terra-rust-signal-bot/terra-rust-bot-state.json**. Terra-rust-signal-bot reads the file and extracts the information needed.	 
+* The current state from terra-rust-bot is written to **./packages/terra-rust-bot-output/terra-rust-bot-state.json**. Terra-rust-signal-bot reads the file and extracts the information needed.	 
  
 
 ## Install
-
-> Tested on Linux.
-> Tested on Windows Subsystem for Linux / Ubuntu.
+ 
 
 **Build terra-rust-signal-bot**
 
@@ -79,11 +77,8 @@ DEBUG (SHOWS ABSOLUTLY EVERYTHING)
 
 ### Run terra-rust-signal-bot
  
-* If you already started the terra-rust-bot then you can use the terra-rust-signal-bot to either directly view the state or to activate the signal-bot.
+* If you already started the terra-rust-bot then you can use the terra-rust-signal-bot.
 
 * `cd ./packages/terra-rust-signal-bot`
-* `./run.sh receive-loop` (run the signal-bot)
+* `./run.sh activate` (run the signal-bot)
 * `./stop.sh` (stop the signal-bot)
-
-* `./terra-rust-signal-bot local-display -m "\help"  ` (to view the state directly)
-* replace `"\help"` with any other command to view the state.

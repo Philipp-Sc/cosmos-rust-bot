@@ -1,3 +1,5 @@
+pub mod pretty;
+
 use core::pin::Pin;
 use core::future::Future;
 
@@ -8,22 +10,8 @@ use std::sync::Arc;
 use tokio::sync::RwLock;  
 use tokio::time::timeout;  
 
-use serde::Deserialize;
-use serde::Serialize; 
-
-
 use chrono::{Utc};
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct Entry {
-    pub timestamp: i64, 
-    pub key: String, 
-    pub prefix: Option<String>,
-    pub value: String,  
-    pub suffix: Option<String>,
-    pub group: Option<String>,
-}
-
+use pretty::Entry;
 
 pub async fn add_entry_to_state(state: &Arc<RwLock<Vec<Option<Entry>>>>, index: usize, entry: Entry) -> anyhow::Result<()> {
     
