@@ -35,8 +35,10 @@ At the same time **TRB** can be compiled to a single executable that is easy to 
  Feature list:    
 
  **Automation**
-- Anchor Protocol Auto Repay/Borrow: Keeps your loan safe by sourcing money from your balance (UST) or Anchor Deposit (aUST) and automatically borrows additional UST and depositing it into Anchor Earn (aUST). 
-- Anchor Protocol Auto Stake/Farm: Checks your pending borrower ANC rewards, considers the gas fees and stakes them automatically or provides them to the Astroport ANC-UST LP at Spectrum Protocol.
+- Anchor Protocol Auto Repay/Borrow:  
+  Keeps your loan safe by sourcing money from your balance (UST) or Anchor Deposit (aUST) and automatically borrows additional UST and depositing it into Anchor Earn (aUST). 
+- Anchor Protocol Auto Stake/Farm:  
+  Checks your pending borrower ANC rewards, considers the gas fees and stakes them automatically or provides them to the Astroport ANC-UST LP at Spectrum Protocol.
 
 **View Token Prices, Collateral Information, Pending Rewards, etc.**
 
