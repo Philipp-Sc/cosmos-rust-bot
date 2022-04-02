@@ -75,7 +75,7 @@ At the same time **TRB** can be compiled to a single executable that is easy to 
 
 #### Configuration
 * The configuration can be customized via the **terra-rust-bot.json** file.
-* The current state is written to **./packages/terra-rust-signal-bot/terra-rust-bot-state.json**.
+* The current state is written to **./packages/terra-rust-bot-output/terra-rust-bot-state.json**.
  
 
 
@@ -174,7 +174,9 @@ At the same time **TRB** can be compiled to a single executable that is easy to 
 
  **View the current state**
 
-* Use the [terra-rust-signal-bot](https://github.com/Philipp-Sc/terra-rust-bot/tree/main/packages/terra-rust-signal-bot) to view the state. 
+* Either use the package [terra-rust-bot-output](https://github.com/Philipp-Sc/terra-rust-bot/tree/main/packages/terra-rust-bot-output) to view the state in the terminal.
+
+* Or use [terra-rust-signal-bot](https://github.com/Philipp-Sc/terra-rust-bot/tree/main/packages/terra-rust-signal-bot) to view the state via Signal.
 
  
 ## Summary
@@ -189,8 +191,7 @@ You do not need to donate to me, but I will be very happy if you can.
 
 - `terra1q0n5e43mmz8ddra8554xkxsvelnz4evwukxkht`
 
-Thanks a lot,     
-Philipp.
+Thanks a lot.
  
  
 ## Similar projects
