@@ -6,6 +6,9 @@ use serde::Serialize;
 use chrono::Utc;
 use chrono::{NaiveDateTime};
 
+use colored::*;
+use colored::control::set_override;
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Entry {
     pub timestamp: i64, 
@@ -18,8 +21,9 @@ pub struct Entry {
 
 pub type State = Vec<Option<Entry>>;
 
-pub async fn terra_rust_bot_state(context: &str, path: &str) -> String {
-    
+pub async fn terra_rust_bot_state(context: &str, path: &str, is_console: bool) -> String {
+    set_override(is_console);
+
     let identifier = match context { 
         "\\debug" => {
             ""
@@ -197,21 +201,26 @@ DEBUG (SHOWS ABSOLUTLY EVERYTHING)
                 Ok(res) => {res},
                 Err(err) => {return format!("{:?}",err);},
             };
-            let mut display = format!("{}",identifier);
+            let console_prefix = match is_console {
+                true => "    ",
+                false => ""
+            };
+            let mut display = format!("{}{}",console_prefix,identifier.truecolor(75,219,75));
             let mut prev_group = "".to_string();
             let empty = "".to_string();
+            
             for x in 0..state.len() { 
             	if let Some(entry) = &state[x] {
                     let group = &entry.group.as_ref().unwrap_or(&empty);
             		if group.contains(identifier) {
                         if prev_group != group.to_string() {
-                            display = format!("{}\n{}",display,group.replace(identifier,""));   
+                            display = format!("{}\n{}{}",display,console_prefix,group.replace(identifier,"").truecolor(75,219,75)/*.truecolor(84, 147, 247)*/);   
                             prev_group = group.to_string();
                         }
 
 	            		let prefix = entry.prefix.as_ref().unwrap_or(&empty);
 	            		let suffix = entry.suffix.as_ref().unwrap_or(&empty);
-	            		display = format!("{}\n{}:\n                        {} {} {}",display,entry.key,prefix,entry.value,suffix);
+	            		display = format!("{}\n{}{}:\n                        {} {} {}",display,console_prefix,entry.key.truecolor(77, 77, 237),prefix.purple(),entry.value.purple(),suffix.purple());
             		}
             	}
             }

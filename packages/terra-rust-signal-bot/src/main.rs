@@ -271,7 +271,7 @@ async fn main() -> anyhow::Result<()> {
                                             let mut msg_sent = false;
                                             while !msg_sent {
                                                 let message = ContentBody::DataMessage(DataMessage {
-                                                    body: Some(terra_rust_bot_state(&sender_message,"./../terra-rust-bot-output/terra-rust-bot-state.json").await),
+                                                    body: Some(terra_rust_bot_state(&sender_message,"./../terra-rust-bot-output/terra-rust-bot-state.json",false).await),
                                                     timestamp: Some(timestamp),
                                                     ..Default::default()
                                                 });

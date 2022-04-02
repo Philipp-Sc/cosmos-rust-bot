@@ -33,7 +33,7 @@ async fn main() -> anyhow::Result<()> {
  
         Subcommand::LocalDisplay {message} => {
             println!("{esc}c", esc = 27 as char); 
-            println!("{}", terra_rust_bot_state(&message,"./terra-rust-bot-state.json").await);
+            println!("{}", terra_rust_bot_state(&message,"./terra-rust-bot-state.json",true).await);
         }  
     };
     Ok(())
