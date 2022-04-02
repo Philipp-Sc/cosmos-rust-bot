@@ -9,7 +9,27 @@
  
 This package can be used to view the latest informaction directly from the terra-rust-bot. 
 
-\help
+
+## How it works
+ 
+#### Configuration
+* The current state from terra-rust-bot is written to **./packages/terra-rust-bot-output/terra-rust-bot-state.json**. You can use this package **terra-rust-bot-output** directly to view all the information in a human readable format.
+ 
+
+## Install
+
+**Build**
+
+* `cd ./packages/terra-rust-bot-output`
+* `cargo build`
+
+
+## Usage
+
+* After that you should be able to run:  
+* `./target/debug/terra-rust-bot-output local-display -m "\help"  ` 
+* This will show you all possible commands.
+ 
  ```
  [Available Commands]
 SYSTEM TIME AND LATEST TIMESTAMP 
@@ -45,26 +65,3 @@ TIMESTAMPS WHEN ENTRIES WERE WRITTEN TO STATE
 DEBUG (SHOWS ABSOLUTLY EVERYTHING)
     \debug
 ```
-
-
-## How it works
- 
-#### Configuration
-* The current state from terra-rust-bot is written to **./packages/terra-rust-bot-output/terra-rust-bot-state.json**. You can use this package **terra-rust-bot-output** directly to view all the information in a human readable format.
- 
-
-## Install
-
-**Build**
-
-* `cd ./packages/terra-rust-bot-output`
-* `cargo build`
-
-
-## Usage
-
-* After that you should be able to run:  
-* `./target/debug/terra-rust-bot-output local-display -m "\help"  ` 
-* This will show you all possible commands.
- 
- 
