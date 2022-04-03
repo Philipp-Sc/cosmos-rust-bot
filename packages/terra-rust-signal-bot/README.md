@@ -97,4 +97,4 @@ DEBUG (SHOWS ABSOLUTLY EVERYTHING)
 
 * unlink your device within your Signal Messenger App.
 * `ls ~/.config/presage` shows you the signal client data.
-* remove it via ``rm -rf ~/.config/presage`.
+* remove it via `rm -rf ~/.config/presage`.
