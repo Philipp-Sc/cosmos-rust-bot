@@ -1,9 +1,17 @@
 <div align="center">
-   
+
+      
   <h1>Terra Rust Signal Bot</h1> 
   <p>Signal Messenger integration</p> 
+   
+  <img src="gallery/signal_bot_auto_stake.png" width="200">
+  <img src="gallery/signal_bot_help.png" width="200">
+  <img src="gallery/signal_messenger.png" width="200">
   </div>
 <br/>
+
+ 
+
 
 ### [Install](#install) · [Usage](#usage)  
  
