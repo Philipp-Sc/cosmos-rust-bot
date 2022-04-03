@@ -2,6 +2,10 @@
    
   <h1>Terra Rust Bot Output</h1> 
   <p>View the state of terra-rust-bot</p> 
+   
+   
+  <img src="Gallery/terminal_output_auto_stake.png" width="350">
+  <img src="Gallery/terminal_output_market.png" width="250">
   </div>
 <br/>
 
