@@ -73,18 +73,6 @@ pub fn timestamp_now_to_string() -> String {
     return now.to_string();              
 }
 
-pub async fn get_past_transaction_logs(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, field: &str) -> String {
-   match get_meta_data_maybe(&tasks, field).await {
-        Ok(maybe) => {
-            return format!("tx: {:?}, timestamp: {}",maybe.data, maybe.timestamp);
-        },
-        Err(_) => {
-            // no previous transaction, free to continue.
-            return "--".to_string();
-        }
-   }
-}
-
  
 pub async fn calculate_borrow_plan(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, field: &str, digits_rounded_to: u32) -> String {
 
@@ -1298,18 +1286,7 @@ pub async fn anything_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise
             }
         } 
 }
-
-pub async fn anything_to_err(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: &str) -> String { 
-     
-        match get_data_maybe_or_meta_data_maybe(&tasks,key).await {
-            Ok(_) => {
-               return "--".to_string();
-            },
-            Err(err) => {
-                return format!("{:?}",err);
-            }
-        } 
-}
+ 
 pub async fn net_apr_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> String { 
         // utilisationRatio = stablecoinsLent / stablecoinsDeposited
         // borrowRate = utilisationRatio * interestMultiplier + baseRate

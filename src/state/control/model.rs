@@ -2,6 +2,9 @@
 
 // includes functions from action/mod.rs
 
+
+// TODO: ADD TIMESTAMP WHEN requirement was ordered.
+
 pub mod wallet;
 pub mod requirements;
 use secstr::*;
@@ -127,6 +130,52 @@ pub async fn get_data_maybe_or_meta_data_maybe(tasks: &Arc<RwLock<HashMap<String
             },
             Err(e) => {
                 return Err(anyhow!("Error: {:?}",e));
+            }
+        } 
+    }
+    return Err(anyhow!("Info: Key '{}' is not yet resolved. ",key));
+}
+/*
+ * returns the value for the given key, if the enum is of the type Maybe.
+ * will not await the future if it is not yet resolved.
+ * in that case it returns an error.
+ * 
+ * TODO: deprecated get_data_maybe_or_meta_data_maybe;
+ */
+pub async fn try_get_resolved(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>,key: &str) -> anyhow::Result<Maybe<ResponseResult>> { 
+    
+    let map = tasks.read().await; 
+    let res = map.get(key).ok_or(anyhow!("Error: key does not exist"))?;
+
+    if let MaybeOrPromise::Data(QueryData::Maybe(m)) = res {
+        match &m.data {
+            Ok(n) => {
+                return Ok(Maybe{
+                    data:Ok(n.clone()),
+                    timestamp:m.timestamp
+                });
+            },
+            Err(e) => {
+                return Ok(Maybe{
+                    data:Err(anyhow!("{}",e.clone())),
+                    timestamp:m.timestamp
+                }); 
+            }
+        } 
+    }
+    if let MaybeOrPromise::MetaData(MetaData::Maybe(m)) = res {
+        match &m.data {
+            Ok(n) => {
+                return Ok(Maybe{
+                    data:Ok(ResponseResult::Text(n.clone())),
+                    timestamp:m.timestamp
+                });
+            },
+            Err(e) => {
+                return Ok(Maybe{
+                    data:Err(anyhow!("{}",e.clone())),
+                    timestamp:m.timestamp
+                }); 
             }
         } 
     }

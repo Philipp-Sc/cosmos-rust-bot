@@ -81,8 +81,41 @@ enum Subcommand {
         #[structopt(long, short = "m", help = "Contents of the message to send")]
         message: String,
     }, 
+    #[structopt(about = "Terra-rust-bot feature: Send Notifications.")]
+    ActivateNotifications, 
     #[structopt(about = "Terra-rust-bot feature: Reply with status information to incoming messages.")]
     Activate, 
+}
+
+async fn send_message_to_self(manager: &Manager<SledConfigStore>, message: String) -> anyhow::Result<()> {
+    let mut my_uuid = None;
+    while my_uuid.is_none() {
+        match manager.whoami().await {
+            Ok(uuid) => {
+                my_uuid = Some(uuid);
+            },
+            Err(e) => {
+                println!("{:?}",e);
+                let millis = Duration::from_millis(1000); 
+                thread::sleep(millis);
+            }
+        };
+    }
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards")
+        .as_millis() as u64;
+
+    let message = ContentBody::DataMessage(DataMessage {
+        body: Some(message),
+        timestamp: Some(timestamp),
+        ..Default::default()
+    });
+                       
+    let my_uuid = my_uuid.unwrap().uuid;
+    manager.send_message(my_uuid, message, timestamp).await?;
+    Ok(())
+
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -104,7 +137,7 @@ async fn main() -> anyhow::Result<()> {
     let config_store = SledConfigStore::new(db_path)?;
 
     let csprng = rand::thread_rng();
-    let mut manager = Manager::new(config_store, csprng)?;
+    let mut manager: Manager<SledConfigStore> = Manager::new(config_store, csprng)?;
 
     let millis = Duration::from_millis(1000); 
 
@@ -202,6 +235,67 @@ async fn main() -> anyhow::Result<()> {
         Subcommand::Whoami => {
             println!("{:?}", &manager.whoami().await?)
         } 
+
+        Subcommand::ActivateNotifications => {
+
+            let mut ping_delay = false; 
+            let mut error_hash = "".to_string();
+            let mut logs_hash = "".to_string();
+
+            // filter errors by timestamp.
+            // only new errors will show up.
+            // if empty return none
+            // else Some(string)
+
+            loop {
+                match terra_rust_bot_state_ping_delay("./../terra-rust-bot-output/terra-rust-bot-state.json",30i64).await {
+                    Some(x) => {
+                        if !ping_delay {
+                            send_message_to_self(&manager,format!("[Notification]\n{}",x)).await.ok();
+                            ping_delay = true;
+                        }
+                    },
+                    None => {
+                        if ping_delay {
+                            send_message_to_self(&manager,"[Notification]\nTerra-rust-bot cought up with the schedule.".to_string()).await.ok();
+                        }
+                        ping_delay = false;
+                        // send nothing.
+                    }
+                }
+                match terra_rust_bot_state_default("[Errors]","./../terra-rust-bot-output/terra-rust-bot-state.json",false).await {
+                    Some(x) => {
+                        if error_hash != x {
+                            send_message_to_self(&manager,format!("[Notification]\n{}",&x)).await.ok();
+                            error_hash = x.to_owned();
+                        }
+                    },
+                    None => {
+                        if error_hash!="".to_string() {
+                            send_message_to_self(&manager,"[Notification]\nTerra-rust-bot cought up with the errors.".to_string()).await.ok();
+                        }
+                        error_hash = "".to_string();
+                    }
+                } 
+                match terra_rust_bot_state_default("[Logs]","./../terra-rust-bot-output/terra-rust-bot-state.json",false).await {
+                    Some(x) => {
+                        if logs_hash != x {
+                            send_message_to_self(&manager,format!("[Notification]\n{}",&x)).await.ok();
+                            logs_hash = x.to_owned();
+                        }
+                    },
+                    None => {
+                        if logs_hash!="".to_string() {
+                            send_message_to_self(&manager,"[Notification]\nTerra-rust-bot cleared it's Logs.".to_string()).await.ok();
+                        }
+                        logs_hash = "".to_string();
+                    }
+                }
+                thread::sleep(millis);
+            }
+
+        } 
+        // add encryption for sled!
         Subcommand::Activate => {
             loop { 
                 println!("{}","whoami()");
