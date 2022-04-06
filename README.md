@@ -8,8 +8,22 @@
     <img src="https://img.shields.io/github/commit-activity/m/Philipp-Sc/terra-rust-bot"> 
     <img src="https://img.shields.io/github/license/Philipp-Sc/terra-rust-bot">
     <img src="https://img.shields.io/twitter/follow/PSchlutermann?style=social"> 
+  
   </div>
+
 <br/>
+<div align="center">
+
+  <img src="packages/terra-rust-bot-output/Gallery/terminal_output_auto_stake.png" height="250">
+  <img src="packages/terra-rust-bot-output/Gallery/terminal_output_market.png" height="250">
+  
+  <img src="packages/terra-rust-signal-bot/gallery/signal_bot_auto_stake.png" height="250">
+  <img src="packages/terra-rust-signal-bot/gallery/signal_bot_help.png" height="250">
+  <img src="packages/terra-rust-signal-bot/gallery/signal_messenger.png" height="250">
+
+</div>
+
+   
 
 > :warning: The bot needs your **seed phrase** to create and sign transactions.  
 > :arrow_right_hook: You can use Terra-rust-bot without a seed phrase in view mode. Test this first.  
