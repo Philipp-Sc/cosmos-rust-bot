@@ -54,7 +54,7 @@ This package includes a Signal Messenger integration that can be used to obtain 
 * `./run.sh activate` (run the signal-bot)
 * `./stop.sh` (stop the signal-bot)
 
-* Within your **Signal Messenger App** in your Contact search bar type **"Notes to Self"**. Open the channel and write "\help" to see a list of all available commands.
+* Within your **Signal Messenger App** in your Contact search bar type **"Note to Self"**. Open the channel and write "\help" to see a list of all available commands.
 
 
  ```

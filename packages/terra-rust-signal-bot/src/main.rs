@@ -24,6 +24,9 @@ use url::Url;
 use std::thread;
 use std::time::Duration;
 
+
+use tokio::time::timeout; 
+
 #[derive(StructOpt)]
 #[structopt(about = "a basic signal CLI to try things out")]
 struct Args {
@@ -80,9 +83,7 @@ enum Subcommand {
         uuid: Uuid,
         #[structopt(long, short = "m", help = "Contents of the message to send")]
         message: String,
-    }, 
-    #[structopt(about = "Terra-rust-bot feature: Send Notifications.")]
-    ActivateNotifications, 
+    },  
     #[structopt(about = "Terra-rust-bot feature: Reply with status information to incoming messages.")]
     Activate, 
 }
@@ -235,59 +236,14 @@ async fn main() -> anyhow::Result<()> {
         Subcommand::Whoami => {
             println!("{:?}", &manager.whoami().await?)
         } 
+        // add encryption for sled!
+        Subcommand::Activate => { 
 
-        Subcommand::ActivateNotifications => {
 
             let mut ping_delay = false; 
             let mut latest_error = 0i64;
             let mut latest_log = 0i64;
 
-            loop {
-                match terra_rust_bot_state_ping_delay("./../terra-rust-bot-output/terra-rust-bot-state.json",30i64).await {
-                    Some(x) => {
-                        if !ping_delay {
-                            send_message_to_self(&manager,format!("[Notification]\n{}",x)).await.ok();
-                            ping_delay = true;
-                        }
-                    },
-                    None => {
-                        if ping_delay {
-                            send_message_to_self(&manager,"[Notification]\nTerra-rust-bot cought up with the schedule.".to_string()).await.ok();
-                        }
-                        ping_delay = false;
-                        // send nothing.
-                    }
-                }
-                match terra_rust_bot_state_get_latest("[Errors]","./../terra-rust-bot-output/terra-rust-bot-state.json").await
-                  {
-                    Some(x) => {
-                        if latest_error < x {
-                            latest_error = x;
-                            let x = terra_rust_bot_state_default("[Errors]","./../terra-rust-bot-output/terra-rust-bot-state.json",false).await;
-                            send_message_to_self(&manager,format!("[Notification]\n{}",x.unwrap_or("Failed fetching new errors.".to_string()))).await.ok();
-                        }
-                    },
-                    None => {
-                    }
-                } 
-                match terra_rust_bot_state_get_latest("[Logs]","./../terra-rust-bot-output/terra-rust-bot-state.json").await
-                  {
-                    Some(x) => {
-                        if latest_log < x {
-                            latest_log = x;
-                            let x = terra_rust_bot_state_default("[Logs]","./../terra-rust-bot-output/terra-rust-bot-state.json",false).await;
-                            send_message_to_self(&manager,format!("[Notification]\n{}",x.unwrap_or("Failed fetching new errors.".to_string()))).await.ok();
-                        }
-                    },
-                    None => {
-                    }
-                }  
-                thread::sleep(millis);
-            }
-
-        } 
-        // add encryption for sled!
-        Subcommand::Activate => {
             loop { 
                 println!("{}","whoami()");
                 let mut my_uuid = None;
@@ -324,57 +280,108 @@ async fn main() -> anyhow::Result<()> {
                 let messages = messages.unwrap(); 
      
                 pin_mut!(messages);
-
-                while let Some(Content { metadata, body }) = messages.next().await {
-                    println!("{}","messages.next()"); 
-                    match body {
-                        // ContentBody::DataMessage(message) |
-                        ContentBody::SynchronizeMessage(SyncMessage {
-                            sent:
-                                Some(Sent {
-                                    destination_uuid: Some(destination_uuid),
-                                    message: Some(message),
+                let mut searching = false;
+                loop {
+                    let next = timeout(Duration::from_secs(1), messages.next()).await;
+                    match next {
+                        Ok(Some(Content { metadata, body })) => {
+                            println!("{}","..message received"); 
+                            searching = false;
+                            match body {
+                                // ContentBody::DataMessage(message) |
+                                ContentBody::SynchronizeMessage(SyncMessage {
+                                    sent:
+                                        Some(Sent {
+                                            destination_uuid: Some(destination_uuid),
+                                            message: Some(message),
+                                            ..
+                                        }),
                                     ..
-                                }),
-                            ..
-                        }) => {
-                            if let Some(sender_uuid) = metadata.sender.uuid {
-                                if sender_uuid == my_uuid && my_uuid == Uuid::parse_str(&destination_uuid).unwrap() { 
-                                    // message from and to self
-                                    if let Some(_quote) = &message.quote { 
-                                        // quote
-                                    } else if let Some(_reaction) = message.reaction { 
-                                        // reaction
-                                    } else {
-                                        // default
-                                        if let Some(sender_message) = message.body {
-                                            println!("Message from myself ({:?}): {:?}", sender_uuid, sender_message); 
-                                            let timestamp = std::time::SystemTime::now()
-                                                .duration_since(UNIX_EPOCH).unwrap()
-                                                .as_millis() as u64;
+                                }) => {
+                                    if let Some(sender_uuid) = metadata.sender.uuid {
+                                        if sender_uuid == my_uuid && my_uuid == Uuid::parse_str(&destination_uuid).unwrap() { 
+                                            // message from and to self
+                                            if let Some(_quote) = &message.quote { 
+                                                // quote
+                                            } else if let Some(_reaction) = message.reaction { 
+                                                // reaction
+                                            } else {
+                                                // default
+                                                if let Some(sender_message) = message.body {
+                                                    println!("Message from myself ({:?}): {:?}", sender_uuid, sender_message); 
+                                                    let timestamp = std::time::SystemTime::now()
+                                                        .duration_since(UNIX_EPOCH).unwrap()
+                                                        .as_millis() as u64;
 
-                                            let mut msg_sent = false;
-                                            while !msg_sent {
-                                                let message = ContentBody::DataMessage(DataMessage {
-                                                    body: Some(terra_rust_bot_state(&sender_message,"./../terra-rust-bot-output/terra-rust-bot-state.json",false).await),
-                                                    timestamp: Some(timestamp),
-                                                    ..Default::default()
-                                                });
-                                                msg_sent = match manager.send_message(my_uuid, message, timestamp).await {
-                                                    Ok(_) => true,
-                                                    _ => false,
-                                                };
+                                                    let mut msg_sent = false;
+                                                    while !msg_sent {
+                                                        let message = ContentBody::DataMessage(DataMessage {
+                                                            body: Some(terra_rust_bot_state(&sender_message,"./../terra-rust-bot-output/terra-rust-bot-state.json",false).await),
+                                                            timestamp: Some(timestamp),
+                                                            ..Default::default()
+                                                        });
+                                                        msg_sent = match manager.send_message(my_uuid, message, timestamp).await {
+                                                            Ok(_) => true,
+                                                            _ => false,
+                                                        };
+                                                    }
+                                                    
+                                                }  
                                             }
-                                            
-                                        }  
+                                        }
                                     }
-                                }
+                                },
+                                _ => {}
                             }
                         },
-                        _ => {}
-                    }
+                        _ => {
+                            // timeout
+                            if !searching {
+                                println!("Searching for alerts..");
+                                searching = true;
+                            }
+                            match terra_rust_bot_state_ping_delay("./../terra-rust-bot-output/terra-rust-bot-state.json",30i64).await {
+                                Some(x) => {
+                                    if !ping_delay {
+                                        send_message_to_self(&manager,format!("[Notification]\n{}",x)).await.ok();
+                                        ping_delay = true;
+                                    }
+                                },
+                                None => {
+                                    if ping_delay {
+                                        send_message_to_self(&manager,"[Notification]\nTerra-rust-bot cought up with the schedule.".to_string()).await.ok();
+                                    }
+                                    ping_delay = false;
+                                    // send nothing.
+                                }
+                            }
+                            match terra_rust_bot_state_get_latest("[Errors]","./../terra-rust-bot-output/terra-rust-bot-state.json").await
+                              {
+                                Some(x) => {
+                                    if latest_error < x {
+                                        latest_error = x;
+                                        let x = terra_rust_bot_state_default("[Errors]","./../terra-rust-bot-output/terra-rust-bot-state.json",false).await;
+                                        send_message_to_self(&manager,format!("[Notification]\n{}",x.unwrap_or("Failed fetching new errors.".to_string()))).await.ok();
+                                    }
+                                },
+                                None => {
+                                }
+                            } 
+                            match terra_rust_bot_state_get_latest("[Logs]","./../terra-rust-bot-output/terra-rust-bot-state.json").await
+                              {
+                                Some(x) => {
+                                    if latest_log < x {
+                                        latest_log = x;
+                                        let x = terra_rust_bot_state_default("[Logs]","./../terra-rust-bot-output/terra-rust-bot-state.json",false).await;
+                                        send_message_to_self(&manager,format!("[Notification]\n{}",x.unwrap_or("Failed fetching new errors.".to_string()))).await.ok();
+                                    }
+                                },
+                                None => {
+                                }
+                            }  
+                        }
+                    };
                 }
-            
             }
         } 
     };
