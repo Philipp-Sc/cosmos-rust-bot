@@ -16,8 +16,8 @@ astroport = { git = "https://github.com/astroport-fi/astroport-core" }
 terraswap = "2.4.0" 
 basset = { git = "https://github.com/lidofinance/lido-terra-contracts"}
 spectrum-protocol = { git = "https://github.com/spectrumprotocol/contracts" } 
-cw20 = "0.8.0"
-terra-rust-api="1.1.8"
+cw20 = "0.8.0" 
+terra-rust-api = "1.2.20"
 tokio = { version = "1.4", features = ["full"] }
 anyhow="1.0"  
 serde = { version = "1.0", features = ["derive"] } 

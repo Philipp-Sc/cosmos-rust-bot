@@ -19,7 +19,7 @@ use smart_contracts::objects::meta::api::{
     query_core_block_at_height,
     query_core_block_txs};
  
-use anyhow::anyhow; 
+use anyhow::{anyhow, Context}; 
 use regex::Regex;
 use chrono::{DateTime};
 use std::time::{Instant}; 
@@ -305,22 +305,20 @@ pub async fn get_block_txs_deposit_stable(height: u64) -> anyhow::Result<Respons
             if tx_responses[index].raw_log.contains("deposit_stable") 
                 && tx_responses[index].raw_log.contains("mint_amount") 
                 && tx_responses[index].raw_log.contains("deposit_amount") {
-
+ 
                 let mut mint_amount = "0".to_string();
                 let mut deposit_amount = "0".to_string();
 
-                let first_tx_log: &Value = &tx_responses[index].logs[0];
-
-                let first_tx_log: Log = serde_json::from_str(first_tx_log.to_string().as_str())?;
+                let first_tx_log = &tx_responses[index].logs.as_ref().context("no value")?[0];
                 
                 for i in 0..first_tx_log.events.len() {
-                    if first_tx_log.events[i].type_field == "wasm" {
+                    if first_tx_log.events[i].s_type == "wasm" {
                         for ii in 0..first_tx_log.events[i].attributes.len() {
                             if first_tx_log.events[i].attributes[ii].key == "mint_amount" {
-                                mint_amount = first_tx_log.events[i].attributes[ii].value.to_owned();
+                                mint_amount = first_tx_log.events[i].attributes[ii].value.as_ref().context("no value")?.to_owned();
                             }
                             if first_tx_log.events[i].attributes[ii].key == "deposit_amount" { 
-                                deposit_amount = first_tx_log.events[i].attributes[ii].value.to_owned();   
+                                deposit_amount = first_tx_log.events[i].attributes[ii].value.as_ref().context("no value")?.to_owned();   
                             }
                         }
                     }
