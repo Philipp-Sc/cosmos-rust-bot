@@ -26,7 +26,13 @@ This package includes a Signal Messenger integration that can be used to obtain 
  
 #### Configuration
 * The current state from terra-rust-bot is written to **./packages/terra-rust-bot-output/terra-rust-bot-state.json**. Terra-rust-signal-bot reads the file and extracts the information needed.	 
+
+This enables **terra-rust-signal-bot** to answer to commands as well as sending alerts on it's own:  
+* Errors: there are currenlty errors that hinder terra-rust-bot in any way.
+* Logs: a new transaction was made on behave of the user.
+* Inactivity (threshold is 30s): the terra-rust-bot was unable to gather updated information in the given timeframe. This is helpful to detect when the bot is not running correctly. Be aware if the internet connection on the system signal-bot is running on is down you will not get any notifications.
  
+The commands are shown in the **Usage** section.
 
 ## Install
  
