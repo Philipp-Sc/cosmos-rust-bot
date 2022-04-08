@@ -1,9 +1,5 @@
-// add folder at root called control
 
 // includes functions from action/mod.rs
-
-
-// TODO: ADD TIMESTAMP WHEN requirement was ordered.
 
 pub mod wallet;
 pub mod requirements;
