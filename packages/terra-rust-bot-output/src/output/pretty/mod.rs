@@ -310,7 +310,7 @@ pub async fn terra_rust_bot_state_get_latest(identifier: &str, path: &str) -> Op
         Ok(file) => { 
             let state: State = match serde_json::from_str(&file) {
                 Ok(res) => {res},
-                Err(err) => {return None;},
+                Err(_) => {return None;},
             };   
             let empty = "".to_string();
             
@@ -327,7 +327,7 @@ pub async fn terra_rust_bot_state_get_latest(identifier: &str, path: &str) -> Op
             }
             return Some(max_timestamp);  
         },
-        Err(err) => {
+        Err(_) => {
             return None;
         }
     } 

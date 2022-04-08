@@ -176,7 +176,7 @@ pub async fn borrower_balance_to_string(tasks: Arc<RwLock<HashMap<String, MaybeO
 
 pub async fn terra_balance_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, denom: &str, as_micro: bool, digits_rounded_to: u32) -> Maybe<String> { 
     match get_resolved(&tasks,"terra_balances").await {
-        Maybe{data:Ok(response_result),timestamp:timestamp} => {
+        Maybe{data:Ok(response_result),timestamp} => {
             let vector_balances = &response_result.as_balances().unwrap().result; 
             for balance in vector_balances {
                 if &balance.denom == denom {  

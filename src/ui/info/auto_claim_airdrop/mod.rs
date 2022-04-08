@@ -15,8 +15,7 @@ use core::pin::Pin;
 use core::future::Future;
 
 use std::sync::Arc; 
-use tokio::sync::RwLock;   
-use chrono::Utc;
+use tokio::sync::RwLock;    
  
 pub async fn lazy_anchor_account_auto_claim_airdrop(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_acc_address: &Arc<SecUtf8>, wallet_seed_phrase: &Arc<SecUtf8>, state: &Arc<RwLock<Vec<Option<Entry>>>>,offset: &mut usize, is_test: bool, is_first_run: bool) -> Vec<(usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>)> {
      

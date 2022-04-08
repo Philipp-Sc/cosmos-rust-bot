@@ -47,28 +47,13 @@ pub mod view_macro {
                         Ok(d) => d,
                     }
                 },
-                Maybe{data: Err(err),timestamp: t} => {
+                Maybe{data: Err(_),..} => {
                    return $e;
                 }  
             }
         }
-    }
-    macro_rules! decimal_or_return_custom_string {
-        ( $e:expr, $s:expr ) => {
-            match ($e,$s) {
-                (Maybe{data:Err(e),..},s) => return $e,
-                (Maybe{data:Ok(d),..},_) => Decimal::from_str(&d).unwrap(),
-            }
-        }
-    } 
-
-     
-
-    
-
-
-    pub(crate) use decimal_or_return;  
-    pub(crate) use decimal_or_return_custom_string;   
+    }  
+    pub(crate) use decimal_or_return;    
 }
 
 use view_macro::decimal_or_return; 
@@ -77,13 +62,18 @@ use view_macro::decimal_or_return;
     macro_rules! percent_decimal_or_return {
         ( $e:expr ) => {
             match $e {
-                Maybe{data: Err(err),timestamp: t} => {
-                   return Maybe{data:Err(anyhow::anyhow!("--")),timestamp:chrono::Utc::now().timestamp()};
+                Maybe{data: Err(_),..} => {
+                   return $e;
                 } 
-                Maybe{data: Ok(data),timestamp: t} => {  
+                Maybe{data: Ok(data),..} => {  
                     let mut chars = data.chars(); 
                     chars.next_back(); 
-                    Decimal::from_str(chars.as_str()).unwrap().checked_div(Decimal::from_str("100").unwrap()).unwrap()
+                    match Decimal::from_str(chars.as_str()) {
+                        Err(err) => {
+                            return Maybe{data:Err(anyhow::anyhow!(err)),timestamp:$e.timestamp}
+                            },
+                        Ok(d) => d.checked_div(Decimal::from_str("100").unwrap()).unwrap(),
+                    }                    
                 },
             }
         }

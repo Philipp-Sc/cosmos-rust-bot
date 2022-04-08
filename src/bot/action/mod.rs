@@ -30,8 +30,7 @@ use crate::state::control::model::{
 
 use crate::view::interface::*; 
 use interface_macro::maybe_struct;
-use view_macro::decimal_or_return; 
-use view_macro::decimal_or_return_custom_string; 
+use view_macro::decimal_or_return;  
 
 use crate::view::*;
 
@@ -171,9 +170,9 @@ pub async fn anchor_borrow_and_deposit_stable(tasks: Arc<RwLock<HashMap<String, 
 
 
 pub async fn anchor_redeem_and_repay_stable(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> Maybe<String> {
-    let max_tx_fee = decimal_or_return_custom_string!(meta_data_key_to_string(tasks.clone(),"max_tx_fee",false, 4).await,"(waiting for max_tx_fee)");
-	let balance = decimal_or_return_custom_string!(terra_balance_to_string(tasks.clone(),"uusd",false,2).await,"(waiting for ust_balance)");
- 	let min_ust_balance = decimal_or_return_custom_string!(meta_data_key_to_string(tasks.clone(),"min_ust_balance",false, 4).await,"waiting for min_ust_balance)");
+    let max_tx_fee = decimal_or_return!(meta_data_key_to_string(tasks.clone(),"max_tx_fee",false, 4).await);
+	let balance = decimal_or_return!(terra_balance_to_string(tasks.clone(),"uusd",false,2).await);
+ 	let min_ust_balance = decimal_or_return!(meta_data_key_to_string(tasks.clone(),"min_ust_balance",false, 4).await);
 
  	if balance < min_ust_balance || balance < max_tx_fee {
  		return maybe_struct!((Some( "Insufficient UST balance, replenish your account!".to_string()),Some(Utc::now().timestamp())));
@@ -182,18 +181,18 @@ pub async fn anchor_redeem_and_repay_stable(tasks: Arc<RwLock<HashMap<String, Ma
     let zero = Decimal::from_str("0").unwrap(); 
     let micro = Decimal::from_str("1000000").unwrap();
     
-    let exchange_rate = decimal_or_return_custom_string!(a_terra_exchange_rate_to_string(tasks.clone(),10).await,"(waiting for a_ust_exchange_rate)");
+    let exchange_rate = decimal_or_return!(a_terra_exchange_rate_to_string(tasks.clone(),10).await);
    
-	let to_withdraw_from_deposit = decimal_or_return_custom_string!(calculate_repay_plan(tasks.clone(),"to_withdraw_from_deposit",2).await,"(waiting for redeem_amount)")
+	let to_withdraw_from_deposit = decimal_or_return!(calculate_repay_plan(tasks.clone(),"to_withdraw_from_deposit",2).await)
 								   .checked_div(exchange_rate).unwrap()
 								   .checked_mul(micro).unwrap()
 								   .round_dp_with_strategy(0, rust_decimal::RoundingStrategy::ToZero);
 
-    let to_repay = decimal_or_return_custom_string!(calculate_repay_plan(tasks.clone(),"to_repay",2).await,"(waiting for to_repay)")
+    let to_repay = decimal_or_return!(calculate_repay_plan(tasks.clone(),"to_repay",2).await)
     			   .checked_mul(micro).unwrap()
 				   .round_dp_with_strategy(0, rust_decimal::RoundingStrategy::ToZero);
 
-    let gas_fees_uusd = decimal_or_return_custom_string!(gas_price_to_string(tasks.clone(),10).await,"(waiting for gas_fee)");
+    let gas_fees_uusd = decimal_or_return!(gas_price_to_string(tasks.clone(),10).await);
 
     match check_anchor_loan_status(tasks.clone(),"repay",2).await.data.unwrap_or("--".to_string()).as_ref() {
 	    	"repay due" => {},
@@ -211,7 +210,7 @@ pub async fn anchor_redeem_and_repay_stable(tasks: Arc<RwLock<HashMap<String, Ma
     if to_withdraw_from_deposit > zero && to_repay > zero {
   
  
-		let gas_adjustment_preference = decimal_or_return_custom_string!(meta_data_key_to_string(tasks.clone(),"gas_adjustment_preference",false, 10).await,"(waiting for gas_adjustment_preference)");
+		let gas_adjustment_preference = decimal_or_return!(meta_data_key_to_string(tasks.clone(),"gas_adjustment_preference",false, 10).await);
 		 
 		let mnemonics = match only_estimate {
 			true => {wallet_acc_address.unsecure().to_string()},
@@ -234,7 +233,7 @@ pub async fn anchor_redeem_and_repay_stable(tasks: Arc<RwLock<HashMap<String, Ma
 	}else if to_repay > zero {
 		// no redeem, just repay. 
 
-		let gas_adjustment_preference = decimal_or_return_custom_string!(meta_data_key_to_string(tasks.clone(),"gas_adjustment_preference",false, 10).await,"(waiting for gas_adjustment_preference)");
+		let gas_adjustment_preference = decimal_or_return!(meta_data_key_to_string(tasks.clone(),"gas_adjustment_preference",false, 10).await);
 		  
 		let mnemonics = match only_estimate {
 			true => {wallet_acc_address.unsecure().to_string()},
