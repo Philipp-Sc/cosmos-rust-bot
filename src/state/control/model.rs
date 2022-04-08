@@ -10,7 +10,7 @@ pub mod requirements;
 use secstr::*;
 
 use rust_decimal::Decimal; 
-  
+use std::str::FromStr;
  
 use serde::Deserialize;
 use serde::Serialize;
@@ -90,9 +90,9 @@ pub enum MetaData {
 //    Task(JoinHandle<anyhow::Result<String>>), // not used
 }
 
-
+ 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct UserSettings { 
+pub struct UserSettings {  
     pub trigger_percentage: Decimal, 
     pub target_percentage: Decimal,  
     pub borrow_percentage: Decimal,   
@@ -100,7 +100,22 @@ pub struct UserSettings {
     pub gas_adjustment_preference: Decimal,            
     pub max_tx_fee: Decimal,
     pub ust_balance_preference: Decimal,
+    // pub lock_settings: bool,
+    // pub pause_requested: bool,
 } 
+impl Default for UserSettings {
+    fn default() -> UserSettings {
+        UserSettings {
+            trigger_percentage: Decimal::from_str("0.9").unwrap(),  
+            target_percentage: Decimal::from_str("0.72").unwrap(),   
+            borrow_percentage: Decimal::from_str("0.5").unwrap(),   
+            max_tx_fee: Decimal::from_str("5").unwrap(),
+            gas_adjustment_preference: Decimal::from_str("1.2").unwrap(),
+            min_ust_balance: Decimal::from_str("10").unwrap(),   
+            ust_balance_preference: Decimal::from_str("20").unwrap(),
+        }
+    }
+}
 
 /*
  * returns the value for the given key, if the enum is of the type Maybe.

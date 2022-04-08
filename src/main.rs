@@ -47,9 +47,7 @@ use terra_rust_bot_output::output::pretty::Entry;
 
 use std::env;
 use secstr::*;
-
-use rust_decimal::Decimal;
-use core::str::FromStr; 
+  
 
 use std::collections::HashMap; 
 use std::time::{Duration};
@@ -96,34 +94,24 @@ extern crate num_cpus;
  #[tokio::main]
 async fn main() -> anyhow::Result<()> {
 
-        /* Load user settings */
-        let mut terra_rust_bot_json_loaded = "\nterra-rust-bot.json not loaded\n";
-
-        let mut user_settings: UserSettings = UserSettings {
-            trigger_percentage: Decimal::from_str("0.9").unwrap(),  
-            target_percentage: Decimal::from_str("0.72").unwrap(),   
-            borrow_percentage: Decimal::from_str("0.5").unwrap(),   
-            max_tx_fee: Decimal::from_str("5").unwrap(),
-            gas_adjustment_preference: Decimal::from_str("1.2").unwrap(),
-            min_ust_balance: Decimal::from_str("10").unwrap(),   
-            ust_balance_preference: Decimal::from_str("20").unwrap(),
-        };
-
-        match fs::read_to_string("./terra-rust-bot.json") {
+        /* Load user settings */ 
+        let user_settings: UserSettings = match fs::read_to_string("./terra-rust-bot.json") {
             Ok(file) => {
-                user_settings = match serde_json::from_str(&file) {
-                    Ok(res) => {
-                        terra_rust_bot_json_loaded="\nterra-rust-bot.json loaded.\n";
+                match serde_json::from_str(&file) {
+                    Ok(res) => { 
                         res
                     },
-                    Err(err) => {println!("{:?}",err);user_settings}
+                    Err(err) => {
+                        println!("{:?}",err);
+                        Default::default()
+                    }
                 }
             },
             Err(err) => {
                 println!("{:?}",err);
-                // use hard coded values.
+                Default::default()
             }
-        }
+        };
         /* Load arguments */
 
         let args: Vec<String> = env::args().collect();
@@ -164,7 +152,6 @@ async fn main() -> anyhow::Result<()> {
         } 
 
         /* Get wallet details */
-
         let mut wallet_seed_phrase = SecUtf8::from("".to_string());
         let mut wallet_acc_address = SecUtf8::from(arg_w);
 
@@ -204,16 +191,7 @@ async fn main() -> anyhow::Result<()> {
         // using timestamps to update each slot with a short delay.
         let mut timestamps_display: Vec<i64> = vec![0i64; display_slots];
         let mut display_out_timestamp = 0i64;
-       
-        let entry = Entry {
-            timestamp: Utc::now().timestamp(), 
-            key: "terra_rust_bot_json_loaded".to_string(),
-            prefix: None,
-            value: terra_rust_bot_json_loaded.to_string(),
-            suffix: None,
-            group: None,
-        };
-        add_entry_to_state(&state, 0, entry).await.ok();
+        
  
         let num_cpus = num_cpus::get();
 
