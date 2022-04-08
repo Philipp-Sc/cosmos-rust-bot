@@ -13,7 +13,6 @@ pub fn requirement_list() ->  Vec<(&'static str, i32, Vec<&'static str>)>  {
         ("trigger_percentage", fast, vec!["anchor_account","anchor_auto_repay"]),
         ("target_percentage", fast, vec!["anchor_auto_repay","anchor_auto_borrow"]),
         ("borrow_percentage", fast, vec!["anchor_auto_borrow"]),
-        ("max_gas_adjustment", fast, vec!["anchor_account","anchor_auto_lp","anchor_auto_stake","anchor_auto_stake_airdrops","anchor_auto_repay","anchor_auto_borrow"]),
         ("gas_adjustment_preference",fast, vec!["anchor_account","anchor_auto_lp","anchor_auto_stake","anchor_auto_stake_airdrops","anchor_auto_repay","anchor_auto_borrow"]),
         ("min_ust_balance", fast, vec!["anchor_account","anchor_auto_lp","anchor_auto_stake","anchor_auto_stake_airdrops","anchor_auto_repay","anchor_auto_borrow"]),
         ("ust_balance_preference", fast, vec!["anchor_auto_repay"]),

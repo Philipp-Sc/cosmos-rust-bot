@@ -179,13 +179,7 @@ At the same time **TRB** can be compiled to a single executable that is easy to 
  * `-b` enable **bot**: `anchor_auto_lp`,`anchor_auto_stake`, `anchor_auto_borrow`  or `anchor_auto_repay`.
  * `-d` enable additional development/debugging output. Currently only `test` is available. `test` will only simulate or estimate transaction fees.
  
- **Process**
-
-*Only works if you used the ./run.sh script*    
- * `ps -p $(cat my-bot.pid)` check if the bot is still running.
- * `kill -TSTP $(cat my-bot.pid) ` pause the bot
- * `kill -CONT $(cat my-bot.pid) ` resume the bot
-
+ 
  **View the current state**
 
 * Either use the package [terra-rust-bot-output](https://github.com/Philipp-Sc/terra-rust-bot/tree/main/packages/terra-rust-bot-output) to view the state in the terminal.

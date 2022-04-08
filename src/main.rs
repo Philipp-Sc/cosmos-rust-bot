@@ -77,12 +77,8 @@ extern crate num_cpus;
 
 // find out why auto_farm fails.
 
-
-// NOTE NEW DEV FEATURE:
-// watch all APIs, notfiy if one fails -> EMAIL
-
-
-
+ 
+ 
 // TODO: Error handling. Every Unwrapp needs to be inspected.
 // Some unwraps panic if the request fail or return an error.
 // To be fixed, but not urgent, since only the task panics, which has no bad side effect.  
@@ -97,12 +93,6 @@ extern crate num_cpus;
 
 // TODO: Optimize TX Fee estimate query functions. !! (will reduce query time)
 
-
-// TODO: Instead of current display implementation write out a JSON file.
-// TODO: Then to display this file write a different programm.
-// TODO: Long term this will be easier to maintain, and make it much easier to write forks or extensions.
-
-
  #[tokio::main]
 async fn main() -> anyhow::Result<()> {
 
@@ -114,7 +104,6 @@ async fn main() -> anyhow::Result<()> {
             target_percentage: Decimal::from_str("0.72").unwrap(),   
             borrow_percentage: Decimal::from_str("0.5").unwrap(),   
             max_tx_fee: Decimal::from_str("5").unwrap(),
-            max_gas_adjustment: Decimal::from_str("1.67").unwrap(),
             gas_adjustment_preference: Decimal::from_str("1.2").unwrap(),
             min_ust_balance: Decimal::from_str("10").unwrap(),   
             ust_balance_preference: Decimal::from_str("20").unwrap(),
@@ -243,7 +232,6 @@ async fn main() -> anyhow::Result<()> {
          * 
          * */
         loop {  
-
 
             let mut offset: usize = 0;
 

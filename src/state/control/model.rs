@@ -95,8 +95,7 @@ pub enum MetaData {
 pub struct UserSettings { 
     pub trigger_percentage: Decimal, 
     pub target_percentage: Decimal,  
-    pub borrow_percentage: Decimal,  
-    pub max_gas_adjustment: Decimal, 
+    pub borrow_percentage: Decimal,   
     pub min_ust_balance: Decimal, 
     pub gas_adjustment_preference: Decimal,            
     pub max_tx_fee: Decimal,
@@ -797,10 +796,7 @@ pub async fn await_function(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,
                     }, 
                     "target_percentage" => {     
                         map.insert("target_percentage".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Maybe {data: Ok(user_settings.target_percentage.to_string().to_owned()), timestamp: Utc::now().timestamp()})));
-                    },  
-                    "max_gas_adjustment" => {      
-                        map.insert("max_gas_adjustment".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Maybe {data: Ok(user_settings.max_gas_adjustment.to_string().to_owned()), timestamp: Utc::now().timestamp()})));
-                    },    
+                    },      
                     "gas_adjustment_preference" => {      
                         map.insert("gas_adjustment_preference".to_string(),MaybeOrPromise::MetaData(MetaData::Maybe(Maybe {data: Ok(user_settings.gas_adjustment_preference.to_string().to_owned()), timestamp: Utc::now().timestamp()})));
                     },    
