@@ -239,13 +239,8 @@ async fn main() -> anyhow::Result<()> {
         Subcommand::ActivateNotifications => {
 
             let mut ping_delay = false; 
-            let mut error_hash = "".to_string();
-            let mut logs_hash = "".to_string();
-
-            // filter errors by timestamp.
-            // only new errors will show up.
-            // if empty return none
-            // else Some(string)
+            let mut latest_error = 0i64;
+            let mut latest_log = 0i64;
 
             loop {
                 match terra_rust_bot_state_ping_delay("./../terra-rust-bot-output/terra-rust-bot-state.json",30i64).await {
@@ -263,34 +258,30 @@ async fn main() -> anyhow::Result<()> {
                         // send nothing.
                     }
                 }
-                match terra_rust_bot_state_default("[Errors]","./../terra-rust-bot-output/terra-rust-bot-state.json",false).await {
+                match terra_rust_bot_state_get_latest("[Errors]","./../terra-rust-bot-output/terra-rust-bot-state.json").await
+                  {
                     Some(x) => {
-                        if error_hash != x {
-                            send_message_to_self(&manager,format!("[Notification]\n{}",&x)).await.ok();
-                            error_hash = x.to_owned();
+                        if latest_error < x {
+                            latest_error = x;
+                            let x = terra_rust_bot_state_default("[Errors]","./../terra-rust-bot-output/terra-rust-bot-state.json",false).await;
+                            send_message_to_self(&manager,format!("[Notification]\n{}",x.unwrap_or("Failed fetching new errors.".to_string()))).await.ok();
                         }
                     },
                     None => {
-                        if error_hash!="".to_string() {
-                            send_message_to_self(&manager,"[Notification]\nTerra-rust-bot cought up with the errors.".to_string()).await.ok();
-                        }
-                        error_hash = "".to_string();
                     }
                 } 
-                match terra_rust_bot_state_default("[Logs]","./../terra-rust-bot-output/terra-rust-bot-state.json",false).await {
+                match terra_rust_bot_state_get_latest("[Logs]","./../terra-rust-bot-output/terra-rust-bot-state.json").await
+                  {
                     Some(x) => {
-                        if logs_hash != x {
-                            send_message_to_self(&manager,format!("[Notification]\n{}",&x)).await.ok();
-                            logs_hash = x.to_owned();
+                        if latest_log < x {
+                            latest_log = x;
+                            let x = terra_rust_bot_state_default("[Logs]","./../terra-rust-bot-output/terra-rust-bot-state.json",false).await;
+                            send_message_to_self(&manager,format!("[Notification]\n{}",x.unwrap_or("Failed fetching new errors.".to_string()))).await.ok();
                         }
                     },
                     None => {
-                        if logs_hash!="".to_string() {
-                            send_message_to_self(&manager,"[Notification]\nTerra-rust-bot cleared it's Logs.".to_string()).await.ok();
-                        }
-                        logs_hash = "".to_string();
                     }
-                }
+                }  
                 thread::sleep(millis);
             }
 

@@ -1,5 +1,8 @@
 use terra_rust_bot_output::output::*;
+
+
 use terra_rust_bot_output::output::pretty::Entry; 
+use crate::state::control::model::{Maybe}; 
 use crate::state::control::model::{MaybeOrPromise,await_function};
 
 use crate::view::*;
@@ -26,13 +29,13 @@ use chrono::Utc;
  * 
  * */
 
- pub async fn lazy_anchor_account_auto_repay(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, state: &Arc<RwLock<Vec<Option<Entry>>>> ,offset: &mut usize, is_test: bool, is_first_run: bool) -> Vec<(usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>)>  {
+ pub async fn lazy_anchor_account_auto_repay(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, state: &Arc<RwLock<Vec<Option<Entry>>>> ,offset: &mut usize, is_test: bool, is_first_run: bool) -> Vec<(usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>)>  {
 
     let mut anchor_view: Vec<(Entry,usize)> = Vec::new();
-    let mut anchor_tasks: Vec<(usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>)> = Vec::new();
+    let mut anchor_tasks: Vec<(usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>)> = Vec::new();
 
     anchor_view.push((Entry {
-        timestamp: Utc::now().timestamp(), 
+        timestamp: 0i64, 
         key: "loan_amount".to_string(),
         prefix: None,
         value: "--".to_string(),
@@ -40,12 +43,12 @@ use chrono::Utc;
         group: Some("[Anchor Protocol][Auto Repay]".to_string()),
     },*offset)); 
  
-    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(borrower_loan_amount_to_string(tasks.clone(),false,2)));
+    let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset, Box::pin(borrower_loan_amount_to_string(tasks.clone(),false,2)));
     anchor_tasks.push(t);
     *offset += 1;
 
     anchor_view.push((Entry {
-        timestamp: Utc::now().timestamp(), 
+        timestamp: 0i64, 
         key: "borrow_limit".to_string(),
         prefix: None,
         value: "--".to_string(),
@@ -53,12 +56,12 @@ use chrono::Utc;
         group: Some("[Anchor Protocol][Auto Repay]".to_string()),
     },*offset)); 
  
-    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(borrow_limit_to_string(tasks.clone(),false,2)));
+    let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset, Box::pin(borrow_limit_to_string(tasks.clone(),false,2)));
     anchor_tasks.push(t);
     *offset += 1;
 
     anchor_view.push((Entry {
-        timestamp: Utc::now().timestamp(), 
+        timestamp: 0i64, 
         key: "loan_to_borrow_limit".to_string(),
         prefix: None,
         value: "--".to_string(),
@@ -66,12 +69,12 @@ use chrono::Utc;
         group: Some("[Anchor Protocol][Auto Repay]".to_string()),
     },*offset)); 
  
-    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(borrower_ltv_to_string(tasks.clone(),2)));
+    let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset, Box::pin(borrower_ltv_to_string(tasks.clone(),2)));
     anchor_tasks.push(t);
     *offset += 1;
 
     anchor_view.push((Entry {
-        timestamp: Utc::now().timestamp(), 
+        timestamp: 0i64, 
         key: "left_to_trigger".to_string(),
         prefix: None,
         value: "--".to_string(),
@@ -79,12 +82,12 @@ use chrono::Utc;
         group: Some("[Anchor Protocol][Auto Repay]".to_string()),
     },*offset)); 
 
-    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(check_anchor_loan_status(tasks.clone(),"repay",2)));
+    let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset, Box::pin(check_anchor_loan_status(tasks.clone(),"repay",2)));
     anchor_tasks.push(t);
     *offset += 1; 
 
     anchor_view.push((Entry {
-        timestamp: Utc::now().timestamp(), 
+        timestamp: 0i64, 
         key: "ideal_repay_amount".to_string(),
         prefix: None,
         value: "--".to_string(),
@@ -92,7 +95,7 @@ use chrono::Utc;
         group: Some("[Anchor Protocol][Auto Repay]".to_string()),
     },*offset)); 
 
-    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(calculate_amount(tasks.clone(),"repay",false,2)));
+    let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset, Box::pin(calculate_amount(tasks.clone(),"repay",false,2)));
     anchor_tasks.push(t);
     *offset += 1;
 
@@ -106,7 +109,7 @@ use chrono::Utc;
     *offset += 1;
 */
     anchor_view.push((Entry {
-        timestamp: Utc::now().timestamp(), 
+        timestamp: 0i64, 
         key: "to_withdraw_from_account".to_string(),
         prefix: None,
         value: "--".to_string(),
@@ -114,7 +117,7 @@ use chrono::Utc;
         group: Some("[Anchor Protocol][Auto Repay]".to_string()),
     },*offset)); 
 
-    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(calculate_repay_plan(tasks.clone(),"to_withdraw_from_account",2)));
+    let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset, Box::pin(calculate_repay_plan(tasks.clone(),"to_withdraw_from_account",2)));
     anchor_tasks.push(t);
     *offset += 1;
 
@@ -125,7 +128,7 @@ use chrono::Utc;
 */
 
     anchor_view.push((Entry {
-        timestamp: Utc::now().timestamp(), 
+        timestamp: 0i64, 
         key: "redeem_amount".to_string(),
         prefix: None,
         value: "--".to_string(),
@@ -133,12 +136,12 @@ use chrono::Utc;
         group: Some("[Anchor Protocol][Auto Repay][Redeem]".to_string()),
     },*offset)); 
   
-    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(calculate_repay_plan(tasks.clone(),"to_withdraw_from_deposit",2)));
+    let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset, Box::pin(calculate_repay_plan(tasks.clone(),"to_withdraw_from_deposit",2)));
     anchor_tasks.push(t);
     *offset += 1;
 
     anchor_view.push((Entry {
-            timestamp: Utc::now().timestamp(), 
+            timestamp: 0i64, 
             key: "redeem_stable_tx_gas_estimate".to_string(),
             prefix: None,
             value: "--".to_string(),
@@ -146,12 +149,12 @@ use chrono::Utc;
             group: Some("[Anchor Protocol][Auto Repay][Redeem]".to_string()),
         },*offset)); 
  
-    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_redeem_stable","avg_gas_used".to_owned(),false,2)));
+    let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset, Box::pin(estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_redeem_stable","avg_gas_used".to_owned(),false,2)));
     anchor_tasks.push(t);
     *offset += 1;
 
     anchor_view.push((Entry {
-            timestamp: Utc::now().timestamp(), 
+            timestamp: 0i64, 
             key: "to_repay".to_string(),
             prefix: None,
             value: "--".to_string(),
@@ -159,12 +162,12 @@ use chrono::Utc;
             group: Some("[Anchor Protocol][Auto Repay][Repay]".to_string()),
         },*offset)); 
  
-    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(calculate_repay_plan(tasks.clone(),"to_repay",2)));
+    let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset, Box::pin(calculate_repay_plan(tasks.clone(),"to_repay",2)));
     anchor_tasks.push(t);
     *offset += 1;   
 
     anchor_view.push((Entry {
-            timestamp: Utc::now().timestamp(), 
+            timestamp: 0i64, 
             key: "repay_stable_tx_gas_estimate".to_string(),
             prefix: None,
             value: "--".to_string(),
@@ -172,7 +175,7 @@ use chrono::Utc;
             group: Some("[Anchor Protocol][Auto Repay][Repay]".to_string()),
         },*offset)); 
   
-    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_repay_stable","avg_gas_used".to_owned(),false,2)));
+    let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset, Box::pin(estimate_anchor_protocol_tx_fee(tasks.clone(),"anchor_protocol_txs_repay_stable","avg_gas_used".to_owned(),false,2)));
     anchor_tasks.push(t);
     *offset += 1;
  
@@ -181,7 +184,7 @@ use chrono::Utc;
     *offset += 1;
  
     anchor_view.push(("--".purple().to_string(),*offset));
-    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(calculate_repay_plan(tasks.clone(),"stability_tax",2)));
+    let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset, Box::pin(calculate_repay_plan(tasks.clone(),"stability_tax",2)));
     anchor_tasks.push(t);
     *offset += 1;
 
@@ -189,7 +192,7 @@ use chrono::Utc;
     *offset += 1;*/
 
     anchor_view.push((Entry {
-        timestamp: Utc::now().timestamp(), 
+        timestamp: 0i64, 
         key: "total_amount".to_string(),
         prefix: None,
         value: "--".to_string(),
@@ -198,12 +201,12 @@ use chrono::Utc;
     },*offset)); 
  
   
-    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(calculate_repay_plan(tasks.clone(),"total_amount",2)));
+    let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset, Box::pin(calculate_repay_plan(tasks.clone(),"total_amount",2)));
     anchor_tasks.push(t);
     *offset += 1;
 
     anchor_view.push((Entry {
-        timestamp: Utc::now().timestamp(), 
+        timestamp: 0i64, 
         key: "auto_repay_tx_fee_estimate".to_string(),
         prefix: None,
         value: "--".to_string(),
@@ -211,7 +214,7 @@ use chrono::Utc;
         group: Some("[Anchor Protocol][Auto Repay][Transaction]".to_string()),
     },*offset)); 
   
-    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(estimate_anchor_protocol_auto_repay_tx_fee(tasks.clone(),2)));
+    let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset, Box::pin(estimate_anchor_protocol_auto_repay_tx_fee(tasks.clone(),2)));
     anchor_tasks.push(t);
     *offset += 1;
 
@@ -221,7 +224,7 @@ use chrono::Utc;
     }
  
     anchor_view.push((Entry {
-        timestamp: Utc::now().timestamp(), 
+        timestamp: 0i64, 
         key: field.to_string(),
         prefix: None,
         value: "--".to_string(),
@@ -230,7 +233,7 @@ use chrono::Utc;
     },*offset)); 
   
     // display task here
-    let t: (usize,Pin<Box<dyn Future<Output = String> + Send + 'static>>) = (*offset, Box::pin(await_function(tasks.clone(),"anchor_auto_repay".to_owned())));
+    let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset, Box::pin(await_function(tasks.clone(),"anchor_auto_repay".to_owned())));
     anchor_tasks.push(t);
     *offset += 1;
 

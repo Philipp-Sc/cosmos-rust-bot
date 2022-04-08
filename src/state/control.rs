@@ -12,6 +12,7 @@ use model::get_meta_data_maybe;
 use model::MaybeOrPromise;
 use model::get_oldest_timestamps_of_resolved_tasks;
 use model::try_register_function;
+use model::Maybe;
 
 
 pub async fn data_is_outdated(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, req: &[&str]) -> bool {
@@ -28,7 +29,7 @@ pub async fn data_is_outdated(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>
     }
 }
 
-pub async fn try_run_function(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, task: Pin<Box<dyn Future<Output = String> + Send + 'static>>, key: &str, is_test: bool) {
+pub async fn try_run_function(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, task: Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>, key: &str, is_test: bool) {
 	
 	let timeout_duration = 120u64;  
 	/* if task hangs for some reason (awaiting data, performaing estimate, broadcasting transaction) then timeout */

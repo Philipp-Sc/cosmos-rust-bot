@@ -7,8 +7,6 @@ use crate::state::control::model::{MaybeOrPromise};
 use crate::state::control::model::try_get_resolved;
 use crate::state::control::model::Maybe;
 
-use crate::view::*;  
-
 use std::collections::HashMap;  
 
 use std::sync::Arc; 

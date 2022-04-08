@@ -70,6 +70,11 @@ use chrono::{Utc};
 use core::pin::Pin;
 use core::future::Future;
 
+
+use terra_rust_bot_output::output::Maybe as MaybeImported;
+
+pub type Maybe<T> = MaybeImported<T>;
+
 pub enum MaybeOrPromise { 
     Data(QueryData),
     MetaData(MetaData),
@@ -85,10 +90,6 @@ pub enum MetaData {
 //    Task(JoinHandle<anyhow::Result<String>>), // not used
 }
 
-pub struct Maybe<T> {
-    pub data: anyhow::Result<T>,   
-    pub timestamp: i64,
-} 
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct UserSettings { 
@@ -197,12 +198,6 @@ pub async fn try_get_resolved(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>
  // task.await is blocking. // current behaviour leads to one run being as fast as the slowest task.
 pub async fn get_data_maybe_or_await_task(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>,key: &str) -> anyhow::Result<ResponseResult> { 
         
-        /* this is only efficient with low refresh rates. Otherwise this adds a second delay to this function.
-        let maybe = get_data_maybe_or_meta_data_maybe(tasks,key).await;
-        if maybe.is_ok() {
-            return maybe;
-        }*/
-
         let mut map = tasks.write().await; 
         let res = map.get_mut(key).ok_or(anyhow!("Error: key does not exist"))?;
         
@@ -237,7 +232,39 @@ pub async fn get_data_maybe_or_await_task(tasks: &Arc<RwLock<HashMap<String, May
             } 
         } 
         return Err(anyhow!("Unexpected Error: Unreachable point reached."));
+ }
+
+pub async fn await_task(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>,key: &str) -> anyhow::Result<()> { 
         
+        let mut map = tasks.write().await; 
+        let res = map.get_mut(key).ok_or(anyhow!("Error: key does not exist"))?;
+        
+        if let MaybeOrPromise::Data(QueryData::Task(task)) = res { 
+ 
+            let maybe: Result<ResponseResult, anyhow::Error>  = match task.await {
+                Ok(n) => { n },
+                Err(e) => { Err(anyhow!("Error: {:?}",e)) } // JoinError
+            };
+            let maybe: Maybe<ResponseResult>= Maybe {data: maybe, timestamp: Utc::now().timestamp()};
+
+            *res = MaybeOrPromise::Data(QueryData::Maybe(maybe));  
+        }  
+        Ok(())
+ }
+
+ pub async fn get_resolved(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>,key: &str) -> Maybe<ResponseResult> { 
+        
+        match await_task(tasks,key).await {
+            Ok(_) => { // resolved
+                return try_get_resolved(tasks,key).await.unwrap(); // always Ok(_) 
+            },
+            Err(e) =>{ // Error: key does not exit
+                return Maybe{
+                    data:Err(anyhow!("{}",e)),
+                    timestamp: Utc::now().timestamp()
+                }; 
+            }
+        }          
  }
 
 pub async fn get_timestamp_or_await_task(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>,key: &str) -> anyhow::Result<i64> { 
@@ -439,7 +466,7 @@ pub async fn register_value(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>
     map.insert(key,MaybeOrPromise::MetaData(MetaData::Maybe(Maybe {data: Ok(value), timestamp: Utc::now().timestamp()})));
 }
    
-pub async fn try_register_function(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: String, f: Pin<Box<dyn Future<Output = String> + Send + 'static >>, timeout_duration: u64, block_duration_after_resolve: i64) {
+pub async fn try_register_function(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: String, f: Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static >>, timeout_duration: u64, block_duration_after_resolve: i64) {
 
     let mut does_not_exist = false;
  
@@ -456,21 +483,21 @@ pub async fn try_register_function(tasks: &Arc<RwLock<HashMap<String, MaybeOrPro
 
     if does_not_exist || (timestamp > 0i64 && now - timestamp >= block_duration_after_resolve) {
         let handle = tokio::spawn(async move {   
-                let result = timeout(Duration::from_secs(timeout_duration), f).await.unwrap_or("timeout".to_string());                   
-                Ok(ResponseResult::Text(result))
+                let result = timeout(Duration::from_secs(timeout_duration), f).await.unwrap_or(Maybe{data:Ok("timeout".to_string()),timestamp: Utc::now().timestamp()});                   
+                Ok(ResponseResult::Text(result.data.unwrap_or("--".to_string())))
         });
         let mut map = tasks.write().await;
         map.insert(key, MaybeOrPromise::Data(QueryData::Task(handle))); 
     }
 }
 
-pub async fn await_function(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: String) -> String {
-   match get_data_maybe_or_await_task(&tasks,&key).await {
-        Ok(succ) => {
-            return succ.as_text().unwrap().to_string();
+pub async fn await_function(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: String) -> Maybe<String> {
+   match get_resolved(&tasks,&key).await {
+        Maybe{data: Ok(succ),timestamp:t} => {
+            return Maybe{data: Ok(succ.as_text().unwrap().to_string()),timestamp:t};
         },
-        Err(err) => {
-            return err.to_string();
+        Maybe{data: Err(err),timestamp:t} => {
+            return Maybe{data: Ok(err.to_string()),timestamp:t};
         }
      }
 }

@@ -94,7 +94,7 @@ pub async fn terra_rust_bot_state(context: &str, path: &str, is_console: bool) -
  
 } 
 
-fn terra_rust_bot_state_help(is_console: bool) -> String {   
+fn terra_rust_bot_state_help(_is_console: bool) -> String {   
 
 return r#"[Available Commands]
 SYSTEM TIME AND LATEST TIMESTAMP 
@@ -305,6 +305,33 @@ async fn terra_rust_bot_state_ping(path: &str, is_console: bool) -> String {
     return format!("{}",t);
 }
 
+pub async fn terra_rust_bot_state_get_latest(identifier: &str, path: &str) -> Option<i64> {
+    match fs::read_to_string(path) {
+        Ok(file) => { 
+            let state: State = match serde_json::from_str(&file) {
+                Ok(res) => {res},
+                Err(err) => {return None;},
+            };   
+            let empty = "".to_string();
+            
+            let mut max_timestamp = 0i64;
+            for x in 0..state.len() { 
+                if let Some(entry) = &state[x] {
+                    let group = &entry.group.as_ref().unwrap_or(&empty);
+                    if group.contains(identifier) { 
+                        if max_timestamp < entry.timestamp {
+                            max_timestamp = entry.timestamp;
+                        }
+                    }
+                }
+            }
+            return Some(max_timestamp);  
+        },
+        Err(err) => {
+            return None;
+        }
+    } 
+}
 
 
 pub async fn terra_rust_bot_state_default(identifier: &str, path: &str, is_console: bool) -> Option<String> {  
@@ -320,7 +347,7 @@ pub async fn terra_rust_bot_state_default(identifier: &str, path: &str, is_conso
                 Err(err) => {return Some(format!("{:?}",err));},
             }; 
 
-            t.set_header(&[&identifier.truecolor(75,219,75).to_string(), ""]);
+            t.set_header(&[&identifier.truecolor(75,219,75).to_string()]);
             let mut has_data = false;
             let mut prev_group = "".to_string();
             let empty = "".to_string();
@@ -331,14 +358,18 @@ pub async fn terra_rust_bot_state_default(identifier: &str, path: &str, is_conso
                     if group.contains(identifier) {
                         has_data = true;
                         if prev_group != group.to_string() {
-                            display = format!("{}\n{}",display,group.replace(identifier,"").truecolor(75,219,75)/*.truecolor(84, 147, 247)*/);   
                             prev_group = group.to_string();
-                            t.add_row(&[&group.replace(identifier,"").truecolor(75,219,75).to_string(), ""]);
+                            let header = group.replace(identifier,"");
+                            if header != "" {
+                                display = format!("{}\n{}",display,&header.truecolor(75,219,75)/*.truecolor(84, 147, 247)*/);   
+                                t.add_row(&[&format!("{}",&header.truecolor(75,219,75))]);
+                            }
                         }
                         let prefix = entry.prefix.as_ref().unwrap_or(&empty);
                         let suffix = entry.suffix.as_ref().unwrap_or(&empty);
-                        display = format!("{}\n{}:\n                        {} {} {}",display,entry.key.truecolor(77, 77, 237),prefix.purple(),entry.value.purple(),suffix.purple());
-                        t.add_row(&[&format!("{}:",entry.key.truecolor(77, 77, 237)),&format!("{} {} {}",prefix.purple(),entry.value.purple(),suffix.purple())]);
+                        let sec_ago_updated = Utc::now().timestamp()-entry.timestamp;
+                        display = format!("{}\n{}:\n                        {} {} {}\n                         [{}s. ago updated]",display,entry.key.truecolor(77, 77, 237),prefix.purple(),entry.value.purple(),suffix.purple(),sec_ago_updated);
+                        t.add_row(&[&format!("{}:",entry.key.truecolor(77, 77, 237)),&format!("{} {} {}",prefix.purple(),entry.value.purple(),suffix.purple()),&format!("[{}s. ago updated]",sec_ago_updated)]);
                     }
                 }
             } 
@@ -351,7 +382,8 @@ pub async fn terra_rust_bot_state_default(identifier: &str, path: &str, is_conso
         }
     };
     if is_console {
-        t.load_preset(UTF8_NO_BORDERS); 
+        t.load_preset(ASCII_HORIZONTAL_ONLY); 
+        // UTF8_HORIZONTAL_ONLY
     }else {
         return Some(display);
         //t.load_preset(NOTHING);

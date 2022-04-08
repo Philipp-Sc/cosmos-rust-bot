@@ -7,15 +7,11 @@ use crate::state::control::model::try_get_resolved;
 use crate::state::control::model::Maybe;
 
 
-use crate::view::*;  
-
 use std::collections::HashMap;  
 
 use std::sync::Arc; 
 use tokio::sync::RwLock;    
 
-
-use chrono::{Utc};
 
 
 pub async fn display_all_logs(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, state: &Arc<RwLock<Vec<Option<Entry>>>> ,offset: &mut usize, args_b: &Vec<&str>) {

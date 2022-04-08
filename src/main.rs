@@ -9,7 +9,7 @@ use terra_rust_api_layer::services::blockchain::smart_contracts::objects::meta::
 // Model
 mod state;
 
-use crate::state::control::model::{UserSettings,MaybeOrPromise,requirements,get_keys_of_running_tasks,get_keys_of_failed_tasks,await_running_tasks,get_timestamps_of_resolved_tasks};
+use crate::state::control::model::{UserSettings,Maybe,MaybeOrPromise,requirements,get_keys_of_running_tasks,get_keys_of_failed_tasks,await_running_tasks,get_timestamps_of_resolved_tasks};
 
 use crate::state::control::model::requirements::{my_requirement_keys, my_requirement_list};
 
@@ -40,6 +40,7 @@ use ui::info::market::general::*;
 use ui::logs::*;
 use ui::errors::*; 
  
+
 use terra_rust_bot_output::output::*;
 use terra_rust_bot_output::output::pretty::Entry;
 
@@ -417,7 +418,7 @@ async fn main() -> anyhow::Result<()> {
 
                 // starts the bot specific function as task.
                 // (only if previous task of the same key has finished)
-                let task: Pin<Box<dyn Future<Output = String> + Send + 'static>> = Box::pin(anchor_borrow_claim_and_stake_rewards(tasks.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(),is_test));
+                let task: Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>> = Box::pin(anchor_borrow_claim_and_stake_rewards(tasks.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(),is_test));
                 try_run_function(&tasks,task,"anchor_auto_stake",is_test).await;  
    
                 // checks if data for the display is available
@@ -431,7 +432,7 @@ async fn main() -> anyhow::Result<()> {
             }  
             if args_b.contains(&"anchor_auto_lp") {
 
-                let task: Pin<Box<dyn Future<Output = String> + Send + 'static>> = Box::pin(anchor_borrow_claim_and_farm_rewards(tasks.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(),is_test));
+                let task: Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>> = Box::pin(anchor_borrow_claim_and_farm_rewards(tasks.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(),is_test));
                 try_run_function(&tasks,task,"anchor_auto_farm",is_test).await;  
       
                 let anchor_auto_lp = lazy_anchor_account_auto_farm_rewards(&tasks, &state, &mut offset, is_test, is_first_run).await;
@@ -445,7 +446,7 @@ async fn main() -> anyhow::Result<()> {
 
             if args_b.contains(&"anchor_auto_repay") {
 
-                let task: Pin<Box<dyn Future<Output = String> + Send + 'static>> = Box::pin(anchor_redeem_and_repay_stable(tasks.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(),is_test));
+                let task: Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>> = Box::pin(anchor_redeem_and_repay_stable(tasks.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(),is_test));
                 try_run_function(&tasks,task,"anchor_auto_repay",is_test).await;  
 
                 let anchor_auto_repay = lazy_anchor_account_auto_repay(&tasks, &state, &mut offset, is_test, is_first_run).await;
@@ -459,7 +460,7 @@ async fn main() -> anyhow::Result<()> {
             }   
             if args_b.contains(&"anchor_auto_borrow") {
 
-                let task: Pin<Box<dyn Future<Output = String> + Send + 'static>> = Box::pin(anchor_borrow_and_deposit_stable(tasks.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(),is_test));
+                let task: Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>> = Box::pin(anchor_borrow_and_deposit_stable(tasks.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(),is_test));
                 try_run_function(&tasks,task,"anchor_auto_borrow",is_test).await;  
     
                 let anchor_auto_borrow = lazy_anchor_account_auto_borrow(&tasks, &state, &mut offset, is_test, is_first_run).await;
