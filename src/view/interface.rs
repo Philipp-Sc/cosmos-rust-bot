@@ -24,10 +24,10 @@ pub mod interface_macro {
         ( $e:expr ) => {
             match $e {
                 (Some(d),Some(t)) => {
-                    Maybe{data:Ok(d),timestamp:t}
+                    Maybe::<String>{data:Ok(d),timestamp:t}
                 },
                 (_,_) => { 
-                    Maybe{data:Err(anyhow::anyhow!("--")),timestamp:Utc::now().timestamp()}
+                    Maybe::<String>{data:Err(anyhow::anyhow!("--")),timestamp:Utc::now().timestamp()}
                 }
             }
         }
@@ -45,7 +45,7 @@ macro_rules! try_get_data_by_key {
                 (response_result,t)
             },
             Maybe{data: Err(err),timestamp: t} => {
-                return Maybe{data:Err(err), timestamp:t};
+                return Maybe::<String>{data:Err(anyhow::anyhow!(err)), timestamp:t};
             }
         }
     }

@@ -340,7 +340,7 @@ async fn main() -> anyhow::Result<()> {
                                 println!("Searching for alerts..");
                                 searching = true;
                             }
-                            match terra_rust_bot_state_ping_delay("./../terra-rust-bot-output/terra-rust-bot-state.json",30i64).await {
+                            match terra_rust_bot_state_ping_delay("./../terra-rust-bot-output/terra-rust-bot-state.json",60i64).await {
                                 Some(x) => {
                                     if !ping_delay {
                                         send_message_to_self(&manager,format!("[Notification]\n{}",x)).await.ok();

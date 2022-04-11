@@ -106,8 +106,13 @@ At the same time **TRB** can be compiled to a single executable that is easy to 
 * Note: Works both with edition = "2018" and edition = "2021" (Cargo.toml). If you do not want to use the nightly version, just edit the config (Cargo.toml).
 * To use the nightly edition (edition = "2021") install it with: `rustup default nightly && rustup update`.
 
+
 * On WSL: You may need to install the following packages first:
 * `sudo apt-get install build-essential libssl-dev pkg-config`
+
+
+* On Fedora: You may need to install the openssl package:
+* `sudo dnf install openssl openssl-devel`
 
 **Clone the repository**
 

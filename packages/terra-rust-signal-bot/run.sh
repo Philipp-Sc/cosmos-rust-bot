@@ -1,15 +1,9 @@
 #!/bin/bash 
 
-export CLICOLOR=0
-export CLICOLOR_FORCE=0
-
-args=("$@")
-
- 
 echo -e "checking if ./terra-rust-signal-bot is running already and stopping instance"
 ./stop.sh
  
-nohup ./terra-rust-signal-bot $@ &  
+nohup ./always-run.sh activate &
 
 echo $! > ./terra-rust-signal-bot.pid
 

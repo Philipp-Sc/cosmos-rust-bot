@@ -37,5 +37,5 @@ echo $(ls -lh my-bot)
 echo ""
 echo "for convinience use ./run.sh to start the bot and ./stop.sh to stop the bot."
 echo ""
-echo "e.g. './run.sh -b anchor_auto_repay anchor_auto_borrow -d test dev'"
+echo "e.g. './run.sh -b anchor_auto_repay anchor_auto_borrow -d test'"
 echo "e.g. './stop.sh"
