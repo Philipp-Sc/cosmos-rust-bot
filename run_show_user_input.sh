@@ -63,6 +63,13 @@ fi
 
 if [ "$IS_GENERAL" = false ] && [ "$NEED_INPUT" = true ]; then
     IFS= read -r INPUT < /dev/tty
+    printf '\033[1A\033[K'
+    echo -n -e "${YELLOW}"
+    for i in {1..24}
+    do
+        printf "***** "
+    done
+    echo -e "${PURPLE}"
     nohup ./my-bot $@  <<< "$INPUT" &
 else
     nohup ./my-bot $@ & 
