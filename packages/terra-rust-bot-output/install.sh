@@ -29,5 +29,5 @@ esac
 
 echo "install.sh finished"
 
-echo "terra-rust-bot executable available as ./my-bot-output"
+echo "terra-rust-bot.output executable available as ./my-bot-output"
 echo $(ls -lh my-bot-output)
