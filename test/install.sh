@@ -61,7 +61,7 @@ mkdir terra-rust-bot-output;
 mkdir terra-rust-signal-bot;
 cd ../../;
 
-cp $MYPATH/{my-bot,run.sh,run_show_user_input.sh,stop.sh,terra-rust-bot.json} ./build/;
+cp $MYPATH/{my-bot,run.sh,stop.sh,terra-rust-bot.json} ./build/;
 
 cp $MYPATH/packages/terra-rust-bot-output/my-bot-output ./build/packages/terra-rust-bot-output/;
 cp $MYPATH/packages/terra-rust-signal-bot/{terra-rust-signal-bot,signal-bot.sh,always-run.sh,run.sh,stop.sh} ./build/packages/terra-rust-signal-bot/;
