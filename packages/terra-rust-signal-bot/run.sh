@@ -1,4 +1,6 @@
-#!/bin/bash 
+#!/bin/bash
+
+cd "$(dirname "$0")"
 
 echo -e "checking if ./terra-rust-signal-bot is running already and stopping instance"
 ./stop.sh

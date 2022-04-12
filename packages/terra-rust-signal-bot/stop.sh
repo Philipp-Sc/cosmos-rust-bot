@@ -1,4 +1,5 @@
 #!/bin/bash
+cd "$(dirname "$0")"
 
 if [ -f ./terra-rust-signal-bot.pid ]; then
     cat ./terra-rust-signal-bot.pid

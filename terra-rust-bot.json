@@ -3,7 +3,6 @@
             "target_percentage": "0.8",
             "borrow_percentage": "0.7",
             "max_tx_fee": "5",
-            "max_gas_adjustment": "1.67",
             "gas_adjustment_preference": "1.2" ,
             "min_ust_balance": "10",
             "ust_balance_preference": "20"

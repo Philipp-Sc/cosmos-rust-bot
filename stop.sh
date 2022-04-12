@@ -1,5 +1,7 @@
 #!/bin/bash
 
+cd "$(dirname "$0")"
+
 if [ -f ./my-bot.pid ]; then
     cat ./my-bot.pid
     kill `cat ./my-bot.pid`

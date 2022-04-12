@@ -1,5 +1,7 @@
 #!/bin/bash 
 
+cd "$(dirname "$0")"
+
 export CLICOLOR=1
 export CLICOLOR_FORCE=1
 
