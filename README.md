@@ -118,24 +118,19 @@ At the same time **TRB** can be compiled to a single executable that is easy to 
 
 * `git clone https://github.com/Philipp-Sc/terra-rust-bot.git`
 
-* `cd terra-rust-bot`
-
 
 **Build terra-rust-bot**
 
- *To make the process as simple as possiblethe following bash script is: ./install.sh*
+ *To make the process as simple as possible following bash script is: ./install.sh*  
  *You can choose between three different build options:*
-* `./install.sh dev` fast build
-* `./install.sh prod` optimized build
-* `./install.sh native` optimize the build for your CPU    
+* `dev` fast build
+* `prod` optimized build
+* `native` optimize the build for your CPU    
 
-## Update
 
-* To update save your local changes with  `git stash`.
-* Get the latest code with `git pull`.
-* Then build the package again.
- 
-
+* `cd terra-rust-bot/test`
+* `./install.sh dev local` (builds **all** packages, to --for example-- disable the signal messenger integration edit the script first)
+* Note: after a successful build you can remove everything except `terra-rust-bot/test/build`
 ## Config
 
 ### terra-rust-bot.json
@@ -156,41 +151,51 @@ At the same time **TRB** can be compiled to a single executable that is easy to 
 
 ### Run terra-rust-bot
 
-
 > :arrow_right: To optimize terra-rust-bot's response time run it on a multi-core system for the best performance.  
  
 
-**Location of the executable**
+**Location of the executables**
 
-* `./my-bot` (if you used the install script)
+**terra-rust-bot** (the actual terra-rust-bot)
+* `./terra-rust-bot/test/build/my-bot`  
+  *The following two bash scripts are available: ./run.sh and ./stop.sh*
+  *./run.sh makes sure the seed phrase stays secure and starts the bot as a background process*
+  *It will also automatically stop any running instance of ./my-bot first before creating a new process*
 
-**Server Environment**
 
-*For convinience the following two bash scripts are available: ./run.sh and ./stop.sh*
-*./run.sh makes sure the seed phrase stays secure and starts the bot as a background process*
-*It will also automatically stop any running instance of ./my-bot first before creating a new process*
+**terra-rust-bot-output** (program to show the state of terra-rust-bot)
+* `./terra-rust-bot/test/build/packages/terra-rust-bot-output/my-bot-output` 
 
- **Common Use Cases**
-* Auto Repay/Borrow `./run.sh -b anchor_auto_repay anchor_auto_borrow -d test`    
-* Auto Repay/Borrow + Auto Staking `./run.sh -b anchor_auto_stake anchor_auto_repay anchor_auto_borrow -d test`    
-* Everything `./run.sh -i market anchor -a anchor_account -b anchor_auto_stake anchor_auto_repay anchor_auto_borrow -d test`    
+**terra-rust-signal-bot** (signal messenger bot)
+* `./terra-rust-bot/test/build/packages/terra-rust-signal-bot/terra-rust-signal-bot`  
+  *The following two bash scripts are available: ./run.sh and ./stop.sh*
+  *./run.sh starts the bot as a background process and makes sure the terra-rust-signal-bot gets restarted if it crashed*
+  *It will also automatically stop any running instance of first before creating a new process*
+
+
+
+**To bring everything together smoothly `./terra-rust-bot/test/build/bin/ctlscript.sh` handles all interaction with the above-mentioned executables and bash scripts.**
+* run `./ctlscript.sh help` to learn how to use terra-rust-bot.
+
+ **Common Terra-rust-bot Arguments**
+* Auto Repay/Borrow `-b anchor_auto_repay anchor_auto_borrow -d test`    
+* Auto Repay/Borrow + Auto Staking `-b anchor_auto_stake anchor_auto_repay anchor_auto_borrow -d test`    
+* Everything `-i market anchor -a anchor_account -b anchor_auto_stake anchor_auto_repay anchor_auto_borrow -d test`    
 
 *the above commands are read only, remove `-d test` to let the bot sign transactions*
-
-**Command line args**
 
  * `-i` show **info** dashboards: `market` or `anchor`.  
  * `-a` show **account** dashboards: `anchor_account`.  
  * `-b` enable **bot**: `anchor_auto_lp`,`anchor_auto_stake`, `anchor_auto_borrow`  or `anchor_auto_repay`.
- * `-d` enable additional development/debugging output. Currently only `test` is available. `test` will only simulate or estimate transaction fees.
+ * `-d` Currently only `test` is available. `test` will only simulate or estimate transaction fees.
  
  
  **View the current state**
-
+ 
 * Either use the package [terra-rust-bot-output](https://github.com/Philipp-Sc/terra-rust-bot/tree/main/packages/terra-rust-bot-output) to view the state in the terminal.
 
 * Or use [terra-rust-signal-bot](https://github.com/Philipp-Sc/terra-rust-bot/tree/main/packages/terra-rust-signal-bot) to view the state via Signal.
-
+ 
  
 ## Summary
 
