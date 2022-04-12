@@ -62,7 +62,7 @@ if [ "$IS_BOT" = false ] && [ "$HAS_WALLET" = false ] && [ "$IS_GENERAL" = false
 fi
 
 if [ "$IS_GENERAL" = false ] && [ "$NEED_INPUT" = true ]; then
-    IFS= read -rs INPUT < /dev/tty
+    IFS= read -r INPUT < /dev/tty
     nohup ./my-bot $@  <<< "$INPUT" &
 else
     nohup ./my-bot $@ & 
