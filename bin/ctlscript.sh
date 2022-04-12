@@ -19,10 +19,6 @@ case $1 in
   ps -p "$(cat ../my-bot.pid)";
   if [ -f ../my-bot.pid ]; then
       echo "process running with PID $(cat ../my-bot.pid)"
-      echo "to stop terra-rust-bot run: './ctlscript.sh stop'"
-      echo "to view the state of terra-rust-bot run: './ctlscript.sh show \"\help\"'"
-      echo "to enable the signal messenger integration link your device: './ctlscript.sh '"
-      echo "to activate the signal bot for notifications run: './ctlscript.sh '"
   else
       echo "process not running: failed to start terra-rust-bot!"
   fi
@@ -53,6 +49,16 @@ case $1 in
   cd ../packages/terra-rust-signal-bot;
   ./stop.sh;
   ;;
+
+  "help")
+  echo "to start terra-rust-bot: './ctlscript.sh start'"
+  echo "to stop terra-rust-bot: './ctlscript.sh stop'"
+  echo "to view the state of terra-rust-bot: './ctlscript.sh show \"\help\"'"
+  echo "to enable the signal messenger integration link your device: './ctlscript.sh connect-signal-app'"
+  echo "to activate the signal bot for notifications: './ctlscript.sh start-signal-bot'"
+  echo "to de-activate the signal bot: './ctlscript.sh stop-signal-bot'"
+  ;;
+
   "")
 
   echo "ERROR: specify one of the following arguments: start, stop, or show."

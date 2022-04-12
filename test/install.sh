@@ -2,14 +2,14 @@
 
 cd "$(dirname "$0")"
 
+echo "Installing Terra-rust-bot"
+
 echo -n "Checking dependencies... "
 for name in git openssl cargo
 do
   [[ $(which $name 2>/dev/null) ]] || { echo -en "\n$name needs to be installed. ";deps=1; }
 done
 [[ $deps -ne 1 ]] && echo "OK" || { echo -en "\nInstall the above and rerun this script\n";exit 1; }
-
-echo "Installing Terra-rust-bot"
 
 args=("$@")
 
@@ -71,4 +71,4 @@ cp $MYPATH/bin/ctlscript.sh ./build/bin/;
 echo "build successful!"
 ls -lh ./build
 echo "the next step for you is to configure the settings by editing 'terra-rust-bot.json'."
-echo "run './build/bin/ctlscript.sh help' if you need more info on how to start/stop the bot."
+echo "run 'cd build/bin;./ctlscript.sh help' to learn how to use terra-rust-bot."
