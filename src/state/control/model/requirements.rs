@@ -77,13 +77,13 @@ pub fn requirement_list() ->  Vec<(&'static str, i32, Vec<&'static str>)>  {
 
  }
 
- pub fn my_requirement_keys(args: &Vec<String>) -> Vec<&str> {
+ pub fn my_requirement_keys<'a>(args: &'a Vec<&str>) -> Vec<&'a str> {
 
        let req = requirement_list();
        let mut req_keys: Vec<&str> = Vec::new();  
         for i in 0..req.len() {
             for x in args {
-                if req[i].2.contains(&x.as_str()) {
+                if req[i].2.contains(x) {
                     req_keys.push(req[i].0); 
                     break;
                 }
@@ -93,13 +93,13 @@ pub fn requirement_list() ->  Vec<(&'static str, i32, Vec<&'static str>)>  {
  }
 
 
- pub fn my_requirement_list(args: &Vec<String>) -> Vec<(&'static str, i32, Vec<&'static str>)> {
+ pub fn my_requirement_list(args: &Vec<&str>) -> Vec<(&'static str, i32, Vec<&'static str>)> {
 
        let req = requirement_list();
        let mut req_new = Vec::new();
        for i in 0..req.len() {
               for x in args {
-                    if req[i].2.contains(&x.as_str()) { 
+                    if req[i].2.contains(x) {
                             req_new.push((req[i].0,req[i].1,req[i].2.clone()));
                             break;
                 }

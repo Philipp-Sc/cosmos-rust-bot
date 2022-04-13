@@ -44,8 +44,6 @@ use ui::errors::*;
 use terra_rust_bot_output::output::*;
 use terra_rust_bot_output::output::pretty::Entry;
 
-
-use std::env;
 use secstr::*;
   
 
@@ -94,11 +92,11 @@ extern crate num_cpus;
  #[tokio::main]
 async fn main() -> anyhow::Result<()> {
 
-        /* Load user settings */ 
+        /* Load user settings */
         let user_settings: UserSettings = match fs::read_to_string("./terra-rust-bot.json") {
             Ok(file) => {
                 match serde_json::from_str(&file) {
-                    Ok(res) => { 
+                    Ok(res) => {
                         res
                     },
                     Err(err) => {
@@ -112,50 +110,50 @@ async fn main() -> anyhow::Result<()> {
                 Default::default()
             }
         };
-        /* Load arguments */
 
-        let args: Vec<String> = env::args().collect();
+        if user_settings.remove_after_startup {
+            let res = fs::remove_file("./terra-rust-bot.json");
+            println!("{:?}",res);
+        }
 
-        let mut args_i: Vec<&str> = Vec::new();
-        let mut args_a: Vec<&str> = Vec::new();
-        let mut args_b: Vec<&str> = Vec::new();
-        let mut args_d: Vec<&str> = Vec::new();
-        let mut arg_w = "".to_string();
+         let mut args: Vec<&str> = Vec::new();
+         let mut bot_args: Vec<&str> = Vec::new();
 
-        let mut is_test = false; 
+        if user_settings.anchor_protocol_auto_stake {
+            bot_args.push("anchor_auto_stake");
+            args.push("anchor_auto_stake");
+        }
+        if user_settings.anchor_protocol_auto_farm {
+            bot_args.push("anchor_auto_lp");
+            args.push("anchor_auto_lp");
+        }
+        if user_settings.anchor_protocol_auto_repay {
+            bot_args.push("anchor_auto_repay");
+            args.push("anchor_auto_repay");
+        }
+        if user_settings.anchor_protocol_auto_borrow {
+            bot_args.push("anchor_auto_borrow");
+            args.push("anchor_auto_borrow");
+        }
+        if user_settings.terra_market_info {
+            args.push("market");
+        }
+        if user_settings.anchor_general_info {
+            args.push("anchor");
+        }
+        if user_settings.anchor_account_info {
+            args.push("anchor_account");
+        }
 
-        let mut last_item = 0;
-        for x in 1..args.len() {
-            if &args[x] == "-i" || &args[x] == "-a" || &args[x] == "-b" ||  &args[x] == "-d" || &args[x] == "-w" {
-                last_item = x;
-            }else{
-                if &args[last_item] == "-w" {
-                    arg_w = format!("{}",&args[x]);
-                }
-                if &args[last_item] == "-i" {
-                    args_i.push(&args[x]);
-                }
-                if &args[last_item] == "-a" {
-                    args_a.push(&args[x]);
-                }  
-                if &args[last_item] == "-b" {
-                    args_b.push(&args[x]);
-                }  
-                if &args[last_item] == "-d" {
-                    if &args[x] == "test" {
-                        is_test = true;
-                    } 
-                    args_d.push(&args[x]);
+        let is_test = user_settings.read_only_mode;
+        let is_bot = user_settings.anchor_protocol_auto_repay || user_settings.anchor_protocol_auto_borrow || user_settings.anchor_protocol_auto_stake || user_settings.anchor_protocol_auto_farm;
 
-                }
-            }
-        } 
 
         /* Get wallet details */
         let mut wallet_seed_phrase = SecUtf8::from("".to_string());
-        let mut wallet_acc_address = SecUtf8::from(arg_w);
+        let mut wallet_acc_address = SecUtf8::from(user_settings.terra_wallet_address.as_ref().unwrap_or(&"".to_string()));
 
-        if args_b.len() > 0 {                              
+        if is_bot {
             // ** seed phrase needed **
             wallet_seed_phrase = encrypt_text_with_secret(get_input("Enter your seed phrase (press Enter to skip):").to_string());
             if wallet_acc_address.unsecure().len()!=44 || !is_test {
@@ -163,7 +161,7 @@ async fn main() -> anyhow::Result<()> {
             }
         }else if wallet_acc_address.unsecure().len()==0 { 
             // ** maybe need wallet address **
-            if args_a.len() > 0 || args_b.len() > 0 { // yes.
+            if user_settings.anchor_account_info || is_bot {
                     wallet_acc_address = SecUtf8::from(get_input("Enter your wallet address (press Enter to skip):").to_string());
             } 
         }
@@ -179,7 +177,7 @@ async fn main() -> anyhow::Result<()> {
         let req_keys: Vec<&str> = my_requirement_keys(&args);  
 
         let mut req_keys_status = req_keys.clone();
-        for bot_tasks in &args_b {
+        for bot_tasks in &bot_args {
             req_keys_status.push(bot_tasks);
         } 
 
@@ -191,8 +189,7 @@ async fn main() -> anyhow::Result<()> {
         // using timestamps to update each slot with a short delay.
         let mut timestamps_display: Vec<i64> = vec![0i64; display_slots];
         let mut display_out_timestamp = 0i64;
-        
- 
+
         let num_cpus = num_cpus::get();
 
         /* Tasks */
@@ -248,7 +245,7 @@ async fn main() -> anyhow::Result<()> {
                 }
                 let mut contains = false;
                 for x in &args {
-                    if req[i].2.contains(&x.as_str()) {
+                    if req[i].2.contains(x) {
                         contains = true;
                         break;
                     }
@@ -355,7 +352,7 @@ async fn main() -> anyhow::Result<()> {
             // if one task is slow, because the requirement is not yet resolved, it slows down the whole loop, 
             // therefore it will timeout after 0.1s, so the loop can continue.  
  
-            if args_i.contains(&"market") {        
+            if user_settings.terra_market_info {
                 for t in display_market_info(&tasks, &state, &mut offset, is_first_run).await {
                     if timestamps_display[t.0] == 0i64 || now - timestamps_display[t.0] > 1i64 {
                         try_add_to_state(&state,t.0,Box::pin(t.1)).await.ok();
@@ -363,7 +360,7 @@ async fn main() -> anyhow::Result<()> {
                     }
                 }
             }
-            if args_i.contains(&"anchor") {        
+            if user_settings.anchor_general_info {
                 for t in display_anchor_info(&tasks, &state, &mut offset, is_first_run).await {
                     if timestamps_display[t.0] == 0i64 || now - timestamps_display[t.0] > 1i64 {
                         try_add_to_state(&state,t.0,Box::pin(t.1)).await.ok();
@@ -371,7 +368,7 @@ async fn main() -> anyhow::Result<()> {
                     } 
                 }
             }
-            if args_a.contains(&"anchor_account") {        
+            if user_settings.anchor_account_info {
                 for t in display_anchor_account(&tasks, &state, &mut offset, is_first_run).await {
                     if timestamps_display[t.0] == 0i64 || now - timestamps_display[t.0] > 1i64 {
                         try_add_to_state(&state,t.0,Box::pin(t.1)).await.ok();
@@ -380,7 +377,7 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
 
-            if args_b.contains(&"anchor_auto_stake") {
+            if user_settings.anchor_protocol_auto_stake {
 
                 // starts the bot specific function as task.
                 // (only if previous task of the same key has finished)
@@ -396,7 +393,7 @@ async fn main() -> anyhow::Result<()> {
                     }  
                 }                    
             }  
-            if args_b.contains(&"anchor_auto_lp") {
+            if user_settings.anchor_protocol_auto_farm {
 
                 let task: Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>> = Box::pin(anchor_borrow_claim_and_farm_rewards(tasks.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(),is_test));
                 try_run_function(&tasks,task,"anchor_auto_farm",is_test).await;  
@@ -410,7 +407,7 @@ async fn main() -> anyhow::Result<()> {
                 }                    
             }   
 
-            if args_b.contains(&"anchor_auto_repay") {
+            if user_settings.anchor_protocol_auto_repay {
 
                 let task: Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>> = Box::pin(anchor_redeem_and_repay_stable(tasks.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(),is_test));
                 try_run_function(&tasks,task,"anchor_auto_repay",is_test).await;  
@@ -424,7 +421,7 @@ async fn main() -> anyhow::Result<()> {
                 }  
                 
             }   
-            if args_b.contains(&"anchor_auto_borrow") {
+            if user_settings.anchor_protocol_auto_borrow {
 
                 let task: Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>> = Box::pin(anchor_borrow_and_deposit_stable(tasks.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(),is_test));
                 try_run_function(&tasks,task,"anchor_auto_borrow",is_test).await;  
@@ -438,7 +435,7 @@ async fn main() -> anyhow::Result<()> {
                 }  
             }
 
-            display_all_logs(&tasks ,&state, &mut offset, &args_b).await;
+            display_all_logs(&tasks ,&state, &mut offset, &bot_args).await;
             
             display_all_errors(&tasks, &*req_unresolved ,&state, &mut offset).await;
 

@@ -29,10 +29,7 @@ esac
 
 echo "install.sh finished"
 
-echo "terra-rust-signal-bot executable available as ./terra-rust-signal-bot"
+echo "terra-rust-signal-bot executable available as './terra-rust-signal-bot'"
 echo $(ls -lh terra-rust-signal-bot)
 echo ""
-echo "for convinience use ./run.sh to start the bot and ./stop.sh to stop it."
-echo ""
-echo "e.g. './run.sh'"
-echo "e.g. './stop.sh'"
+echo "for convenience use './run.sh' to start the bot and './stop.sh' to stop it."

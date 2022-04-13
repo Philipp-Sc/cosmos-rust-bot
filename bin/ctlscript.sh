@@ -7,14 +7,7 @@ ELEMENTS=${#args[@]}
 
 case $1 in
   "start")
-  echo -e "Enter the arguments that you want to pass to terra-rust-bot:"
-  echo -e "E.g:"
-  echo -e "    [TEST]"
-  echo -e "          -b anchor_auto_stake anchor_auto_repay anchor_auto_borrow -d test -w <replace_with_terra_wallet_address>"
-  echo -e "    [PRODUCTION]"
-  echo -e "          -b anchor_auto_stake anchor_auto_repay anchor_auto_borrow"
-  IFS= read -r MYARGS < /dev/tty
-  ../run.sh ${MYARGS};
+  ../run.sh;
   sleep 1;
   ps -p "$(cat ../my-bot.pid)";
   if [ -f ../my-bot.pid ]; then
@@ -51,12 +44,13 @@ case $1 in
   ;;
 
   "help")
+  echo "to enable different features and configure terra-rust-bot: 'nano ../terra-rust-bot.json'"
   echo "to start terra-rust-bot: './ctlscript.sh start'"
   echo "to stop terra-rust-bot: './ctlscript.sh stop'"
   echo "to view the state of terra-rust-bot: './ctlscript.sh show \"\help\"'"
   echo "to enable the signal messenger integration link your device: './ctlscript.sh connect-signal-app'"
   echo "to activate the signal bot for notifications: './ctlscript.sh start-signal-bot'"
-  echo "to de-activate the signal bot: './ctlscript.sh stop-signal-bot'"
+  echo "to stop the signal bot: './ctlscript.sh stop-signal-bot'"
   ;;
 
   "")

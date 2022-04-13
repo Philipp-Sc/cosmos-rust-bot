@@ -134,17 +134,37 @@ At the same time **TRB** can be compiled to a single executable that is easy to 
 ## Config
 
 ### terra-rust-bot.json
-
- > :arrow_right: This file needs to be in the working directory, from where you execute the command to run terra-rust-bot.
+ 
+* `remove_after_startup:` security feature, if `true` the terra-rust-bot.json file will be deleted after it has been loaded.
+* `read_only_mode:` if `true` no transactions will be executed, useful for testing or view only, will simulate or estimate transaction fees.
+* `terra_wallet_address:` convenience feature: default `null`, if set for example to `"terra1q0n5e43mmz8ddra8554xkxsvelnz4evwukxkht"` terra-rust-bot will not ask you for your wallet address.  
  
 
- * `trigger_percentage:` recommended value not greater than 0.95 (= trigger repay at 95% of the borrow limit).
- * `borrow_percentage:` recommended value around 0.7 (= trigger borrow at 70% of the borrow limit).
- * `target_percentage:` recommended value 0.8 (= repay position to 80% of the borrow limit).
- * `max_tx_fee:` safeguard parameter: max. UST amount to spend per transaction for the fees. recommended value 5.
- * `gas_adjustment_preference:` the gas_adjustment you want to use, recommended value is "1.2" or higher to ensure transactions go through.
- * `min_ust_balance:` min. UST balance, if below this value no further transactions will be made. If min_ust_balance is 10 UST then you should have more than that deposited for the bot to be able to execute transactions, around 15 or 20 UST. It is your job to make sure the balance is sufficient.
- * `ust_balance_preference:` greater than min_ust_balance, the bot will try to maintain the balance at the given value.
+* `anchor_protocol_auto_repay:` if `true` saves you from being liquidated triggered by the *trigger_percentage*.
+* `anchor_protocol_auto_borrow:` if `true` and current borrow limit grows (see *borrow_percentage*), an auto borrow will be triggered moving increasing the loan to the *target_percent*.
+* `anchor_protocol_auto_stake:` if `true` ANC rewards will be claimed automatically and staked.
+* `anchor_protocol_auto_farm:` if `true` ANC rewards will be claimed automatically and provided to the Spectrum Protocol ANC-UST-LP Auto Compound Vault.
+
+
+* `anchor_account_info:` if `true` queries data for the **Anchor Account Dashboard**.  
+
+
+* `terra_market_info:` if `true` queries data for the **Market Dashboard**.
+* `anchor_general_info:` if `true` queries data for the **Anchor Dashboard**.
+
+
+* `trigger_percentage:` recommended value not greater than 0.95 (= trigger repay at 95% of the borrow limit).
+* `borrow_percentage:` recommended value around 0.7 (= trigger borrow at 70% of the borrow limit).
+* `target_percentage:` recommended value 0.8 (= repay position to 80% of the borrow limit).
+
+
+
+* `max_tx_fee:` safeguard parameter: max. UST amount to spend per transaction for the fees. recommended value 5.
+* `gas_adjustment_preference:` the gas_adjustment you want to use, recommended value is "1.2" or higher to ensure transactions go through.
+
+
+* `min_ust_balance:` min. UST balance, if below this value no further transactions will be made. If min_ust_balance is 10 UST then you should have more than that deposited for the bot to be able to execute transactions, around 15 or 20 UST. It is your job to make sure the balance is sufficient.
+* `ust_balance_preference:` greater than min_ust_balance, the bot will try to maintain the balance at the given value.
 
 
 ## Usage
@@ -177,25 +197,17 @@ At the same time **TRB** can be compiled to a single executable that is easy to 
 **To bring everything together smoothly `./terra-rust-bot/test/build/bin/ctlscript.sh` handles all interaction with the above-mentioned executables and bash scripts.**
 * run `./ctlscript.sh help` to learn how to use terra-rust-bot.
 
- **Common Terra-rust-bot Arguments**
-* Auto Repay/Borrow `-b anchor_auto_repay anchor_auto_borrow -d test`    
-* Auto Repay/Borrow + Auto Staking `-b anchor_auto_stake anchor_auto_repay anchor_auto_borrow -d test`    
-* Everything `-i market anchor -a anchor_account -b anchor_auto_stake anchor_auto_repay anchor_auto_borrow -d test`    
 
-*the above commands are read only, remove `-d test` to let the bot sign transactions*
 
- * `-i` show **info** dashboards: `market` or `anchor`.  
- * `-a` show **account** dashboards: `anchor_account`.  
- * `-b` enable **bot**: `anchor_auto_lp`,`anchor_auto_stake`, `anchor_auto_borrow`  or `anchor_auto_repay`.
- * `-d` Currently only `test` is available. `test` will only simulate or estimate transaction fees.
  
- 
- **View the current state**
+**View the current state**
  
 * Either use the package [terra-rust-bot-output](https://github.com/Philipp-Sc/terra-rust-bot/tree/main/packages/terra-rust-bot-output) to view the state in the terminal.
 
 * Or use [terra-rust-signal-bot](https://github.com/Philipp-Sc/terra-rust-bot/tree/main/packages/terra-rust-signal-bot) to view the state via Signal.
  
+
+* Note: both are part of `./ctlscript.sh`
  
 ## Summary
 

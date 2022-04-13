@@ -34,10 +34,7 @@ esac
 
 echo "install.sh finished"
 
-echo "terra-rust-bot executable available as ./my-bot"
+echo "terra-rust-bot executable available as './my-bot'"
 echo $(ls -lh my-bot)
 echo ""
-echo "for convinience use ./run.sh to start the bot and ./stop.sh to stop the bot."
-echo ""
-echo "e.g. './run.sh -b anchor_auto_repay anchor_auto_borrow -d test'"
-echo "e.g. './stop.sh"
+echo "for convenience use './run.sh' to start the bot and './stop.sh' to stop the bot."

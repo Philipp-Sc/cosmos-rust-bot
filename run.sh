@@ -14,38 +14,23 @@ echo -e "${PURPLE}checking if ./my-bot is running already and stopping instance 
 #echo -e "(if you want to run multiple instance, you will need to update ./run.sh and ./stop.sh)${BLUE}"
 ./stop.sh
 
-# store arguments in a special array 
-args=("$@") 
-# get number of elements 
-ELEMENTS=${#args[@]} 
 
-IS_BOT=false
-IS_TEST=false
-HAS_WALLET=false 
+IS_BOT=$(grep -oP '\"anchor_protocol_auto_repay\":( )*(true|false)' terra-rust-bot.json | grep -oP '(true|false)')
+if [ "$IS_BOT" = "false" ]; then
+ IS_BOT=$(grep -oP '\"anchor_protocol_auto_borrow\":( )*(true|false)' terra-rust-bot.json | grep -oP '(true|false)')
+fi
+if [ "$IS_BOT" = "false" ]; then
+ IS_BOT=$(grep -oP '\"anchor_protocol_auto_stake\":( )*(true|false)' terra-rust-bot.json | grep -oP '(true|false)')
+fi
+if [ "$IS_BOT" = "false" ]; then
+ IS_BOT=$(grep -oP '\"anchor_protocol_auto_farm\":( )*(true|false)' terra-rust-bot.json | grep -oP '(true|false)')
+fi
 
-IS_GENERAL=true
+IS_TEST=$(grep -oP '\"read_only_mode\":( )*(true|false)' terra-rust-bot.json | grep -oP '(true|false)')
+HAS_WALLET=$(grep -oP '\"terra_wallet_address\":( )*(null|\"terra)' terra-rust-bot.json | grep -oP '(null| "terra)' | grep -oP '(null|terra)')
 
-# echo each element in array  
-# for loop 
-for (( i=0;i<$ELEMENTS;i++)); do 
-    if [ ${args[${i}]} = "-b" ]; then
-	    IS_BOT=true
-        IS_GENERAL=false
-    fi 
-    if [ ${args[${i}]} = "-a" ]; then 
-        IS_GENERAL=false
-    fi 
 
-    if [ ${args[${i}]} = "test" ]; then
-        IS_TEST=true
-    fi 
-
-    if [ ${args[${i}]} = "-w" ]; then
-        HAS_WALLET=true
-        IS_GENERAL=false
-    fi 
-
-done
+NEED_ACCOUNT=$(grep -oP '\"anchor_account_info\":( )*(true|false)' terra-rust-bot.json | grep -oP '(true|false)')
 
 #echo "IS_BOT:${IS_BOT}"
 #echo "IS_TEST:${IS_TEST}"
@@ -53,35 +38,36 @@ done
 
 NEED_INPUT=false
 
-if [ "$IS_BOT" = true ] && ( ( [ "$IS_TEST" = true ] && [ "$HAS_WALLET" = false ] ) || [ "$IS_TEST" = false ] ); then
+if [ "$IS_BOT" = "true" ] && ( ( [ "$IS_TEST" = "true" ] && [ "$HAS_WALLET" = "null" ] ) || [ "$IS_TEST" = "false" ] ); then
     echo -e "${BLUE}Enter your seed phrase ${PURPLE}(press enter if you want to continue without your seed phrase)"
     NEED_INPUT=true
-fi
-
-if [ "$IS_BOT" = false ] && [ "$HAS_WALLET" = false ] && [ "$IS_GENERAL" = false ]; then
-    echo -e "${BLUE}Enter your wallet address ${PURPLE}(press enter if you want to continue withoug your wallet address)"
+elif [ "$IS_BOT" = "false" ] && [ "$HAS_WALLET" = "null" ] && [ "$NEED_ACCOUNT" = "true" ]; then
+    echo -e "${BLUE}Enter your wallet address ${PURPLE}(press enter if you want to continue without your wallet address)"
     NEED_INPUT=true
 fi
 
-if [ "$IS_GENERAL" = false ] && [ "$NEED_INPUT" = true ]; then
+if [ "$NEED_INPUT" = true ]; then
     IFS= read -r INPUT < /dev/tty
     printf '\033[1A\033[K'
     echo -n -e "${YELLOW}"
-    for i in {1..24}
-    do
-        printf "***** "
-    done
+    if [ "$IS_BOT" = "true" ]; then
+      for i in {1..24}
+      do
+          printf "***** "
+      done
+    else
+      for i in {1..44}
+      do
+          printf "*"
+      done
+    fi
     echo -e "${PURPLE}"
-    nohup ./my-bot $@  <<< "$INPUT" &
+    nohup ./my-bot  <<< "$INPUT" &
 else
-    nohup ./my-bot $@ & 
+    nohup ./my-bot &
 fi
 
 echo $! > ./my-bot.pid
 
 echo -e "${PURPLE}process id written to ./my.bot.pid${PURPLE}"
-echo -e "to stop the bot run: ${YELLOW}./stop.sh${PURPLE}"
-echo ""
-echo "to view the current state of the bot run the following command"
-echo -e "${YELLOW}while sleep 0.1; do cat ./packages/terra-rust-bot-output/terra-rust-bot-state.json; done${PURPLE}"
-echo -e "(CTRL + C to exit)${NC}"
+echo -e "to stop the bot run: ${YELLOW}./stop.sh${NC}"
