@@ -192,22 +192,22 @@ At the same time **TRB** can be compiled to a single executable that is easy to 
   *./run.sh starts the bot as a background process and makes sure the terra-rust-signal-bot gets restarted if it crashed*
   *It will also automatically stop any running instance of first before creating a new process*
 
-
-
-**To bring everything together smoothly `./terra-rust-bot/test/build/bin/ctlscript.sh` handles all interaction with the above-mentioned executables and bash scripts.**
-* run `./ctlscript.sh help` to learn how to use terra-rust-bot.
-
-
-
  
 **View the current state**
  
 * Either use the package [terra-rust-bot-output](https://github.com/Philipp-Sc/terra-rust-bot/tree/main/packages/terra-rust-bot-output) to view the state in the terminal.
 
 * Or use [terra-rust-signal-bot](https://github.com/Philipp-Sc/terra-rust-bot/tree/main/packages/terra-rust-signal-bot) to view the state via Signal.
- 
 
-* Note: both are part of `./ctlscript.sh`
+
+
+**To bring everything together smoothly `./terra-rust-bot/test/build/bin/ctlscript.sh` handles all interaction with the above-mentioned executables and bash scripts.**
+
+*Make sure you used the installation script as described in the build section above.*
+* `cd test/build/bin`
+* run `./ctlscript.sh help` to learn how to use terra-rust-bot.
+
+
  
 ## Summary
 
