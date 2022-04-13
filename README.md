@@ -141,7 +141,7 @@ At the same time **TRB** can be compiled to a single executable that is easy to 
  
 
 * `anchor_protocol_auto_repay:` if `true` saves you from being liquidated triggered by the *trigger_percentage*.
-* `anchor_protocol_auto_borrow:` if `true` and current borrow limit grows (see *borrow_percentage*), an auto borrow will be triggered moving increasing the loan to the *target_percent*.
+* `anchor_protocol_auto_borrow:` if `true` and current borrow limit grows (see *borrow_percentage*), an auto borrow will be triggered increasing the loan to the *target_percent*.
 * `anchor_protocol_auto_stake:` if `true` ANC rewards will be claimed automatically and staked.
 * `anchor_protocol_auto_farm:` if `true` ANC rewards will be claimed automatically and provided to the Spectrum Protocol ANC-UST-LP Auto Compound Vault.
 
