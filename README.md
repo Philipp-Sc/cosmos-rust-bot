@@ -129,7 +129,7 @@ At the same time **TRB** can be compiled to a single executable that is easy to 
 
 
 * `cd terra-rust-bot/test`
-* `./install.sh dev local` (builds **all** packages, to --for example-- disable the signal messenger integration edit the script first)
+* `./install.sh dev local all` (builds `all` packages, to - for example - disable the signal messenger integration use `default` instead. Use `minimal` to only build the terra-rust-bot.)
 * Note: after a successful build you can remove everything except `terra-rust-bot/test/build`
 ## Config
 

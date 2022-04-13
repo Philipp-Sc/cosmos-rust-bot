@@ -46,10 +46,6 @@ case $2 in
 	;;
 esac
 
-$MYPATH/install.sh $@;
-$MYPATH/packages/terra-rust-bot-output/install.sh $@;
-$MYPATH/packages/terra-rust-signal-bot/install.sh $@;
-
 rm -rf build;
 mkdir build;
 
@@ -61,14 +57,42 @@ mkdir terra-rust-bot-output;
 mkdir terra-rust-signal-bot;
 cd ../../;
 
-cp $MYPATH/{my-bot,run.sh,stop.sh,terra-rust-bot.json} ./build/;
-
-cp $MYPATH/packages/terra-rust-bot-output/my-bot-output ./build/packages/terra-rust-bot-output/;
-cp $MYPATH/packages/terra-rust-signal-bot/{terra-rust-signal-bot,signal-bot.sh,always-run.sh,run.sh,stop.sh} ./build/packages/terra-rust-signal-bot/;
-
 cp $MYPATH/bin/ctlscript.sh ./build/bin/;
 
-echo "build successful!"
+case $3 in
+	"all")
+	# includes signal-bot, includes terra-rust-bot-output
+  $MYPATH/install.sh $1 $2;
+  $MYPATH/packages/terra-rust-bot-output/install.sh $1 $2;
+  $MYPATH/packages/terra-rust-signal-bot/install.sh $1 $2;
+
+  cp $MYPATH/{my-bot,run.sh,stop.sh,terra-rust-bot.json} ./build/;
+  cp $MYPATH/packages/terra-rust-bot-output/my-bot-output ./build/packages/terra-rust-bot-output/;
+  cp $MYPATH/packages/terra-rust-signal-bot/{terra-rust-signal-bot,signal-bot.sh,always-run.sh,run.sh,stop.sh} ./build/packages/terra-rust-signal-bot/;
+	;;
+
+	"default")
+	# excludes signal-bot, includes terra-rust-bot-output
+  $MYPATH/install.sh $1 $2;
+  $MYPATH/packages/terra-rust-bot-output/install.sh $1 $2;
+
+  cp $MYPATH/{my-bot,run.sh,stop.sh,terra-rust-bot.json} ./build/;
+  cp $MYPATH/packages/terra-rust-bot-output/my-bot-output ./build/packages/terra-rust-bot-output/;
+	;;
+
+	"minimal")
+	# only terra-rust-bot
+	$MYPATH/install.sh $1 $2;
+  cp $MYPATH/{my-bot,run.sh,stop.sh,terra-rust-bot.json} ./build/;
+	;;
+
+	"")
+	echo "ERROR: specify one of the following arguments: all, default, minimal."
+	exit
+	;;
+esac
+
+echo "build finished!"
 ls -lh ./build
 echo "the next step for you is to configure the settings by editing 'terra-rust-bot.json'."
 echo "run 'cd build/bin;./ctlscript.sh help' to learn how to use terra-rust-bot."
