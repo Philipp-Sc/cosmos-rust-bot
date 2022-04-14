@@ -134,9 +134,11 @@ At the same time **TRB** can be compiled to a single executable that is easy to 
 ## Config
 
 ### terra-rust-bot.json
- 
-* `remove_after_startup:` security feature, if `true` the terra-rust-bot.json file will be deleted after it has been loaded.
-* `read_only_mode:` if `true` no transactions will be executed, useful for testing or view only, will simulate or estimate transaction fees.
+
+* `pause_requested:` if `true` terra-rust-bot will pause (all running tasks will be aborted) until `pause_requested` is set to `false`. (`hot_reload: true` required)
+* `hot_reload`: if `true` and the terra-rust-bot.json file gets updated terra-rust-bot will reload it. This gives you live control over the bot. (`remove: false` required)
+* `remove:` security feature, if `true` the terra-rust-bot.json file will be deleted after it has been loaded.
+* `test:` if `true` no transactions will be executed, useful for testing or view only, will simulate or estimate transaction fees.
 * `terra_wallet_address:` convenience feature: default `null`, if set for example to `"terra1q0n5e43mmz8ddra8554xkxsvelnz4evwukxkht"` terra-rust-bot will not ask you for your wallet address.  
  
 
