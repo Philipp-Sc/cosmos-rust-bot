@@ -76,8 +76,7 @@ At the same time **TRB** can be compiled to a single executable that is easy to 
 - Use a dedicated wallet.
 - Avoid vserver and use a dedicated root server. (RAM snapshots are a security risk)
 - Harden your system. (Firewall, SSH, SELinux, Filesystem Encryption, VPN)
-- Hide the fact that you are using terra-rust-bot: Rename the executable to something (un)expected.  
- 
+
 
 
 #### Requests
@@ -141,9 +140,12 @@ At the same time **TRB** can be compiled to a single executable that is easy to 
 
 * `pause_requested:` if `true` terra-rust-bot will pause (all running tasks will be aborted) until `pause_requested` is set to `false`. (`hot_reload: true` required)
 * `hot_reload`: if `true` and the terra-rust-bot.json file gets updated terra-rust-bot will reload it. This gives you live control over the bot. (`remove: false` required)
+
+*Note: only with `hot_reload: true` you can use the `\set <field> <value>` command*
+
 * `remove:` security feature, if `true` the terra-rust-bot.json file will be deleted after it has been loaded.
 * `test:` if `true` no transactions will be executed, useful for testing or view only, will simulate or estimate transaction fees.
-* `terra_wallet_address:` convenience feature: default `null`, if set for example to `"terra1q0n5e43mmz8ddra8554xkxsvelnz4evwukxkht"` terra-rust-bot will not ask you for your wallet address.  
+* `terra_wallet_address:` convenience feature: default `null`, if set for example to `"terra1q0n5e43mmz8ddra8554xkxsvelnz4evwukxkht"` terra-rust-bot will not ask you for your wallet address. (can **not** be updated once terra-rust-bot is started)
  
 
 * `anchor_protocol_auto_repay:` if `true` saves you from being liquidated triggered by the *trigger_percentage*.
@@ -199,7 +201,7 @@ At the same time **TRB** can be compiled to a single executable that is easy to 
   *It will also automatically stop any running instance of first before creating a new process*
 
  
-**View the current state**
+**To view the current state and/or use the `\set <field> <value>` commands:**
  
 * Either use the package [terra-rust-bot-output](https://github.com/Philipp-Sc/terra-rust-bot/tree/main/packages/terra-rust-bot-output) to view the state in the terminal.
 

@@ -69,6 +69,8 @@ The following script is configured to restart the signal-bot in case it crashes 
 
  ```
  [Available Commands]
+UPDATE SETTINGS
+    \set <field> <value>
 SYSTEM TIME AND LATEST TIMESTAMP 
     \ping      
 MARKET INFO    

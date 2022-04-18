@@ -2,6 +2,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use rust_decimal::Decimal;
 use std::str::FromStr;
+use std::fs;
 
 #[derive(Debug)]
 pub struct Maybe<T> {
@@ -69,3 +70,45 @@ pub struct Entry {
 }
 
 pub type State = Vec<Option<Entry>>;
+
+
+pub fn load_user_settings(path: &str) -> UserSettings {
+
+    let user_settings: UserSettings = match fs::read_to_string(path) {
+        Ok(file) => {
+            match serde_json::from_str(&file) {
+                Ok(res) => {
+                    res
+                },
+                Err(err) => {
+                    println!("{:?}",err);
+                    Default::default()
+                }
+            }
+        },
+        Err(err) => {
+            println!("{:?}",err);
+            Default::default()
+        }
+    };
+    user_settings
+}
+
+pub async fn load_state(path: &str) -> Option<State> {
+    let mut state: Option<State> = None;
+    let mut try_counter = 0;
+    while state.is_none() && try_counter<3 {
+        match fs::read_to_string(path) {
+            Ok(file) => {
+                match serde_json::from_str(&file) {
+                    Ok(res) => { state = Some(res); },
+                    Err(_) => { try_counter = try_counter + 1; },
+                };
+            },
+            Err(_) => {
+                try_counter = try_counter + 1;
+            }
+        }
+    }
+    state
+}

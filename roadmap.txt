@@ -1,9 +1,7 @@
 
 // roadmap
 
-// TODAY/TOMORROW
-// todo: signal/command-line commands (to edit terra-rust-bot.json)
-// WEDNESDAY - FRIDAY
+// TOMORROW - THURSDAY
 // todo: open API/extend utilities so that useful functions can be provided e.g. when to compound? see open issues
 //
 
@@ -15,11 +13,6 @@
 
 
 // signal-bot
-// todo: load file and watch it for changes then reload object, pass object to function
-// todo: add "\set pause_requested true" command
-// todo: add "\set pause_requested false" command
-// ..
-// todo: add "\set trigger_percentage 0.9" command
 // todo: add claim airdrops
 // todo: require password for \set commands
 

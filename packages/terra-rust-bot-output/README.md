@@ -36,6 +36,8 @@ This package can be used to view the latest informaction directly from the terra
  
  ```
  [Available Commands]
+UPDATE SETTINGS
+    \set <field> <value>
 SYSTEM TIME AND LATEST TIMESTAMP 
     \ping      
 MARKET INFO    

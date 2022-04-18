@@ -1,6 +1,3 @@
-use std::fs;
-
-
 use chrono::Utc;
 use chrono::{NaiveDateTime};
 
@@ -13,131 +10,136 @@ use comfy_table::presets::*;
 use terra_rust_bot_essentials::shared::{State,Entry};
 
 
+pub fn terra_rust_bot_user_settings(message: &str) -> Option<(&str,&str)> {
 
-pub async fn load_state(path: &str) -> Option<State> {
-    let mut state: Option<State> = None;
-    let mut try_counter = 0;
-    while state.is_none() && try_counter<3 {
-        match fs::read_to_string(path) {
-            Ok(file) => {
-                match serde_json::from_str(&file) {
-                    Ok(res) => { state = Some(res); },
-                    Err(_) => { try_counter = try_counter + 1; },
-                };
-            },
-            Err(_) => {
-                try_counter = try_counter + 1;
+    let v: Vec<&str> = message.split(" ").collect();
+    match v.len() {
+        3 => {
+            match (v[0], v[1], v[2]) {
+                ("\\set","terra_wallet_address",_) => {
+                    return None;
+                },
+                ("\\set",field,new_value) => {
+                    return Some((field,new_value));
+                },
+                _ => {
+                    return None;
+                }
             }
+        },
+        _ => {
+            return None;
         }
-    }
-    state
+    };
 }
 
 pub async fn terra_rust_bot_state(context: &str, state: &State, is_console: bool) -> String {
-    
+
     set_override(is_console);
 
-    match context { 
-  
+    match context {
+
         "\\market" => {
             return terra_rust_bot_state_default("[Market]",state,is_console).await.unwrap_or("No data".to_string());
         },
         "\\anchor info" => {
             return terra_rust_bot_state_default("[Anchor Protocol Info]",state,is_console).await.unwrap_or("No data".to_string());
-        },  
+        },
         "\\anchor account" => {
             return terra_rust_bot_state_default("[Anchor Protocol Account]",state,is_console).await.unwrap_or("No data".to_string());
-        },   
-        "\\auto repay" => { 
+        },
+        "\\auto repay" => {
             return terra_rust_bot_state_default("[Anchor Protocol][Auto Repay]",state,is_console).await.unwrap_or("No data".to_string());
-        },        
-        "\\auto borrow" => { 
+        },
+        "\\auto borrow" => {
             return terra_rust_bot_state_default("[Anchor Protocol][Auto Borrow]",state,is_console).await.unwrap_or("No data".to_string());
-        },        
-        "\\auto stake" => { 
+        },
+        "\\auto stake" => {
             return terra_rust_bot_state_default("[Anchor Protocol][Auto Stake]",state,is_console).await.unwrap_or("No data".to_string());
-        },        
-        "\\auto farm" => { 
+        },
+        "\\auto farm" => {
             return terra_rust_bot_state_default("[Anchor Protocol][Auto Farm]",state,is_console).await.unwrap_or("No data".to_string());
-        },  
-        "\\errors" => { 
+        },
+        "\\errors" => {
             return terra_rust_bot_state_default("[Errors]",state,is_console).await.unwrap_or("No data".to_string());
-        },  
-        "\\pending" => { 
+        },
+        "\\pending" => {
             return terra_rust_bot_state_default("[Unresolved]",state,is_console).await.unwrap_or("No data".to_string());
-        },     
+        },
         "\\logs" => {
             return terra_rust_bot_state_default("[Logs]",state,is_console).await.unwrap_or("No data".to_string());
-        },      
+        },
         "\\auto" => {
             return format!("{}\n\n\n{}\n\n\n{}\n\n\n{}",
-                terra_rust_bot_state_default("[Anchor Protocol][Auto Repay]",state,is_console).await.unwrap_or("No data".to_string()),
-                terra_rust_bot_state_default("[Anchor Protocol][Auto Borrow]",state,is_console).await.unwrap_or("No data".to_string()),
-                terra_rust_bot_state_default("[Anchor Protocol][Auto Stake]",state,is_console).await.unwrap_or("No data".to_string()),
-                terra_rust_bot_state_default("[Anchor Protocol][Auto Farm]",state,is_console).await.unwrap_or("No data".to_string())
-                );
-        },     
-        "\\task count" => { 
+                           terra_rust_bot_state_default("[Anchor Protocol][Auto Repay]",state,is_console).await.unwrap_or("No data".to_string()),
+                           terra_rust_bot_state_default("[Anchor Protocol][Auto Borrow]",state,is_console).await.unwrap_or("No data".to_string()),
+                           terra_rust_bot_state_default("[Anchor Protocol][Auto Stake]",state,is_console).await.unwrap_or("No data".to_string()),
+                           terra_rust_bot_state_default("[Anchor Protocol][Auto Farm]",state,is_console).await.unwrap_or("No data".to_string())
+            );
+        },
+        "\\task count" => {
             return terra_rust_bot_state_default("[Task][Count]",state,is_console).await.unwrap_or("No data".to_string());
-        },           
+        },
         "\\task list" => {
             return terra_rust_bot_state_default("[Task][List]",state,false).await.unwrap_or("No data".to_string());
-        },      
+        },
         "\\help" => {
             return terra_rust_bot_state_help(is_console);
-        }, 
+        },
         "\\ping" => {
             return terra_rust_bot_state_ping(state,is_console).await;
-        },            
-        "\\state history" => { 
-           return terra_rust_bot_state_history(state,is_console).await;
-        },         
+        },
+        "\\state history" => {
+            return terra_rust_bot_state_history(state,is_console).await;
+        },
         "\\task history" => {
-           return terra_rust_bot_task_history(state,is_console).await;
+            return terra_rust_bot_task_history(state,is_console).await;
         },
         &_ => {
             return "?".to_string();
         }
     };
- 
- 
-} 
 
-fn terra_rust_bot_state_help(_is_console: bool) -> String {   
 
-return r#"[Available Commands]
-SYSTEM TIME AND LATEST TIMESTAMP 
-    \ping      
-MARKET INFO    
-    \market         
-ANCHOR INFO    
-    \anchor info    
-ANCHOR ACCOUNT INFO    
-    \anchor account  
+}
+
+fn terra_rust_bot_state_help(_is_console: bool) -> String {
+
+    return r#"[Available Commands]
+UPDATE SETTINGS
+    \set <field> <value>
+SYSTEM TIME AND LATEST TIMESTAMP
+    \ping
+MARKET INFO
+    \market
+ANCHOR INFO
+    \anchor info
+ANCHOR ACCOUNT INFO
+    \anchor account
 EVERY AUTOMATION
-    \auto        
+    \auto
 AUTO REPAY INFO
-    \auto repay  
-AUTO BORROW INFO 
-    \auto borrow  
+    \auto repay
+AUTO BORROW INFO
+    \auto borrow
 AUTO STAKE INFO
-    \auto stake   
-AUTO FARM INFO 
-    \auto farm   
+    \auto stake
+AUTO FARM INFO
+    \auto farm
 SHOW ALL ERRORS
-    \errors  
+    \errors
 SHOW ALL PENDING TASKS
-    \pending  
+    \pending
 SHOW LOGS OF RECENT TRANSACTIONS
-    \logs  
+    \logs
 TASK COUNT (failed,pending,upcoming,all)
-    \task count         
+    \task count
 TASK LIST (failed,pending,upcoming,all)
-    \task list          
+    \task list
 TIMESTAMPS WHEN TASKS WERE RESOLVED
-    \task history     
+    \task history
 TIMESTAMPS WHEN ENTRIES WERE WRITTEN TO STATE
-    \state history         
+    \state history
 "#.to_string();
 }
 
@@ -145,7 +147,7 @@ TIMESTAMPS WHEN ENTRIES WERE WRITTEN TO STATE
 
 async fn terra_rust_bot_task_history(state: &State, is_console: bool) -> String {
 
- 
+
     let mut t = Table::new();
     t.set_header(&[""]);
 
@@ -174,7 +176,7 @@ async fn terra_rust_bot_task_history(state: &State, is_console: bool) -> String 
         }
     }
     if is_console {
-        t.load_preset(UTF8_NO_BORDERS); 
+        t.load_preset(UTF8_NO_BORDERS);
     }else {
         return display;
         //./t.load_preset(NOTHING);
@@ -182,13 +184,13 @@ async fn terra_rust_bot_task_history(state: &State, is_console: bool) -> String 
     return format!("{}",t);
 
 }
-  
+
 
 async fn terra_rust_bot_state_history(state: &State, is_console: bool) -> String {
-    
+
     let mut t = Table::new();
     t.set_header(&[""]);
-            
+
     let mut timestamp = 0i64;
     let mut display = "".to_string();
 
@@ -211,7 +213,7 @@ async fn terra_rust_bot_state_history(state: &State, is_console: bool) -> String
     }
 
     if is_console {
-        t.load_preset(UTF8_NO_BORDERS); 
+        t.load_preset(UTF8_NO_BORDERS);
     }else {
         //t.load_preset(NOTHING);
         return display;
@@ -220,47 +222,47 @@ async fn terra_rust_bot_state_history(state: &State, is_console: bool) -> String
 }
 
 pub async fn terra_rust_bot_state_ping_delay(state: &State, max_delay: i64) -> Option<String> {
-            
+
     let signal_bot = Utc::now().timestamp();
     let mut timestamp = 0i64;
     for x in 0..state.len() {
         if let Some(entry) = &state[x] {
             if timestamp < entry.timestamp {
-                 timestamp = entry.timestamp;
+                timestamp = entry.timestamp;
             }
         }
     }
     let delay = signal_bot - timestamp;
     if delay >= max_delay {
-         return Some(format!("Terra-rust-bot is {} seconds behind schedule.\nsignal-bot:\n                        {}\nterra-rust-bot:\n                        {}\nTo check yourself use:\n\\ping",delay,NaiveDateTime::from_timestamp(signal_bot,0).format("%d/%m/%y %H:%M:%S").to_string(),NaiveDateTime::from_timestamp(timestamp,0).format("%d/%m/%y %H:%M:%S").to_string()));
+        return Some(format!("Terra-rust-bot is {} seconds behind schedule.\nsignal-bot:\n                        {}\nterra-rust-bot:\n                        {}\nTo check yourself use:\n\\ping",delay,NaiveDateTime::from_timestamp(signal_bot,0).format("%d/%m/%y %H:%M:%S").to_string(),NaiveDateTime::from_timestamp(timestamp,0).format("%d/%m/%y %H:%M:%S").to_string()));
     }
     return None;
 }
 
 
 async fn terra_rust_bot_state_ping(state: &State, is_console: bool) -> String {
-    
+
     let mut t = Table::new();
     t.set_header(&["", ""]);
-            
+
     let signal_bot = Utc::now().format("%d/%m/%y %H:%M:%S").to_string();
     let mut timestamp = 0i64;
     for x in 0..state.len() {
         if let Some(entry) = &state[x] {
             if timestamp < entry.timestamp {
-                 timestamp = entry.timestamp;
+                timestamp = entry.timestamp;
             }
         }
     }
     let terra = NaiveDateTime::from_timestamp(timestamp,0).format("%d/%m/%y %H:%M:%S").to_string();
     if !is_console {
-         return format!("signal-bot:\n                        {}\nterra-rust-bot:\n                        {}",signal_bot,terra);
+        return format!("signal-bot:\n                        {}\nterra-rust-bot:\n                        {}",signal_bot,terra);
     }
     t.add_row(&[&"signal-bot:".truecolor(75,219,75).to_string(),&format!("{}",signal_bot.purple()) ]);
     t.add_row(&[&"terra-rust-bot:".truecolor(75,219,75).to_string(),&format!("{}",terra.purple()) ]);
 
     if is_console {
-        t.load_preset(UTF8_NO_BORDERS); 
+        t.load_preset(UTF8_NO_BORDERS);
     }else {
         t.load_preset(NOTHING);
     }
@@ -321,7 +323,7 @@ pub async fn terra_rust_bot_state_default(identifier: &str, state: &State, is_co
         return None;
     }
     if is_console {
-        t.load_preset(ASCII_HORIZONTAL_ONLY); 
+        t.load_preset(ASCII_HORIZONTAL_ONLY);
         // UTF8_HORIZONTAL_ONLY
     }else {
         return Some(display);

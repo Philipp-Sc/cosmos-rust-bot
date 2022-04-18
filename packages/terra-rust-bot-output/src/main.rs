@@ -1,5 +1,7 @@
-use terra_rust_bot_output::output::pretty::*;
- 
+use terra_rust_bot_output::read::*;
+use terra_rust_bot_output::write::*;
+use terra_rust_bot_essentials::shared::{load_state};
+
 use env_logger::Env; 
 use structopt::StructOpt; 
 
@@ -34,12 +36,23 @@ async fn main() -> anyhow::Result<()> {
         Subcommand::LocalDisplay {message} => {
 
             println!("{esc}c", esc = 27 as char);
-            match load_state("./terra-rust-bot.json").await {
+
+            match load_state("./terra-rust-bot-state.json").await {
                 None => {
                     println!("Unable to load ./terra-rust-bot.json.");
                 },
                 Some(state) => {
-                    println!("{}", terra_rust_bot_state(&message,&state,true).await);
+                    match terra_rust_bot_user_settings(&message) {
+                        Some((v1,v2)) => {
+                            match update_user_settings("../../terra-rust-bot.json",v1,v2).await {
+                                Ok(_) => {},
+                                Err(e) => {println!("{:?}",e);},
+                            };
+                        },
+                        None => {
+                            println!("{}", terra_rust_bot_state(&message,&state,true).await);
+                        },
+                    };
                 }
             }
         }  

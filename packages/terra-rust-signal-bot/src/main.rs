@@ -1,4 +1,6 @@
-use terra_rust_bot_output::output::pretty::*;
+use terra_rust_bot_output::read::*;
+use terra_rust_bot_output::write::*;
+use terra_rust_bot_essentials::shared::{load_state};
 
 use std::{path::PathBuf, time::UNIX_EPOCH};
 
@@ -321,7 +323,19 @@ async fn main() -> anyhow::Result<()> {
                                                                 text = "Unable to load ./../terra-rust-bot-output/terra-rust-bot-state.json.".to_string();
                                                             },
                                                             Some(state) => {
-                                                                text = terra_rust_bot_state(&sender_message,&state,false).await;
+                                                                match terra_rust_bot_user_settings(&sender_message) {
+                                                                    Some((v1,v2)) => {
+                                                                        match update_user_settings("../../terra-rust-bot.json",v1,v2).await {
+                                                                            Ok(_) => {
+                                                                                text = "Success!".to_string();
+                                                                            },
+                                                                            Err(e) => {text = format!("{:?}",e);},
+                                                                        };
+                                                                    },
+                                                                    None => {
+                                                                        text = terra_rust_bot_state(&sender_message,&state,false).await;
+                                                                    },
+                                                                };
                                                             }
                                                         };
                                                         let message = ContentBody::DataMessage(DataMessage {

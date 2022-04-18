@@ -42,7 +42,7 @@ use ui::errors::*;
  
 
 use terra_rust_bot_essentials::output::*;
-use terra_rust_bot_essentials::shared::Entry;
+use terra_rust_bot_essentials::shared::{load_user_settings,Entry};
 
 
 use secstr::*;
@@ -80,9 +80,7 @@ async fn main() -> anyhow::Result<()> {
         // stores all requirements either as task or the resolved value.
         let tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>> = Arc::new(RwLock::new(HashMap::new()));
 
-
-        /* Load user settings */
-        let mut user_settings: UserSettings = load_user_settings();
+        let mut user_settings: UserSettings = load_user_settings("./terra-rust-bot.json");
 
         if user_settings.remove {
             let res = fs::remove_file("./terra-rust-bot.json");
@@ -385,33 +383,13 @@ async fn main() -> anyhow::Result<()> {
             }
             abort_tasks(&tasks,&req_keys_status).await.ok();
             if user_settings.hot_reload {
-                user_settings = load_user_settings();
+                user_settings = load_user_settings("./terra-rust-bot.json");
             }
         }
 }
 
 
-fn load_user_settings() -> UserSettings {
 
-    let user_settings: UserSettings = match fs::read_to_string("./terra-rust-bot.json") {
-        Ok(file) => {
-            match serde_json::from_str(&file) {
-                Ok(res) => {
-                    res
-                },
-                Err(err) => {
-                    println!("{:?}",err);
-                    Default::default()
-                }
-            }
-        },
-        Err(err) => {
-            println!("{:?}",err);
-            Default::default()
-        }
-    };
-    user_settings
-}
 
 fn process_user_settings(user_settings: &UserSettings) -> (Vec<(&'static str, i32, Vec<&'static str>)>,Vec<&str>,Vec<&str>,Vec<&str>) {
     let req: Vec<(&'static str, i32, Vec<&'static str>)> = my_requirement_list(&user_settings);
