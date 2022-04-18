@@ -26,8 +26,6 @@ pub struct UserSettings {
     pub gas_adjustment_preference: Decimal,
     pub max_tx_fee: Decimal,
     pub ust_balance_preference: Decimal,
-    // pub lock_settings: bool,
-    // pub pause_requested: bool,
 }
 impl Default for UserSettings {
     fn default() -> UserSettings {

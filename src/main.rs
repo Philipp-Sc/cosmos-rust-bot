@@ -66,33 +66,6 @@ extern crate num_cpus;
 use notify::{Watcher, RecursiveMode, watcher};
 use std::sync::mpsc::channel;
 
-
-// TODOS NOW:
-
-// clean up: bot/action (multiple modules, separation into utility functions)
-
-// clean up: view/mod.rs (multiple modules, separation into utility functions)
-
-// clean up info/..  reduce code, 
-
-// find out why auto_farm fails.
-
- 
- 
-// TODO: Error handling. Every Unwrapp needs to be inspected.
-// Some unwraps panic if the request fail or return an error.
-// To be fixed, but not urgent, since only the task panics, which has no bad side effect.  
-
-// TODO: Add UST peg stat.
-// TODO: Add config for usersettings
-  
-
-// TODO: Auto Replenish: Always get the account balance a good bit above the limit.
-// TODO: Anchor Liquidation Bot
-
-
-// TODO: Optimize TX Fee estimate query functions. !! (will reduce query time)
-
  #[tokio::main]
 async fn main() -> anyhow::Result<()> {
 

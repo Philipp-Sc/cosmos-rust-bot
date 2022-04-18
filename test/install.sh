@@ -63,8 +63,11 @@ case $3 in
 	"all")
 	# includes signal-bot, includes terra-rust-bot-output
   $MYPATH/install.sh $1 $2;
+  rm -rf $MYPATH/target;
   $MYPATH/packages/terra-rust-bot-output/install.sh $1 $2;
+  rm -rf $MYPATH/packages/terra-rust-bot-output/target;
   $MYPATH/packages/terra-rust-signal-bot/install.sh $1 $2;
+  rm -rf $MYPATH/packages/terra-rust-signal-bot/target;
 
   cp $MYPATH/{my-bot,run.sh,stop.sh,terra-rust-bot.json} ./build/;
   cp $MYPATH/packages/terra-rust-bot-output/my-bot-output ./build/packages/terra-rust-bot-output/;
