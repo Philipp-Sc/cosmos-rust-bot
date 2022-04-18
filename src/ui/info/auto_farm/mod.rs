@@ -1,7 +1,7 @@
-use terra_rust_bot_output::output::*;
+use terra_rust_bot_essentials::output::*;
 
 
-use terra_rust_bot_output::output::pretty::Entry; 
+use terra_rust_bot_essentials::shared::Entry;
 use crate::state::control::model::{Maybe};
 use crate::state::control::model::{MaybeOrPromise,await_function};
 

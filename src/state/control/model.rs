@@ -62,7 +62,7 @@ use core::pin::Pin;
 use core::future::Future;
 
 
-use terra_rust_bot_output::output::Maybe as MaybeImported;
+use terra_rust_bot_essentials::shared::Maybe as MaybeImported;
 
 pub type Maybe<T> = MaybeImported<T>;
 

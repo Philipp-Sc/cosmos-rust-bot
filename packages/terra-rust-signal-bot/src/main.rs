@@ -315,8 +315,17 @@ async fn main() -> anyhow::Result<()> {
 
                                                     let mut msg_sent = false;
                                                     while !msg_sent {
+                                                        let text;
+                                                        match load_state("./../terra-rust-bot-output/terra-rust-bot-state.json").await {
+                                                            None => {
+                                                                text = "Unable to load ./../terra-rust-bot-output/terra-rust-bot-state.json.".to_string();
+                                                            },
+                                                            Some(state) => {
+                                                                text = terra_rust_bot_state(&sender_message,&state,false).await;
+                                                            }
+                                                        };
                                                         let message = ContentBody::DataMessage(DataMessage {
-                                                            body: Some(terra_rust_bot_state(&sender_message,"./../terra-rust-bot-output/terra-rust-bot-state.json",false).await),
+                                                            body: Some(text.to_string()),
                                                             timestamp: Some(timestamp),
                                                             ..Default::default()
                                                         });
@@ -340,45 +349,53 @@ async fn main() -> anyhow::Result<()> {
                                 println!("Searching for alerts..");
                                 searching = true;
                             }
-                            match terra_rust_bot_state_ping_delay("./../terra-rust-bot-output/terra-rust-bot-state.json",60i64).await {
-                                Some(x) => {
-                                    if !ping_delay {
-                                        send_message_to_self(&manager,format!("[Notification]\n{}",x)).await.ok();
-                                        ping_delay = true;
-                                    }
-                                },
+                            match load_state("./../terra-rust-bot-output/terra-rust-bot-state.json").await {
                                 None => {
-                                    if ping_delay {
-                                        send_message_to_self(&manager,"[Notification]\nTerra-rust-bot cought up with the schedule.".to_string()).await.ok();
-                                    }
-                                    ping_delay = false;
-                                    // send nothing.
-                                }
-                            }
-                            match terra_rust_bot_state_get_latest("[Errors]","./../terra-rust-bot-output/terra-rust-bot-state.json").await
-                              {
-                                Some(x) => {
-                                    if latest_error < x {
-                                        latest_error = x;
-                                        let x = terra_rust_bot_state_default("[Errors]","./../terra-rust-bot-output/terra-rust-bot-state.json",false).await;
-                                        send_message_to_self(&manager,format!("[Notification]\n{}",x.unwrap_or("Failed fetching new errors.".to_string()))).await.ok();
-                                    }
+                                    println!("Unable to load ./terra-rust-bot.json.");
                                 },
-                                None => {
-                                }
-                            } 
-                            match terra_rust_bot_state_get_latest("[Logs]","./../terra-rust-bot-output/terra-rust-bot-state.json").await
-                              {
-                                Some(x) => {
-                                    if latest_log < x {
-                                        latest_log = x;
-                                        let x = terra_rust_bot_state_default("[Logs]","./../terra-rust-bot-output/terra-rust-bot-state.json",false).await;
-                                        send_message_to_self(&manager,format!("[Notification]\n{}",x.unwrap_or("Failed fetching new errors.".to_string()))).await.ok();
+                                Some(state) => {
+                                    match terra_rust_bot_state_ping_delay(&state,60i64).await {
+                                        Some(x) => {
+                                            if !ping_delay {
+                                                send_message_to_self(&manager,format!("[Notification]\n{}",x)).await.ok();
+                                                ping_delay = true;
+                                            }
+                                        },
+                                        None => {
+                                            if ping_delay {
+                                                send_message_to_self(&manager,"[Notification]\nTerra-rust-bot cought up with the schedule.".to_string()).await.ok();
+                                            }
+                                            ping_delay = false;
+                                            // send nothing.
+                                        }
                                     }
-                                },
-                                None => {
+                                    match terra_rust_bot_state_get_latest("[Errors]",&state).await
+                                    {
+                                        Some(x) => {
+                                            if latest_error < x {
+                                                latest_error = x;
+                                                let x = terra_rust_bot_state_default("[Errors]",&state,false).await;
+                                                send_message_to_self(&manager,format!("[Notification]\n{}",x.unwrap_or("Failed fetching new errors.".to_string()))).await.ok();
+                                            }
+                                        },
+                                        None => {
+                                        }
+                                    }
+                                    match terra_rust_bot_state_get_latest("[Logs]",&state).await
+                                    {
+                                        Some(x) => {
+                                            if latest_log < x {
+                                                latest_log = x;
+                                                let x = terra_rust_bot_state_default("[Logs]",&state,false).await;
+                                                send_message_to_self(&manager,format!("[Notification]\n{}",x.unwrap_or("Failed fetching new errors.".to_string()))).await.ok();
+                                            }
+                                        },
+                                        None => {
+                                        }
+                                    }
                                 }
-                            }  
+                            };
+
                         }
                     };
                 }

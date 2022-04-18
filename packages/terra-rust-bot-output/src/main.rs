@@ -32,8 +32,16 @@ async fn main() -> anyhow::Result<()> {
     match args.subcommand {
  
         Subcommand::LocalDisplay {message} => {
-            println!("{esc}c", esc = 27 as char); 
-            println!("{}", terra_rust_bot_state(&message,"./terra-rust-bot-state.json",true).await);
+
+            println!("{esc}c", esc = 27 as char);
+            match load_state("./terra-rust-bot.json").await {
+                None => {
+                    println!("Unable to load ./terra-rust-bot.json.");
+                },
+                Some(state) => {
+                    println!("{}", terra_rust_bot_state(&message,&state,true).await);
+                }
+            }
         }  
     };
     Ok(())

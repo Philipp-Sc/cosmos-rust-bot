@@ -1,6 +1,6 @@
 
-use terra_rust_bot_output::output::*;
-use terra_rust_bot_output::output::pretty::Entry;
+use terra_rust_bot_essentials::output::*;
+use terra_rust_bot_essentials::shared::Entry;
 
 use crate::state::control::model::{MaybeOrPromise};
 use crate::state::control::model::try_get_resolved;
