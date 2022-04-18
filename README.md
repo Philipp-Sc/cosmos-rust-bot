@@ -121,15 +121,19 @@ At the same time **TRB** can be compiled to a single executable that is easy to 
 
 **Build terra-rust-bot**
 
- *To make the process as simple as possible following bash script is: ./install.sh*  
+ *To make the process as simple as possible use: ./install.sh*  
+
+* `cd terra-rust-bot/test`
+
  *You can choose between three different build options:*
+
 * `dev` fast build
 * `prod` optimized build
 * `native` optimize the build for your CPU    
 
 
-* `cd terra-rust-bot/test`
-* `./install.sh dev local all` (builds `all` packages, to - for example - disable the signal messenger integration use `default` instead. Use `minimal` to only build the terra-rust-bot.)
+* `nohup ./install.sh dev local all &` (builds `all` packages, to - for example - disable the signal messenger integration use `default` instead. Use `minimal` to only build the terra-rust-bot.)
+* Note: check the file `nohup.out` for errors. (`cat nohup.out`)
 * Note: after a successful build you can remove everything except `terra-rust-bot/test/build`
 ## Config
 

@@ -26,7 +26,7 @@ if [ "$IS_BOT" = "false" ]; then
  IS_BOT=$(grep -oP '\"anchor_protocol_auto_farm\":( )*(true|false)' terra-rust-bot.json | grep -oP '(true|false)')
 fi
 
-IS_TEST=$(grep -oP '\"read_only_mode\":( )*(true|false)' terra-rust-bot.json | grep -oP '(true|false)')
+IS_TEST=$(grep -oP '\"test\":( )*(true|false)' terra-rust-bot.json | grep -oP '(true|false)')
 HAS_WALLET=$(grep -oP '\"terra_wallet_address\":( )*(null|\"terra)' terra-rust-bot.json | grep -oP '(null| "terra)' | grep -oP '(null|terra)')
 
 
