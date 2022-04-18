@@ -77,7 +77,9 @@ case $3 in
 	"default")
 	# excludes signal-bot, includes terra-rust-bot-output
   $MYPATH/install.sh $1 $2;
+  rm -rf $MYPATH/target;
   $MYPATH/packages/terra-rust-bot-output/install.sh $1 $2;
+  rm -rf $MYPATH/packages/terra-rust-bot-output/target;
 
   cp $MYPATH/{my-bot,run.sh,stop.sh,terra-rust-bot.json} ./build/;
   cp $MYPATH/packages/terra-rust-bot-output/my-bot-output ./build/packages/terra-rust-bot-output/;
@@ -86,6 +88,7 @@ case $3 in
 	"minimal")
 	# only terra-rust-bot
 	$MYPATH/install.sh $1 $2;
+  rm -rf $MYPATH/target;
   cp $MYPATH/{my-bot,run.sh,stop.sh,terra-rust-bot.json} ./build/;
 	;;
 
