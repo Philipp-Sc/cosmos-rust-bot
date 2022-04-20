@@ -9,6 +9,34 @@ use comfy_table::presets::*;
 
 use terra_rust_bot_essentials::shared::{State,Entry};
 
+use rust_decimal::Decimal;
+use std::str::FromStr;
+
+use terra_rust_api_layer::utils::simple_estimate_optimal_next_claim_and_stake_tx;
+
+
+pub fn terra_rust_bot_methods(message: &str) {
+
+    let v: Vec<&str> = message.split(" ").collect();
+    match v.len() {
+        6 => {
+            match (v[0], v[1], v[2], v[3], v[4], v[5]) {
+                ("\\method","1",loan_amount,distribution_apr,pool_apy,transaction_fee) => {
+                    println!("{}", simple_estimate_optimal_next_claim_and_stake_tx(Decimal::from_str(loan_amount).unwrap(),Decimal::from_str(distribution_apr).unwrap(),Decimal::from_str(pool_apy).unwrap(),Decimal::from_str(transaction_fee).unwrap()));
+                },
+                e => {
+                    println!("{:?}",e);
+                }
+            }
+        },
+        e => {
+            println!("{:?}",e);
+        }
+    };
+
+
+}
+
 
 pub fn terra_rust_bot_user_settings(message: &str) -> Option<(&str,&str)> {
 

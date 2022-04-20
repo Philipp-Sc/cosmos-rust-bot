@@ -117,6 +117,32 @@ pub async fn lazy_anchor_account_auto_stake_rewards(tasks: &Arc<RwLock<HashMap<S
     *offset += 1;
 
     anchor_view.push((Entry {
+        timestamp: 0i64,
+        key: "anc_rewards_annual_return".to_string(),
+        prefix: None,
+        value: "--".to_string(),
+        suffix: Some("UST".to_string()),
+        group: Some("[Anchor Protocol][Auto Stake][Rewards]".to_string()),
+    },*offset));
+
+    let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset, Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"staking","loan_amount","annual_return_auto_staking",2)));
+    anchor_tasks.push(t);
+    *offset += 1;
+
+    anchor_view.push((Entry {
+        timestamp: 0i64,
+        key: "anc_rewards_auto_staking_benefit".to_string(),
+        prefix: None,
+        value: "--".to_string(),
+        suffix: Some("%".to_string()),
+        group: Some("[Anchor Protocol][Auto Stake][Rewards]".to_string()),
+    },*offset));
+
+    let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset, Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"staking","loan_amount","difference",2)));
+    anchor_tasks.push(t);
+    *offset += 1;
+
+    anchor_view.push((Entry {
         timestamp: 0i64, 
         key: "claim_rewards_tx_gas_estimate".to_string(),
         prefix: None,

@@ -80,7 +80,7 @@ At the same time **TRB** can be compiled to a single executable that is easy to 
 
 
 #### Requests
-* Requests are either made directly to the Terra FCD or LCD. For that terra-rust-bot mainly relies on the [Terra-Rust-API](https://crates.io/crates/terra-rust-api). In some cases <a href="api.anchorprotocol.com/api/v2/distribution-apy">api.anchorprotocol.com</a> is used.
+* Requests are either made directly to the Terra FCD or LCD. For that terra-rust-bot mainly relies on the [Terra-Rust-API](https://crates.io/crates/terra-rust-api). Click here to see all custom [API Endpoints](https://github.com/Philipp-Sc/terra-rust-bot/blob/main/packages/terra-rust-api-layer/src/services/blockchain/smart_contracts/objects/meta/api/data/endpoints.rs) that might be used, depending on the setup.
 
 #### Fees
 * Looking at past transactions terra-rust-bot estimates a reasonable transaction fee. In particually by looking at the actual gas amounts that were used in past transactions. This estimate can be used to offset the fee, keeping the account balance stable. For each transaction the fees are simulated using the prefered gas adjustment and double checked with the set maximum transaction fee.  

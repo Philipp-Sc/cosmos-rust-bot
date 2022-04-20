@@ -22,15 +22,14 @@ use std::collections::HashMap;
 
 use rust_decimal::Decimal;
 use core::str::FromStr;
-//use std::convert::TryFrom;
-use rust_decimal::prelude::ToPrimitive;
    
 //use num_format::{Locale, ToFormattedString}; 
  
 use chrono::{Utc};
 
 
-use std::sync::Arc; 
+use std::sync::Arc;
+use terra_rust_api_layer::utils::*;
 use tokio::sync::RwLock; 
 
 
@@ -80,24 +79,6 @@ use view_macro::decimal_or_return;
     } 
 
 
-
-
-// all data aggregations are made here, move in own package.
- 
-// idially only allowed to interact with the model via interface! 
-
-fn duration_to_string(duration: chrono::Duration) -> String {
-        let days = ((duration.num_seconds() / 60) / 60) / 24; 
-        let hours = ((duration.num_seconds() / 60) / 60) % 24;
-        let minutes = (duration.num_seconds() / 60) % 60;
-        format!("{}d, {}h, {}m",days, hours, minutes)
-}
-
-pub fn timestamp_now_to_string() -> String {
-    let dt = Utc::now();//.timestamp()
-    let now = dt.format("%d/%m/%y %H:%M:%S");
-    return now.to_string();              
-}
 
 // everything returns a maybe<string>
 // on ok timestamp is now.
@@ -558,148 +539,34 @@ pub async fn check_anchor_loan_status(tasks: Arc<RwLock<HashMap<String, MaybeOrP
 
 }
 
-// for farming:
-// the apy is a function dependend of the amount of days
-// (1+ 0.21 (dpr)) ^ days
-// 120% / Math.pow(1+(compounded_daily_rate),number_of_days)
 pub async fn estimate_anchor_protocol_next_claim_and_stake_tx(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, field_type: &str, field_amount: &str, field: &str, digits_rounded_to: u32) -> Maybe<String> {
-  
 
-            let borrower_rewards_in_ust = decimal_or_return!(borrower_rewards_in_ust_to_string(tasks.clone(),  10).await);
+    let mut loan_amount = Decimal::from_str("0").unwrap();
 
-            let mut loan_amount = Decimal::from_str("0").unwrap();  
+    if "loan_amount"==field_amount {
+        loan_amount = decimal_or_return!(borrower_loan_amount_to_string(tasks.clone(),false, 10).await);
+    }else if "target_ltv"==field_amount {
+        let trigger_percentage = decimal_or_return!(meta_data_key_to_string(tasks.clone(),"trigger_percentage",false,10).await);
+        let borrow_limit = decimal_or_return!(borrow_limit_to_string(tasks.clone(), false, 10).await);
+        loan_amount = borrow_limit.checked_mul(trigger_percentage).unwrap();
+    }
+    let pending_rewards_in_ust = decimal_or_return!(borrower_rewards_in_ust_to_string(tasks.clone(),  10).await);
+    let distribution_apr = percent_decimal_or_return!(distribution_apr_to_string(tasks.clone(),  10).await);
+    let pool_apy = match field_type {
+        "staking" => {percent_decimal_or_return!(staking_apy_to_string(tasks.clone(),  10).await)},
+        "farming" => {percent_decimal_or_return!(spec_anc_ust_lp_apy_to_string(tasks.clone(),  10).await)},
+        _ => {return maybe_struct!((Some( "Error".to_string()),Some(Utc::now().timestamp())));}
+    };
+    let transaction_fee =  match field_type {
+        "staking" => {decimal_or_return!(estimate_anchor_protocol_tx_fee_claim_and_stake(tasks.clone(),  10).await)},
+        "farming" => {decimal_or_return!(estimate_anchor_protocol_tx_fee_claim_and_provide_to_spec_vault(tasks.clone(),  10).await)},
+        _ => {return maybe_struct!((Some( "Error".to_string()),Some(Utc::now().timestamp())));}
+    };
 
-            if "loan_amount"==field_amount {
-                loan_amount = decimal_or_return!(borrower_loan_amount_to_string(tasks.clone(),false, 10).await); 
-            }else if "target_ltv"==field_amount {
-                let trigger_percentage = decimal_or_return!(meta_data_key_to_string(tasks.clone(),"trigger_percentage",false,10).await);
-                let borrow_limit = decimal_or_return!(borrow_limit_to_string(tasks.clone(), false, 10).await); 
-                loan_amount = borrow_limit.checked_mul(trigger_percentage).unwrap();
-            }
-            let distribution_apr = percent_decimal_or_return!(distribution_apr_to_string(tasks.clone(),  10).await); 
-            let apy = match field_type {
-                "staking" => {percent_decimal_or_return!(staking_apy_to_string(tasks.clone(),  10).await)},
-                "farming" => {percent_decimal_or_return!(spec_anc_ust_lp_apy_to_string(tasks.clone(),  10).await)},
-                _ => {return maybe_struct!((Some( "Error".to_string()),Some(Utc::now().timestamp())));}
-            };
-            let transaction_fee =  match field_type {
-                "staking" => {decimal_or_return!(estimate_anchor_protocol_tx_fee_claim_and_stake(tasks.clone(),  10).await)},
-                "farming" => {decimal_or_return!(estimate_anchor_protocol_tx_fee_claim_and_provide_to_spec_vault(tasks.clone(),  10).await)},
-                _ => {return maybe_struct!((Some( "Error".to_string()),Some(Utc::now().timestamp())));}
-            };
-            
-            
-            let mut _optimal_time_to_wait: Option<Decimal> = None; 
-            let mut _optimal_anc_ust_value: Option<Decimal> = None;
-            let mut _total_returns_in_ust: Option<Decimal> = None;
-  
-            let one_year_equals_this_many_time_frames = Decimal::new(365*24,0);
-           
-            let anc_dist_returns_per_timeframe = distribution_apr.checked_div(one_year_equals_this_many_time_frames).unwrap();
-            let anc_dist_returns_per_time_frame_in_ust = loan_amount.checked_mul(anc_dist_returns_per_timeframe).unwrap(); 
-            
-            let anc_staking_returns_per_timeframe = apy.checked_div(one_year_equals_this_many_time_frames).unwrap();
+    let res = estimate_optimal_next_claim_and_stake_tx(loan_amount, pending_rewards_in_ust, distribution_apr, pool_apy, transaction_fee, digits_rounded_to);
 
-            let claim_and_stake_gas_fee = Decimal::from_str("-1").unwrap().checked_mul(transaction_fee).unwrap();
-            
-            let mut max_value: Option<Decimal> = None;
-            let mut max_index: Option<Decimal> = None;
-
-            let timeframes = one_year_equals_this_many_time_frames.checked_add(Decimal::new(1,0)).unwrap().to_i64().unwrap();
-            
-            for n in 1..timeframes {
-                // amount ANC rewards available after n timeframes
-                let total_anc_dist_returns_n_timeframes_ust = anc_dist_returns_per_time_frame_in_ust.checked_mul(Decimal::new(n,0)).unwrap();
-
-                // amount ANC staked, by claiming and staking the outstanding amount after n timeframes
-                let total_anc_staked_n_timeframes_in_ust_after_tx = total_anc_dist_returns_n_timeframes_ust.checked_add(claim_and_stake_gas_fee).unwrap();
-
-                let total_anc_staking_rewards_one_year_in_ust = total_anc_staked_n_timeframes_in_ust_after_tx
-                .checked_mul(anc_staking_returns_per_timeframe).unwrap()
-                .checked_mul(one_year_equals_this_many_time_frames.checked_sub(Decimal::new(n,0)).unwrap()).unwrap() // remove the timeframes that already passed in the reference year
-                .checked_div(Decimal::new(n,0)).unwrap() // now normalize the result, to represent the ANC staking rewards in the reference year
-                .checked_mul(one_year_equals_this_many_time_frames).unwrap();
-                
-                if let Some(max) = max_value {
-                    if max < total_anc_staking_rewards_one_year_in_ust {
-                        max_value = Some(total_anc_staking_rewards_one_year_in_ust);
-                        max_index = Some(Decimal::new(n,0));
-                    }
-                }else{
-                    max_value = Some(total_anc_staking_rewards_one_year_in_ust);
-                    max_index = Some(Decimal::new(n,0));
-                }
-            }  
-
-            _optimal_time_to_wait = max_index;
-            _optimal_anc_ust_value = anc_dist_returns_per_time_frame_in_ust.checked_mul(max_index.unwrap());
-            let mut n = 1;
-            let mut value: Option<Decimal> = Some(Decimal::new(0,0));
-            while n < timeframes {
-                let staked_n_timeframes_anc_value = anc_staking_returns_per_timeframe.checked_mul(one_year_equals_this_many_time_frames.checked_sub(Decimal::new(n-1,0)).unwrap()).unwrap().checked_mul(_optimal_anc_ust_value.unwrap());
-                value = value.unwrap().checked_add(staked_n_timeframes_anc_value.unwrap());
-                n = n + _optimal_time_to_wait.unwrap().to_i64().unwrap(); 
-            }
-            _total_returns_in_ust = value;
-
-            let _optimal_time_to_wait = _optimal_time_to_wait.unwrap().checked_mul(Decimal::new(60*60,0));
-            let time_to_wait_already_passed = borrower_rewards_in_ust
-                                                .checked_mul(Decimal::new(60*60,0)).unwrap()
-                                                .checked_div(anc_dist_returns_per_time_frame_in_ust);
-
-
-            let wait_loan_taken = chrono::Duration::seconds(_optimal_time_to_wait.unwrap().to_i64().unwrap());
-
-            let mut time = _optimal_time_to_wait.unwrap().to_i64().unwrap();
-            if let Some(ttwap) = time_to_wait_already_passed {
-                time = time-(ttwap.to_i64().unwrap());
-            }
-
-            let minus_already_wait_loan_taken = chrono::Duration::seconds(time);
-            
-            let duration = duration_to_string(wait_loan_taken);
-            let dt = Utc::now();
-            let trigger_date = dt.checked_add_signed(minus_already_wait_loan_taken).unwrap().format("%d/%m/%y %H:%M");
-              
-
-            if "date_next"==field {
-                if time <= 0 {
-                    return maybe_struct!((Some( "now".to_string()),Some(Utc::now().timestamp())));
-                }
-                return maybe_struct!((Some( trigger_date.to_string()),Some(Utc::now().timestamp())));
-            }else if "value_next"==field {
-                return maybe_struct!((Some( _optimal_anc_ust_value.unwrap() 
-                         .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
-                         .to_string()),Some(Utc::now().timestamp())));
-            }else if "duration_next"==field {
-                return maybe_struct!((Some( duration),Some(Utc::now().timestamp())));
-            }else if "total_returns"==field && _total_returns_in_ust!=None {
-                return maybe_struct!((Some( _total_returns_in_ust.unwrap() 
-                         .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
-                         .to_string()),Some(Utc::now().timestamp())));
-            }else if "apr"==field && _total_returns_in_ust!=None  {
-                
-                let max_ltv = decimal_or_return!(max_ltv_to_string(tasks.clone(), "BLUNA", 2).await);
-                let borrow_limit = decimal_or_return!(borrow_limit_to_string(tasks.clone(), false, 10).await); 
-                let collateral_value = borrow_limit.checked_div(max_ltv).unwrap(); 
-            
-                match _total_returns_in_ust.unwrap().checked_div(collateral_value) {
-                    None => {
-                        return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
-                    },
-                    Some(e) => {
-                        return maybe_struct!((Some(  format!("{}%",
-                            e
-                            .checked_mul(Decimal::from_str("100").unwrap()).unwrap()
-                            .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
-                            .to_string()
-                            )),Some(Utc::now().timestamp())));
-                    }
-                }
-                
-            }
-            return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
-
+    let now = Some(Utc::now().timestamp());
+    maybe_struct!((Some(res[field].as_str().unwrap_or("--").to_string()),now))
 }
 
 pub async fn estimate_anchor_protocol_tx_fee_claim_and_farm(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> Maybe<String> { 

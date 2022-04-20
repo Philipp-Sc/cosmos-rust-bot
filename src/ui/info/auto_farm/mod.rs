@@ -131,7 +131,7 @@ pub async fn lazy_anchor_account_auto_farm_rewards(tasks: &Arc<RwLock<HashMap<St
     
     anchor_view.push((Entry {
         timestamp: 0i64, 
-        key: "target".to_string(),
+        key: "anc_rewards_target".to_string(),
         prefix: None,
         value: "--".to_string(),
         suffix: Some("UST".to_string()),
@@ -144,14 +144,40 @@ pub async fn lazy_anchor_account_auto_farm_rewards(tasks: &Arc<RwLock<HashMap<St
 
     anchor_view.push((Entry {
         timestamp: 0i64, 
-        key: "next".to_string(),
+        key: "anc_rewards_target_date".to_string(),
         prefix: None,
         value: "--".to_string(),
         suffix: None,
-        group: Some("[Anchor Protocol][Auto Farm]".to_string()),
+        group: Some("[Anchor Protocol][Auto Farm][Rewards]".to_string()),
     },*offset)); 
  
     let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset, Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"farming","loan_amount","date_next",2)));
+    anchor_tasks.push(t);
+    *offset += 1;
+
+    anchor_view.push((Entry {
+        timestamp: 0i64,
+        key: "annual_return".to_string(),
+        prefix: Some(">".to_string()),
+        value: "--".to_string(),
+        suffix: Some("UST".to_string()),
+        group: Some("[Anchor Protocol][Auto Farm][Rewards]".to_string()),
+    },*offset));
+
+    let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset, Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"farming","loan_amount","annual_return_auto_staking",2)));
+    anchor_tasks.push(t);
+    *offset += 1;
+
+    anchor_view.push((Entry {
+        timestamp: 0i64,
+        key: "anc_rewards_auto_staking_benefit".to_string(),
+        prefix: Some(">".to_string()),
+        value: "--".to_string(),
+        suffix: Some("%".to_string()),
+        group: Some("[Anchor Protocol][Auto Farm][Rewards]".to_string()),
+    },*offset));
+
+    let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset, Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"farming","loan_amount","difference",2)));
     anchor_tasks.push(t);
     *offset += 1;
      

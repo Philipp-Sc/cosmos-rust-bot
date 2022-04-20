@@ -19,6 +19,11 @@ enum Subcommand {
     LocalDisplay {
         #[structopt(long, short = "m", help = "message")]
         message: String,
+    },
+    #[structopt(about = "Terra-rust-bot feature: run utils methods directly to the console.")]
+    LocalUtils {
+        #[structopt(long, short = "m", help = "message")]
+        message: String,
     }
 }
 
@@ -55,7 +60,13 @@ async fn main() -> anyhow::Result<()> {
                     };
                 }
             }
-        }  
+        }
+        Subcommand::LocalUtils {message} => {
+
+            terra_rust_bot_methods(&message);
+
+
+        }
     };
     Ok(())
 }

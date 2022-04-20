@@ -90,6 +90,8 @@ async fn main() -> anyhow::Result<()> {
         /* Get wallet details */
         let mut wallet_seed_phrase = SecUtf8::from("".to_string());
         let mut wallet_acc_address = SecUtf8::from(user_settings.terra_wallet_address.as_ref().unwrap_or(&"".to_string()));
+        //  /^terra1[a-z0-9]{38}$/]
+
 
         if user_settings.anchor_protocol_auto_repay || user_settings.anchor_protocol_auto_borrow || user_settings.anchor_protocol_auto_stake || user_settings.anchor_protocol_auto_farm {
          // ** seed phrase needed **
@@ -326,8 +328,8 @@ async fn main() -> anyhow::Result<()> {
                     let task: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(anchor_borrow_claim_and_farm_rewards(tasks.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(), user_settings.test));
                     try_run_function(&tasks, task, "anchor_auto_farm", user_settings.test).await;
 
-                    let anchor_auto_lp = lazy_anchor_account_auto_farm_rewards(&tasks, &state, &mut offset, user_settings.test, is_first_run).await;
-                    for t in anchor_auto_lp {
+                    let anchor_auto_farm = lazy_anchor_account_auto_farm_rewards(&tasks, &state, &mut offset, user_settings.test, is_first_run).await;
+                    for t in anchor_auto_farm {
                         if timestamps_display[t.0] == 0i64 || now - timestamps_display[t.0] > 1i64 {
                             try_add_to_state(&state, t.0, Box::pin(t.1)).await.ok();
                             timestamps_display[t.0] = now;

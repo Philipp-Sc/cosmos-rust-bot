@@ -94,13 +94,14 @@ pub async fn get_block_txs_fee_data(key: &str) -> anyhow::Result<ResponseResult>
             next = get_txs_fee_data(temp_offset.as_str(),&mut tx_data,get_contract("anchorprotocol","ANC-UST LP").as_ref(),"staking_lp","null").await; 
         }
         if key == "provide_to_spec_anc_ust_vault" {
-           next = get_txs_fee_data(temp_offset.as_str(),&mut tx_data,get_contract("anchorprotocol","SPEC ANC-UST VAULT").as_ref(),"provide_to_spec_anc_ust_vault","null").await; 
+           next = get_txs_fee_data(temp_offset.as_str(),&mut tx_data,get_contract("anchorprotocol","SPEC ANC-UST VAULT (1)").as_ref(),"provide_to_spec_anc_ust_vault","null").await;
         }
 
         if next.is_ok() {
             temp_offset = next.unwrap();
             err_count = 0;
         }else{
+            println!("{:?}",next);
             err_count = err_count + 1;
         }
     }
@@ -146,7 +147,7 @@ pub async fn get_txs_fee_data(offset: &str, tx_data: &mut Vec<TXLog>,account: &s
 fn get_tx_log(entry: &Value, account: &str, query_msg: &str, amount_field: &str) -> anyhow::Result<TXLog> {
 
     let msg = entry.get("tx").ok_or(anyhow!("no tx"))?.get("value").ok_or(anyhow!("no value"))?.get("msg").ok_or(anyhow!("no msg"))?.as_array().ok_or(anyhow!("no array"))?; 
-               
+
     if  (msg.len() == 2 && (
             (
             query_msg=="provide_to_spec_anc_ust_vault" &&
