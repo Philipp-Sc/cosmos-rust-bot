@@ -36,7 +36,7 @@ pub fn terra_rust_bot_methods() {
             println!("Expected returns with automation: {} (+{}%)",result["annual_return_auto_staking"],result["difference"]);
             println!("Date next: {} ",result["date_next"]);
             println!("Duration next: {} ",result["duration_next"]);
-            println!("Value next: {} ",result["date_next"]);
+            println!("Value next: {} ",result["value_next"]);
         },
         e => {
             println!("{:?}",e);
