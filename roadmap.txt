@@ -3,9 +3,12 @@
 
 // TOMORROW - THURSDAY
 // todo: open API/extend utilities so that useful functions can be provided e.g. when to compound? see open issues
-//
+// commandline token swap
 
 
+// todo: IL protection. (Makes Auto Farming viable 5% -> 16%+)
+
+// ARB
 
 
 

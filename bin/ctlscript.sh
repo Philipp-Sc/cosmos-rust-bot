@@ -26,6 +26,11 @@ case $1 in
   ./my-bot-output local-display -m "$2"
   ;;
 
+  "utils")
+  cd ../packages/terra-rust-bot-output;
+  ./my-bot-output local-utils
+  ;;
+
   "connect-signal-app")
   cd ../packages/terra-rust-signal-bot;
   echo "Open the Signal App >> Settings >> Linked Devices >> Link New Device"

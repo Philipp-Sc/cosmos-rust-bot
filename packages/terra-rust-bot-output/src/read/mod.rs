@@ -7,27 +7,36 @@ use colored::control::set_override;
 use comfy_table::Table;
 use comfy_table::presets::*;
 
-use terra_rust_bot_essentials::shared::{State,Entry};
+use terra_rust_bot_essentials::shared::{get_input, State,Entry};
 
 use rust_decimal::Decimal;
 use std::str::FromStr;
 
-use terra_rust_api_layer::utils::simple_estimate_optimal_next_claim_and_stake_tx;
+use terra_rust_api_layer::utils::estimate_optimal_next_claim_and_stake_tx;
 
 
-pub fn terra_rust_bot_methods(message: &str) {
+pub fn terra_rust_bot_methods() {
 
-    let v: Vec<&str> = message.split(" ").collect();
-    match v.len() {
-        6 => {
-            match (v[0], v[1], v[2], v[3], v[4], v[5]) {
-                ("\\method","1",loan_amount,distribution_apr,pool_apy,transaction_fee) => {
-                    println!("{}", simple_estimate_optimal_next_claim_and_stake_tx(Decimal::from_str(loan_amount).unwrap(),Decimal::from_str(distribution_apr).unwrap(),Decimal::from_str(pool_apy).unwrap(),Decimal::from_str(transaction_fee).unwrap()));
-                },
-                e => {
-                    println!("{:?}",e);
-                }
-            }
+    match get_input("Select method:\n1) estimate_optimal_next_claim_and_stake_tx").as_str() {
+        "1" => {
+            let loan_amount = get_input("Loan amount: (the balance you earn distribution rewards on)");
+            let distribution_apr = get_input("Distribution apr: ");
+            let pending_rewards_in_ust = get_input("Pending rewards: (already accumulated pending rewards)");
+            let pool_apy = get_input("Pool apy: (the apy of the pool you provide the distribution rewards to)");
+            let transaction_fee = get_input("Transaction fee: (the fee to claim and provide the rewards per transaction)");
+            let result = estimate_optimal_next_claim_and_stake_tx(
+                    Decimal::from_str(&loan_amount).unwrap(),
+                    Decimal::from_str(&pending_rewards_in_ust).unwrap(),
+                    Decimal::from_str(&distribution_apr).unwrap(),
+                    Decimal::from_str(&pool_apy).unwrap(),
+                    Decimal::from_str(&transaction_fee).unwrap(),
+                    4);
+            println!("{esc}c", esc = 27 as char);
+            println!("Expected returns without any automation: {}",result["annual_return_no_staking"]);
+            println!("Expected returns with automation: {} (+{}%)",result["annual_return_auto_staking"],result["difference"]);
+            println!("Date next: {} ",result["date_next"]);
+            println!("Duration next: {} ",result["duration_next"]);
+            println!("Value next: {} ",result["date_next"]);
         },
         e => {
             println!("{:?}",e);

@@ -26,7 +26,6 @@ use bot::action::*;
 
 mod ui;  // -> View
 
-use ui::user_input::get_input; 
 
 use ui::info::auto_repay::*;
 use ui::info::auto_borrow::*;
@@ -42,7 +41,7 @@ use ui::errors::*;
  
 
 use terra_rust_bot_essentials::output::*;
-use terra_rust_bot_essentials::shared::{load_user_settings,Entry};
+use terra_rust_bot_essentials::shared::{load_user_settings,get_input,Entry};
 
 
 use secstr::*;

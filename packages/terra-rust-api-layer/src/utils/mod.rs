@@ -17,12 +17,6 @@ pub fn timestamp_now_to_string() -> String {
     return now.to_string();
 }
 
-// only aplicable with constant pool apr (non compounding)
-pub fn simple_estimate_optimal_next_claim_and_stake_tx(loan_amount: Decimal, distribution_apr: Decimal, pool_apy: Decimal, transaction_fee: Decimal) -> Value {
-    let pending_rewards_in_ust = Decimal::new(0,0);
-    estimate_optimal_next_claim_and_stake_tx(loan_amount,pending_rewards_in_ust,distribution_apr,pool_apy,transaction_fee,4)
-}
-
 pub fn estimate_optimal_next_claim_and_stake_tx(loan_amount: Decimal, pending_rewards_in_ust: Decimal, distribution_apr: Decimal, pool_apy: Decimal, transaction_fee: Decimal, digits_rounded_to: u32) -> Value {
 
     let mut _optimal_time_to_wait: Option<Decimal> = None;
