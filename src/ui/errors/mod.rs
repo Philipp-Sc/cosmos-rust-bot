@@ -14,13 +14,13 @@ use tokio::sync::RwLock;
 use chrono::Utc;
 
 
-pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, req: &[&str], state: &Arc<RwLock<Vec<Option<Entry>>>> ,offset: &mut usize) {
+pub async fn display_all_errors(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, state: &Arc<RwLock<Vec<Option<Entry>>>> ,offset: &mut usize) {
    
     clear_after_index(state,*offset).await;
 
     let mut error_view: Vec<(Entry,usize)> = Vec::new();
  
-    for key in req {
+    for key in tasks.read().await.keys() {
         match try_get_resolved(&tasks,key).await.as_ref() {
             Ok(maybe) => {
                 match maybe {

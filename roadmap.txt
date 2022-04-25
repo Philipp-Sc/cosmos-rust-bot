@@ -3,6 +3,13 @@
 
 // TOMORROW - THURSDAY
 // todo: open API/extend utilities so that useful functions can be provided e.g. when to compound? see open issues
+
+// commands folder
+// command.json
+// content of command.json is XOR encrypted by secret (terra-rust-bot & signal-bot || terra-rust-bot-output)
+// todo: signal-bot && terra-rust-bot-output require password to start
+// todo: terra-rust-bot.json require password to use hot_reload or! encrypt same as command.json.
+// todo: this means attacker must use terra-rust-bot tools to change things and therefore needs password.
 // commandline token swap
 
 

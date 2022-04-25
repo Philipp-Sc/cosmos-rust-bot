@@ -81,41 +81,6 @@ pub fn requirement_list() ->  Vec<(&'static str, i32, Vec<&'static str>)>  {
 
  }
 
- pub fn my_requirement_keys(user_settings: &UserSettings) -> Vec<&str> {
-
-       let args = settings_to_key_list(user_settings);
-       let req = requirement_list();
-       let mut req_keys: Vec<&str> = Vec::new();  
-        for i in 0..req.len() {
-            for x in &args {
-                if req[i].2.contains(x) {
-                    req_keys.push(req[i].0); 
-                    break;
-                }
-            }
-        }
-        req_keys
- }
-
-pub fn my_bot_keys(user_settings: &UserSettings) -> Vec<&str> {
-
-    let mut args: Vec<&str> = Vec::new();
-    if user_settings.anchor_protocol_auto_stake {
-        args.push("anchor_auto_stake");
-    }
-    if user_settings.anchor_protocol_auto_farm {
-        args.push("anchor_auto_farm");
-    }
-    if user_settings.anchor_protocol_auto_repay {
-        args.push("anchor_auto_repay");
-    }
-    if user_settings.anchor_protocol_auto_borrow {
-        args.push("anchor_auto_borrow");
-    }
-    args
-}
-
-
  pub fn my_requirement_list(user_settings: &UserSettings) -> Vec<(&'static str, i32, Vec<&'static str>)> {
 
     let args = settings_to_key_list(user_settings);

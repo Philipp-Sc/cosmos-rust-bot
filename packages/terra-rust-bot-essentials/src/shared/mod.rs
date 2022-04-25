@@ -102,6 +102,10 @@ pub fn load_user_settings(path: &str) -> UserSettings {
             Default::default()
         }
     };
+    if user_settings.remove {
+        let res = fs::remove_file(path);
+        println!("{:?}",res);
+    }
     user_settings
 }
 

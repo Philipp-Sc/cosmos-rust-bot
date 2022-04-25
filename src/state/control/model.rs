@@ -4,7 +4,7 @@
 pub mod wallet;
 pub mod requirements;
 
-use requirements::UserSettings;
+use requirements::{UserSettings,my_requirement_list};
 use secstr::*;
 
 
@@ -52,7 +52,7 @@ use tokio::sync::RwLock;
  
  
 use std::time::{Duration};
-
+use std::thread::sleep;
 use tokio::time::timeout; 
  
 
@@ -63,6 +63,7 @@ use core::future::Future;
 
 
 use terra_rust_bot_essentials::shared::Maybe as MaybeImported;
+use terra_rust_bot_essentials::shared::Entry;
 
 pub type Maybe<T> = MaybeImported<T>;
 
@@ -247,14 +248,10 @@ pub async fn await_task(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>,key
         }          
  }
 
-pub async fn abort_tasks(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, req: &[&str]) ->  anyhow::Result<()> {
+pub async fn abort_tasks(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>) ->  anyhow::Result<()> {
 
-    let mut map = tasks.write().await;
-
-    for k in req {
-        let res = map.get_mut(k.to_owned()).ok_or(anyhow!("Error: key does not exist"))?;
-
-        if let MaybeOrPromise::Data(QueryData::Task(task)) = res {
+    for (_, value) in tasks.write().await.iter_mut(){
+        if let MaybeOrPromise::Data(QueryData::Task(task)) = value {
             task.abort();
         }
     }
@@ -412,48 +409,38 @@ pub async fn get_meta_data_maybe(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromi
     return keys;
   } 
 
-  pub async fn get_keys_of_running_tasks<'a>(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, req: &'a [&str]) -> Vec<&'a str> {
+  pub async fn get_keys_of_running_tasks<'a>(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>) -> Vec<String> {
 
-    let mut keys: Vec<&str> = Vec::new(); 
-        
-    for k in req {
-         // if the functions returns a value in the given time it is considered resolved.
-         match timeout(Duration::from_millis(100), get_data_maybe_or_await_task(tasks,k)).await {
-            Err(_) => { 
-                keys.push(k);
+    let mut keys: Vec<String> = Vec::new();
+
+    for key in tasks.read().await.keys() {
+        match try_get_resolved(tasks, key).await {
+            Err(_) => {
+                keys.push(key.to_owned());
             },
-            Ok(_) => { 
-            }
-         }
+            Ok(_) => {}
+        }
     }
     return keys;
   } 
 
-  pub async fn get_keys_of_failed_tasks<'a>(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, req: &'a [&str]) -> Vec<&'a str> {
+  pub async fn get_keys_of_failed_tasks<'a>(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>) -> Vec<String> {
 
-    let mut keys: Vec<&str> = Vec::new(); 
-        
-    for k in req {
+    let mut keys: Vec<String> = Vec::new();
+
+    for key in tasks.read().await.keys() {
         // if the functions returns a value in the given time it is considered resolved.
-        match get_data_maybe_or_meta_data_maybe(tasks,k).await {
+        match try_get_resolved(tasks,key).await {
             Err(msg) => {
                 if !msg.to_string().contains("Info"){
-                    keys.push(k);
+                    keys.push(key.to_owned());
                 }
             },
             Ok(_) => {}  
         }
     }
     return keys;
-  } 
-
-pub async fn await_running_tasks(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, req: &[&str]) -> anyhow::Result<String> {
-
-    for k in req { 
-         get_data_maybe_or_await_task(tasks,k).await.ok();
-    }
-    Ok("finished".to_string())
-} 
+  }
 
 pub async fn register_value(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: String, value: String) {
     let mut map = tasks.write().await;
@@ -495,13 +482,155 @@ pub async fn await_function(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,
         }
      }
 }
+pub async fn requirements_next(now: i64, num_cpus: usize, offset: &mut usize, tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, user_settings: &UserSettings, wallet_acc_address: &Arc<SecUtf8>) ->  Vec<(Entry,usize)> {
+
+    let req = my_requirement_list(&user_settings);
+
+    let mut req_keys= Vec::new();
+    for i in 0..req.len() {
+        req_keys.push(req[i].0);
+    }
+
+    let mut entries: Vec<(Entry,usize)> = Vec::new();
+
+
+    let mut req_unresolved = get_keys_of_running_tasks(&tasks).await;
+
+    // waiting for unresolved tasks to catch up
+    if req_unresolved.len() >= num_cpus {
+        // anyway we need to have free threads to spawn more tasks
+        // useful to wait here
+        sleep(Duration::from_secs(10));
+        req_unresolved = get_keys_of_running_tasks(&tasks).await;
+    }
+
+    let req_resolved_timestamps = get_timestamps_of_resolved_tasks(&tasks, &req_keys).await;
+    let req_failed = get_keys_of_failed_tasks(&tasks).await;
+
+
+    for x in 0..req_resolved_timestamps.len() {
+        let entry = Entry {
+            timestamp: now,
+            key: req[x].0.to_string(),
+            prefix: None,
+            value: req_resolved_timestamps[x].to_string(),
+            suffix: None,
+            group: Some("[Task][History]".to_string()),
+        };
+        entries.push((entry,*offset));
+        *offset += 1;
+    }
+
+    let mut req_to_update: Vec<(&str,i64)> = Vec::new();
+    for i in 0..req.len() {
+        // check req is not pending
+        if !req_unresolved.contains(&req[i].0.to_string()) {
+            // check req is failed or
+            // req new or
+            // time passed is greater than req duration
+            if req_failed.contains(&req[i].0.to_string()) || req_resolved_timestamps[i] == 0i64 || ((now - req_resolved_timestamps[i]) > req[i].1 as i64) {
+                req_to_update.push((&req[i].0,now - req_resolved_timestamps[i] - req[i].1 as i64));
+            }
+        }
+    }
+    req_to_update.sort_by_key(|k| k.1);
+    let req_to_update: Vec<&str> = req_to_update.iter().map(|x| x.0).rev().take(num_cpus - req_unresolved.len()).collect();
+
+
+    let entry = Entry {
+        timestamp: now,
+        key: "failed".to_string(),
+        prefix: None,
+        value: req_failed.len().to_string(),
+        suffix: None,
+        group: Some("[Task][Count]".to_string()),
+    };
+    entries.push((entry,*offset));
+    *offset += 1;
+    let entry = Entry {
+        timestamp: now,
+        key: "pending".to_string(),
+        prefix: None,
+        value: req_unresolved.len().to_string(),
+        suffix: None,
+        group: Some("[Task][Count]".to_string()),
+    };
+    entries.push((entry,*offset));
+    *offset += 1;
+    let entry = Entry {
+        timestamp: now,
+        key: "upcoming".to_string(),
+        prefix: None,
+        value: req_to_update.len().to_string(),
+        suffix: None,
+        group: Some("[Task][Count]".to_string()),
+    };
+    entries.push((entry,*offset));
+    *offset += 1;
+    let entry = Entry {
+        timestamp: now,
+        key: "all".to_string(),
+        prefix: None,
+        value: req_keys.len().to_string(),
+        suffix: None,
+        group: Some("[Task][Count]".to_string()),
+    };
+    entries.push((entry,*offset));
+    *offset += 1;
+    let entry = Entry {
+        timestamp: now,
+        key: "failed".to_string(),
+        prefix: None,
+        value: format!("{:?}", req_failed),
+        suffix: None,
+        group: Some("[Task][List]".to_string()),
+    };
+    entries.push((entry,*offset));
+    *offset += 1;
+    let entry = Entry {
+        timestamp: now,
+        key: "pending".to_string(),
+        prefix: None,
+        value: format!("{:?}", req_unresolved),
+        suffix: None,
+        group: Some("[Task][List]".to_string()),
+    };
+    entries.push((entry,*offset));
+    *offset += 1;
+    let entry = Entry {
+        timestamp: now,
+        key: "upcoming".to_string(),
+        prefix: None,
+        value: format!("{:?}", req_to_update),
+        suffix: None,
+        group: Some("[Task][List]".to_string()),
+    };
+    entries.push((entry,*offset));
+    *offset += 1;
+    let entry = Entry {
+        timestamp: now,
+        key: "all".to_string(),
+        prefix: None,
+        value: format!("{:?}", req_keys),
+        suffix: None,
+        group: Some("[Task][List]".to_string()),
+    };
+    entries.push((entry,*offset));
+    *offset += 1;
+
+    if req_unresolved.len() >= num_cpus {
+        return entries;
+    }
+    requirements(&tasks, &user_settings, &wallet_acc_address, &req_to_update).await;
+    entries
+}
   /*
   * all required queries are triggered here in async fashion
   *
   * retrieve the value when it is needed: "data.get_mut(String).unwrap().await"
   * use try_join!, join! or select! macros to optimise retrieval of multiple values.
   */
- pub async fn requirements(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, user_settings: &UserSettings, wallet_acc_address: &Arc<SecUtf8>, req: &Vec<&str>) { 
+ async fn requirements(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, user_settings: &UserSettings, wallet_acc_address: &Arc<SecUtf8>, req: &Vec<&str>) {
           
          let mut map = tasks.write().await;
 

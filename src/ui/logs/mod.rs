@@ -14,11 +14,8 @@ use tokio::sync::RwLock;
 
 
 
-pub async fn display_all_logs(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, state: &Arc<RwLock<Vec<Option<Entry>>>> ,offset: &mut usize, args_b: &Vec<&str>) {
-   
-    if args_b.len() == 0 {
-        return;
-    }
+pub async fn display_all_logs(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, state: &Arc<RwLock<Vec<Option<Entry>>>> ,offset: &mut usize) {
+
 
     let mut log_view: Vec<(Entry,usize)> = Vec::new();
     
