@@ -212,6 +212,7 @@ fn anchor_provide_to_spec_vault_msg(wallet_acc_address: &str, anc_to_keep: Decim
             slippage_tolerance: cosmwasm_std::Decimal::from_str("0.01").unwrap(),
             compound_rate: Some(cosmwasm_std::Decimal::percent(100u64)),
             staker_addr: None,
+            asset_token: None,
         };
 
         let execute_msg_json = serde_json::to_string(&execute_msg)?; 

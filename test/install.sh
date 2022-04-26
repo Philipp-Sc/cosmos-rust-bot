@@ -59,37 +59,47 @@ cd ../../;
 
 cp $MYPATH/bin/ctlscript.sh ./build/bin/;
 
+
+WD=$(pwd)
+
+cargo update;
+cd $MYPATH/packages/terra-rust-api-layer;cargo update;
+cd ../terra-rust-bot-essentials;cargo update;
+cd ../terra-rust-bot-output;cargo update;
+cd ../terra-rust-signal-bot;cargo update;
+cd $WD;
+
+rm -rf $MYPATH/target;
+rm -rf $MYPATH/packages/terra-rust-bot-output/target;
+rm -rf $MYPATH/packages/terra-rust-bot-essentials/target;
+rm -rf $MYPATH/packages/terra-rust-signal-bot/target;
+
+
 case $3 in
 	"all")
 	# includes signal-bot, includes terra-rust-bot-output
-  $MYPATH/install.sh $1 $2;
-  # rm -rf $MYPATH/target;
-  $MYPATH/packages/terra-rust-bot-output/install.sh $1 $2;
-  # rm -rf $MYPATH/packages/terra-rust-bot-output/target;
-  $MYPATH/packages/terra-rust-signal-bot/install.sh $1 $2;
-  # rm -rf $MYPATH/packages/terra-rust-signal-bot/target;
+	$MYPATH/install.sh $1 $2;
+	$MYPATH/packages/terra-rust-bot-output/install.sh $1 $2;
+	$MYPATH/packages/terra-rust-signal-bot/install.sh $1 $2;
 
-  cp $MYPATH/{my-bot,run.sh,stop.sh,terra-rust-bot.json} ./build/;
-  cp $MYPATH/packages/terra-rust-bot-output/my-bot-output ./build/packages/terra-rust-bot-output/;
-  cp $MYPATH/packages/terra-rust-signal-bot/{terra-rust-signal-bot,signal-bot.sh,always-run.sh,run.sh,stop.sh} ./build/packages/terra-rust-signal-bot/;
+	cp $MYPATH/{my-bot,run.sh,stop.sh,terra-rust-bot.json} ./build/;
+	cp $MYPATH/packages/terra-rust-bot-output/my-bot-output ./build/packages/terra-rust-bot-output/;
+	cp $MYPATH/packages/terra-rust-signal-bot/{terra-rust-signal-bot,signal-bot.sh,always-run.sh,run.sh,stop.sh} ./build/packages/terra-rust-signal-bot/;
 	;;
 
 	"default")
 	# excludes signal-bot, includes terra-rust-bot-output
-  $MYPATH/install.sh $1 $2;
-  # rm -rf $MYPATH/target;
-  $MYPATH/packages/terra-rust-bot-output/install.sh $1 $2;
-  # rm -rf $MYPATH/packages/terra-rust-bot-output/target;
+	$MYPATH/install.sh $1 $2;
+	$MYPATH/packages/terra-rust-bot-output/install.sh $1 $2;
 
-  cp $MYPATH/{my-bot,run.sh,stop.sh,terra-rust-bot.json} ./build/;
-  cp $MYPATH/packages/terra-rust-bot-output/my-bot-output ./build/packages/terra-rust-bot-output/;
+  	cp $MYPATH/{my-bot,run.sh,stop.sh,terra-rust-bot.json} ./build/;
+  	cp $MYPATH/packages/terra-rust-bot-output/my-bot-output ./build/packages/terra-rust-bot-output/;
 	;;
 
 	"minimal")
 	# only terra-rust-bot
 	$MYPATH/install.sh $1 $2;
-  # rm -rf $MYPATH/target;
-  cp $MYPATH/{my-bot,run.sh,stop.sh,terra-rust-bot.json} ./build/;
+	cp $MYPATH/{my-bot,run.sh,stop.sh,terra-rust-bot.json} ./build/;
 	;;
 
 	"")
