@@ -7,6 +7,8 @@ echo "updated wallet.rs"
 
 export LITCRYPT_ENCRYPT_KEY=$(openssl rand -hex 256)
 
+export RUSTFLAGS="--cfg tokio_unstable"
+
 case $1 in
 	"dev")
 	echo "development build"

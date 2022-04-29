@@ -53,11 +53,11 @@ pub async fn query_api_spec_anc_ust_lp_reward() ->  anyhow::Result<ResponseResul
 
 
 
-pub async fn query_anchor_airdrops(wallet_acc_address: &str) ->  anyhow::Result<ResponseResult> {
+pub async fn query_anchor_airdrops(wallet_acc_address: String) ->  anyhow::Result<ResponseResult> {
     let res: String = query_api(&format!("{}/api/get?address={}&chainId=columbus-4",get_anchorprotocol_airdrop_api(),wallet_acc_address)).await?;
     let mut res: AnchorAirdrops = serde_json::from_str(&res)?;
     for i in 0..res.len() {
-        res[i].claimable = match airdrop_is_claimed(wallet_acc_address,res[i].stage).await {
+        res[i].claimable = match airdrop_is_claimed(wallet_acc_address.as_str(),res[i].stage).await {
             Ok(response_result) => {response_result.as_is_claimed_response().unwrap().result.is_claimed == false},
             Err(_) => {false},
         };

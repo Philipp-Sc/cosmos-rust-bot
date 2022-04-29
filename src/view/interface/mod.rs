@@ -5,17 +5,17 @@
  */
 
 
-use crate::state::control::model::{get_resolved,Maybe,MaybeOrPromise};
+use crate::state::control::model::{Maybe, try_get_resolved};
 
 use std::collections::HashMap;
 use rust_decimal::Decimal;
 use core::str::FromStr;
 use num_format::{Locale, ToFormattedString};
 use std::sync::Arc;
-use tokio::sync::RwLock;
+use tokio::sync::{Mutex};
 
 use chrono::Utc;
-
+use terra_rust_api_layer::services::blockchain::smart_contracts::objects::ResponseResult;
 
 
 pub mod interface_macro {
@@ -40,7 +40,7 @@ use interface_macro::maybe_struct;
 
 macro_rules! try_get_data_by_key {
     ( $e:expr, $d:expr ) => {
-        match get_resolved($e,$d).await {
+        match try_get_resolved($e,$d).await {
             Maybe{data: Ok(response_result),timestamp: t} => {
                 (response_result,t)
             },
@@ -112,15 +112,15 @@ macro_rules! to_percentage_and_round {
     }
 }
 
-pub async fn tax_rate_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> Maybe<String> {
-    let (response_result,timestamp) = try_get_data_by_key!(&tasks,"tax_rate");
+pub async fn tax_rate_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, digits_rounded_to: u32) -> Maybe<String> {
+    let (response_result,timestamp) = try_get_data_by_key!(&maybes,"tax_rate");
     let value = &response_result.as_tax_rate().unwrap().result;
     let data = try_convert_and_round!(&value,"is_human_readable",false, digits_rounded_to);
     maybe_struct!((Some(data),Some(timestamp)))
 }
 
-pub async fn uusd_tax_cap_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,as_micro:bool, digits_rounded_to: u32) -> Maybe<String> {
-    let (response_result,timestamp) = try_get_data_by_key!(&tasks,"tax_caps");
+pub async fn uusd_tax_cap_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>,as_micro:bool, digits_rounded_to: u32) -> Maybe<String> {
+    let (response_result,timestamp) = try_get_data_by_key!(&maybes,"tax_caps");
     let vec_tax_caps = &response_result.as_tax_caps().unwrap().result;
     for tax_cap in vec_tax_caps {
         if tax_cap.denom == "uusd".to_string() {
@@ -140,42 +140,42 @@ pub async fn uusd_tax_cap_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPro
  * trigger_percentage
  * max_tx_fee
  * */
-pub async fn meta_data_key_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: &str, as_micro: bool, digits_rounded_to: u32) -> Maybe<String> {
-    let (response_result,timestamp) = try_get_data_by_key!(&tasks,key);
+pub async fn meta_data_key_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, key: &str, as_micro: bool, digits_rounded_to: u32) -> Maybe<String> {
+    let (response_result,timestamp) = try_get_data_by_key!(&maybes,key);
     let data = try_convert_and_round!(&response_result.as_text().unwrap(),"is_human_readable",as_micro,digits_rounded_to);
     maybe_struct!((Some(data),Some(timestamp)))
 }
 
-pub async fn anc_staked_balance_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> Maybe<String> {
-    let (response_result,timestamp) = try_get_data_by_key!(&tasks,"staker");
+pub async fn anc_staked_balance_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, digits_rounded_to: u32) -> Maybe<String> {
+    let (response_result,timestamp) = try_get_data_by_key!(&maybes,"staker");
     let value = response_result.as_staker().unwrap().result.balance.to_string();
     let data = try_convert_and_round!(&value,"is_micro",false,digits_rounded_to);
     maybe_struct!((Some(data),Some(timestamp)))
 }
 
-pub async fn borrower_rewards_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, as_micro: bool, digits_rounded_to: u32) -> Maybe<String> {
-    let (response_result,timestamp) = try_get_data_by_key!(&tasks,"borrow_info");
+pub async fn borrower_rewards_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, as_micro: bool, digits_rounded_to: u32) -> Maybe<String> {
+    let (response_result,timestamp) = try_get_data_by_key!(&maybes,"borrow_info");
     let value = response_result.as_borrow_info().unwrap().result.pending_rewards.to_string();
     let data = try_convert_and_round!(&value,"is_micro",as_micro,digits_rounded_to);
     maybe_struct!((Some(data),Some(timestamp)))
 }
 
-pub async fn borrower_anc_deposited_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, as_micro: bool, digits_rounded_to: u32) -> Maybe<String> {
-    let (response_result,timestamp) = try_get_data_by_key!(&tasks,"anc_balance");
+pub async fn borrower_anc_deposited_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, as_micro: bool, digits_rounded_to: u32) -> Maybe<String> {
+    let (response_result,timestamp) = try_get_data_by_key!(&maybes,"anc_balance");
     let value = response_result.as_balance().unwrap().result.balance.to_string();
     let data = try_convert_and_round!(&value,"is_micro",as_micro,digits_rounded_to);
     maybe_struct!((Some(data),Some(timestamp)))
 }
 
-pub async fn borrower_balance_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, as_micro: bool, digits_rounded_to: u32) -> Maybe<String> {
-    let (response_result,timestamp) = try_get_data_by_key!(&tasks,"balance");
+pub async fn borrower_balance_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, as_micro: bool, digits_rounded_to: u32) -> Maybe<String> {
+    let (response_result,timestamp) = try_get_data_by_key!(&maybes,"balance");
     let value = response_result.as_balance().unwrap().result.balance.to_string();
     let data = try_convert_and_round!(&value,"is_micro",as_micro,digits_rounded_to);
     maybe_struct!((Some(data),Some(timestamp)))
 }
 
-pub async fn terra_balance_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, denom: &str, as_micro: bool, digits_rounded_to: u32) -> Maybe<String> {
-    match get_resolved(&tasks,"terra_balances").await {
+pub async fn terra_balance_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, denom: &str, as_micro: bool, digits_rounded_to: u32) -> Maybe<String> {
+    match try_get_resolved(&maybes,"terra_balances").await {
         Maybe{data:Ok(response_result),timestamp} => {
             let vector_balances = &response_result.as_balances().unwrap().result;
             for balance in vector_balances {
@@ -201,43 +201,43 @@ pub async fn terra_balance_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPr
     return maybe_struct!((None,None));
 }
 
-pub async fn borrower_loan_amount_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, as_micro: bool, digits_rounded_to: u32) -> Maybe<String> {
-    let (response_result,timestamp) = try_get_data_by_key!(&tasks,"borrow_info");
+pub async fn borrower_loan_amount_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, as_micro: bool, digits_rounded_to: u32) -> Maybe<String> {
+    let (response_result,timestamp) = try_get_data_by_key!(&maybes,"borrow_info");
     let value = response_result.as_borrow_info().unwrap().result.loan_amount.to_string();
     let data = try_convert_and_round!(&value,"is_micro",as_micro,digits_rounded_to);
     maybe_struct!((Some(data),Some(timestamp)))
 }
 
-pub async fn borrow_limit_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, as_micro: bool, digits_rounded_to: u32) -> Maybe<String> {
-    let (response_result,timestamp) = try_get_data_by_key!(&tasks,"borrow_limit");
+pub async fn borrow_limit_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, as_micro: bool, digits_rounded_to: u32) -> Maybe<String> {
+    let (response_result,timestamp) = try_get_data_by_key!(&maybes,"borrow_limit");
     let value = response_result.as_borrow_limit().unwrap().result.borrow_limit.to_string();
     let data = try_convert_and_round!(&value,"is_micro",as_micro,digits_rounded_to);
     maybe_struct!((Some(data),Some(timestamp)))
 }
 
-pub async fn earn_apr_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> Maybe<String> {
-    let (response_result,timestamp) = try_get_data_by_key!(&tasks,"earn_apy");
+pub async fn earn_apr_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, digits_rounded_to: u32) -> Maybe<String> {
+    let (response_result,timestamp) = try_get_data_by_key!(&maybes,"earn_apy");
     let value = response_result.as_earn_apy().unwrap().result.apy.to_string();
     let data = to_percentage_and_round!(&value,digits_rounded_to);
     maybe_struct!((Some(data),Some(timestamp)))
 }
 
-pub async fn distribution_apr_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> Maybe<String> {
-    let (response_result,timestamp) = try_get_data_by_key!(&tasks,"api/v2/distribution-apy");
+pub async fn distribution_apr_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, digits_rounded_to: u32) -> Maybe<String> {
+    let (response_result,timestamp) = try_get_data_by_key!(&maybes,"api/v2/distribution-apy");
     let value = response_result.as_distribution_apy().unwrap().distribution_apy.to_string();
     let data = to_percentage_and_round!(&value,digits_rounded_to);
     maybe_struct!((Some(data),Some(timestamp)))
 }
 
-pub async fn gas_price_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> Maybe<String> {
-    let (response_result,timestamp) = try_get_data_by_key!(&tasks,"gas_fees_uusd");
+pub async fn gas_price_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, digits_rounded_to: u32) -> Maybe<String> {
+    let (response_result,timestamp) = try_get_data_by_key!(&maybes,"gas_fees_uusd");
     let value = response_result.as_text().unwrap();
     let data = try_convert_and_round!(&value,"is_human_readable",false,digits_rounded_to);
     maybe_struct!((Some(data),Some(timestamp)))
 }
 
-pub async fn spec_anc_ust_lp_apy_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> Maybe<String> {
-    let (response_result,timestamp) = try_get_data_by_key!(&tasks,"api/data?type=lpVault");
+pub async fn spec_anc_ust_lp_apy_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, digits_rounded_to: u32) -> Maybe<String> {
+    let (response_result,timestamp) = try_get_data_by_key!(&maybes,"api/data?type=lpVault");
     let dpr = response_result.as_spec_astro_vault().unwrap().dpr.to_string();
     let value = Decimal::from_str(dpr.as_str()).unwrap()
         .checked_mul(Decimal::from_str("365").unwrap()).unwrap()
@@ -246,22 +246,22 @@ pub async fn spec_anc_ust_lp_apy_to_string(tasks: Arc<RwLock<HashMap<String, May
     maybe_struct!((Some(data),Some(timestamp)))
 }
 
-pub async fn anc_ust_lp_apy_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> Maybe<String> {
-    let (response_result,timestamp) = try_get_data_by_key!(&tasks,"api/v2/ust-lp-reward");
+pub async fn anc_ust_lp_apy_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, digits_rounded_to: u32) -> Maybe<String> {
+    let (response_result,timestamp) = try_get_data_by_key!(&maybes,"api/v2/ust-lp-reward");
     let value = response_result.as_lp_reward().unwrap().apy.to_string();
     let data = to_percentage_and_round!(&value,digits_rounded_to);
     maybe_struct!((Some(data),Some(timestamp)))
 }
 
-pub async fn staking_apy_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> Maybe<String> {
-    let (response_result,timestamp) = try_get_data_by_key!(&tasks,"api/v2/gov-reward");
+pub async fn staking_apy_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, digits_rounded_to: u32) -> Maybe<String> {
+    let (response_result,timestamp) = try_get_data_by_key!(&maybes,"api/v2/gov-reward");
     let value = response_result.as_gov_reward().unwrap().current_apy.to_string();
     let data = to_percentage_and_round!(&value,digits_rounded_to);
     maybe_struct!((Some(data),Some(timestamp)))
 }
 
-pub async fn max_ltv_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,key: &str, digits_rounded_to: u32) -> Maybe<String> {
-    let (response_result,timestamp) = try_get_data_by_key!(&tasks,"anchor_protocol_whitelist");
+pub async fn max_ltv_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>,key: &str, digits_rounded_to: u32) -> Maybe<String> {
+    let (response_result,timestamp) = try_get_data_by_key!(&maybes,"anchor_protocol_whitelist");
     let anchor_asstes = &response_result.as_anchor_whitelist_response().unwrap().result.elems;
     for i in 0..anchor_asstes.len() {
         if &anchor_asstes[i].symbol == key {
@@ -273,73 +273,73 @@ pub async fn max_ltv_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>
     maybe_struct!((None,None))
 }
 
-pub async fn interest_multiplier_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> Maybe<String> {
-    let (response_result,timestamp) = try_get_data_by_key!(&tasks,"config anchorprotocol mmInterestModel");
+pub async fn interest_multiplier_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, digits_rounded_to: u32) -> Maybe<String> {
+    let (response_result,timestamp) = try_get_data_by_key!(&maybes,"config anchorprotocol mmInterestModel");
     let value = response_result.as_config().unwrap().as_mm_interest_model().unwrap().result.interest_multiplier.to_string();
     let data = try_convert_and_round!(&value,"is_human_readable",false,digits_rounded_to);
     maybe_struct!((Some(data),Some(timestamp)))
 }
 
-pub async fn blocks_per_year_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> Maybe<String> {
-    let (response_result,timestamp) = try_get_data_by_key!(&tasks,"blocks_per_year");
+pub async fn blocks_per_year_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, digits_rounded_to: u32) -> Maybe<String> {
+    let (response_result,timestamp) = try_get_data_by_key!(&maybes,"blocks_per_year");
     let value = response_result.as_blocks().unwrap().result.blocks_per_year.to_string();
     let data = try_convert_and_round!(&value,"is_human_readable",false,digits_rounded_to);
     maybe_struct!((Some(data),Some(timestamp)))
 }
 
-pub async fn base_rate_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> Maybe<String> {
-    let (response_result,timestamp) = try_get_data_by_key!(&tasks,"config anchorprotocol mmInterestModel");
+pub async fn base_rate_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, digits_rounded_to: u32) -> Maybe<String> {
+    let (response_result,timestamp) = try_get_data_by_key!(&maybes,"config anchorprotocol mmInterestModel");
     let value = response_result.as_config().unwrap().as_mm_interest_model().unwrap().result.base_rate.to_string();
     let data = try_convert_and_round!(&value,"is_human_readable",false,digits_rounded_to);
     maybe_struct!((Some(data),Some(timestamp)))
 }
 
-pub async fn a_terra_supply_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> Maybe<String> {
-    let (response_result,timestamp) = try_get_data_by_key!(&tasks,"epoch_state anchorprotocol mmMarket");
+pub async fn a_terra_supply_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, digits_rounded_to: u32) -> Maybe<String> {
+    let (response_result,timestamp) = try_get_data_by_key!(&maybes,"epoch_state anchorprotocol mmMarket");
     let res = &response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result;
     let value = (res.aterra_supply / res.exchange_rate).to_string();
     let data = try_convert_and_round!(&value,"is_micro",false,digits_rounded_to).parse::<u128>().unwrap().to_formatted_string(&Locale::en);
     maybe_struct!((Some(data),Some(timestamp)))
 }
 
-pub async fn a_terra_exchange_rate_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> Maybe<String> {
-    let (response_result,timestamp) = try_get_data_by_key!(&tasks,"epoch_state anchorprotocol mmMarket");
+pub async fn a_terra_exchange_rate_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, digits_rounded_to: u32) -> Maybe<String> {
+    let (response_result,timestamp) = try_get_data_by_key!(&maybes,"epoch_state anchorprotocol mmMarket");
     let value = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.exchange_rate.to_string();
     let data = try_convert_and_round!(&value,"is_human_readable",false,digits_rounded_to);
     maybe_struct!((Some(data),Some(timestamp)))
 }
 
-pub async fn b_luna_exchange_rate_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> Maybe<String> {
-    let (response_result,timestamp) = try_get_data_by_key!(&tasks,"state anchorprotocol bLunaHub");
+pub async fn b_luna_exchange_rate_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, digits_rounded_to: u32) -> Maybe<String> {
+    let (response_result,timestamp) = try_get_data_by_key!(&maybes,"state anchorprotocol bLunaHub");
     let value = response_result.as_state().unwrap().as_b_luna_hub().unwrap().result.bluna_exchange_rate.to_string();
     let data = try_convert_and_round!(&value,"is_human_readable",false,digits_rounded_to);
     maybe_struct!((Some(data),Some(timestamp)))
 }
 
-pub async fn total_liabilities_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, digits_rounded_to: u32) -> Maybe<String> {
-    let (response_result,timestamp) = try_get_data_by_key!(&tasks,"state anchorprotocol mmMarket");
+pub async fn total_liabilities_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, digits_rounded_to: u32) -> Maybe<String> {
+    let (response_result,timestamp) = try_get_data_by_key!(&maybes,"state anchorprotocol mmMarket");
     let value = response_result.as_state().unwrap().as_mm_market().unwrap().result.total_liabilities.to_string();
     let data = try_convert_and_round!(&value,"is_micro",false,digits_rounded_to).parse::<u128>().unwrap().to_formatted_string(&Locale::en);
     maybe_struct!((Some(data),Some(timestamp)))
 }
 
-pub async fn simulation_swap_exchange_rate_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: &str, as_micro: bool, digits_rounded_to: u32) -> Maybe<String> {
-    let (response_result,timestamp) = try_get_data_by_key!(&tasks,key);
+pub async fn simulation_swap_exchange_rate_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, key: &str, as_micro: bool, digits_rounded_to: u32) -> Maybe<String> {
+    let (response_result,timestamp) = try_get_data_by_key!(&maybes,key);
     let res = &response_result.as_simulation().unwrap().result;
     let value = (res.return_amount+res.commission_amount).to_string();
     let data = try_convert_and_round!(&value,"is_micro",as_micro,digits_rounded_to);
     maybe_struct!((Some(data),Some(timestamp)))
 }
 
-pub async fn simulation_swap_return_amount_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: &str, as_micro: bool, digits_rounded_to: u32) -> Maybe<String> {
-    let (response_result,timestamp) = try_get_data_by_key!(&tasks,key);
+pub async fn simulation_swap_return_amount_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, key: &str, as_micro: bool, digits_rounded_to: u32) -> Maybe<String> {
+    let (response_result,timestamp) = try_get_data_by_key!(&maybes,key);
     let value = response_result.as_simulation().unwrap().result.return_amount.to_string();
     let data = try_convert_and_round!(&value,"is_micro",as_micro,digits_rounded_to);
     maybe_struct!((Some(data),Some(timestamp)))
 }
 
-pub async fn core_swap_amount_to_string(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, key: &str, digits_rounded_to: u32) -> Maybe<String> {
-    let (response_result,timestamp) = try_get_data_by_key!(&tasks,key);
+pub async fn core_swap_amount_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, key: &str, digits_rounded_to: u32) -> Maybe<String> {
+    let (response_result,timestamp) = try_get_data_by_key!(&maybes,key);
     let value = response_result.as_core_swap().unwrap().result.amount.to_string();
     let data = try_convert_and_round!(&value,"is_micro",false,digits_rounded_to);
     maybe_struct!((Some(data),Some(timestamp)))

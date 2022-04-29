@@ -24,9 +24,8 @@ use crate::state::control::data_is_outdated;
 
 use crate::state::control::model::{
 	Maybe,
-	MaybeOrPromise,
 	register_value, 
-	get_data_maybe_or_meta_data_maybe};
+	try_get_resolved};
 
 use crate::view::interface::*; 
 use interface_macro::maybe_struct;
@@ -38,10 +37,10 @@ use std::collections::HashMap;
 
 
 use std::sync::Arc; 
-use tokio::sync::RwLock; 
+use tokio::sync::{Mutex};
 
 use chrono::Utc;
-
+use terra_rust_api_layer::services::blockchain::smart_contracts::objects::ResponseResult;
 
 
 use crate::state::control::model::wallet::{decrypt_text_with_secret};
@@ -49,21 +48,21 @@ use crate::state::control::model::wallet::{decrypt_text_with_secret};
 
 
  
-pub async fn anchor_claim_and_stake_airdrops(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> Maybe<String> {
-		let max_tx_fee = decimal_or_return!(meta_data_key_to_string(tasks.clone(),"max_tx_fee",false, 4).await);
-		let balance = decimal_or_return!(terra_balance_to_string(tasks.clone(),"uusd",false,2).await);
-	 	let min_ust_balance = decimal_or_return!(meta_data_key_to_string(tasks.clone(),"min_ust_balance",false, 4).await);
+pub async fn anchor_claim_and_stake_airdrops(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>,wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> Maybe<String> {
+		let max_tx_fee = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"max_tx_fee",false, 4).await);
+		let balance = decimal_or_return!(terra_balance_to_string(maybes.clone(),"uusd",false,2).await);
+	 	let min_ust_balance = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"min_ust_balance",false, 4).await);
 
 	 	if balance < min_ust_balance || balance < max_tx_fee {
 	 		return maybe_struct!((Some( "Insufficient UST balance, replenish your account!".to_string()),Some(Utc::now().timestamp())));
 	 	}
 
-	 	if data_is_outdated(&tasks,&["terra_balances","anchor_airdrops"]).await {
+	 	if data_is_outdated(maybes.clone(),&["terra_balances","anchor_airdrops"]).await {
 	 		return maybe_struct!((Some( "waiting for data to refresh..".to_string()),Some(Utc::now().timestamp())));
 	 	}
  
-        match get_data_maybe_or_meta_data_maybe(&tasks,"anchor_airdrops").await {
-            Ok(res) => {
+        match try_get_resolved(&maybes,"anchor_airdrops").await {
+			Maybe{data: Ok(res),..} => {
                 let anchor_airdrops = res.as_airdrop_response().unwrap();  
                 let mut vec_proof = Vec::new();
                 let mut vec_stage = Vec::new();
@@ -78,8 +77,8 @@ pub async fn anchor_claim_and_stake_airdrops(tasks: Arc<RwLock<HashMap<String, M
                 if vec_amount.len() == 0 {
                 	return maybe_struct!((Some( "waiting for airdrops..".to_string()),Some(Utc::now().timestamp())));
                 }
-                let gas_adjustment_preference = decimal_or_return!(meta_data_key_to_string(tasks.clone(),"gas_adjustment_preference",false, 10).await);
-                let gas_fees_uusd = decimal_or_return!(gas_price_to_string(tasks.clone(),10).await);
+                let gas_adjustment_preference = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"gas_adjustment_preference",false, 10).await);
+                let gas_fees_uusd = decimal_or_return!(gas_price_to_string(maybes.clone(),10).await);
 
                 let mnemonics = match only_estimate {
 					true => {wallet_acc_address.unsecure().to_string()},
@@ -88,13 +87,13 @@ pub async fn anchor_claim_and_stake_airdrops(tasks: Arc<RwLock<HashMap<String, M
 
                 match anchor_claim_and_stake_airdrop_tx(&mnemonics,&vec_proof, &vec_stage, &vec_amount, gas_fees_uusd, max_tx_fee, gas_adjustment_preference,only_estimate).await {
 		        	Ok(msg) => {
-		        		register_value(&tasks,"anchor_auto_stake_airdrops".to_string(),msg.to_owned()).await;
-		        		register_value(&tasks,"latest_transaction".to_string(),msg.to_owned()).await;
+		        		register_value(&maybes,"anchor_auto_stake_airdrops".to_string(),msg.to_owned()).await;
+		        		register_value(&maybes,"latest_transaction".to_string(),msg.to_owned()).await;
 		        		return maybe_struct!((Some( msg),Some(Utc::now().timestamp())));
 		        	},
 		        	Err(msg) => {
-		        		register_value(&tasks,"anchor_auto_stake_airdrops".to_string(),msg.to_string().to_owned()).await;
-		        		register_value(&tasks,"latest_transaction".to_string(),msg.to_string().to_owned()).await;
+		        		register_value(&maybes,"anchor_auto_stake_airdrops".to_string(),msg.to_string().to_owned()).await;
+		        		register_value(&maybes,"latest_transaction".to_string(),msg.to_string().to_owned()).await;
 		        		return maybe_struct!((Some( msg.to_string()),Some(Utc::now().timestamp())));
 		        	}
 		        }; 
@@ -105,7 +104,7 @@ pub async fn anchor_claim_and_stake_airdrops(tasks: Arc<RwLock<HashMap<String, M
 
  				// get an estimate
             },
-            Err(err) => {
+			Maybe { data: Err(err), .. } => {
                 return maybe_struct!((Some( format!("{:?}",err)),Some(Utc::now().timestamp())));
             }
         } 
@@ -114,11 +113,11 @@ pub async fn anchor_claim_and_stake_airdrops(tasks: Arc<RwLock<HashMap<String, M
 
 
 
-pub async fn anchor_borrow_and_deposit_stable(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> Maybe<String> {
+pub async fn anchor_borrow_and_deposit_stable(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> Maybe<String> {
 
-	let max_tx_fee = decimal_or_return!(meta_data_key_to_string(tasks.clone(),"max_tx_fee",false, 4).await);
-	let balance = decimal_or_return!(terra_balance_to_string(tasks.clone(),"uusd",false,2).await);
- 	let min_ust_balance = decimal_or_return!(meta_data_key_to_string(tasks.clone(),"min_ust_balance",false, 4).await);
+	let max_tx_fee = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"max_tx_fee",false, 4).await);
+	let balance = decimal_or_return!(terra_balance_to_string(maybes.clone(),"uusd",false,2).await);
+ 	let min_ust_balance = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"min_ust_balance",false, 4).await);
 
  	if balance < min_ust_balance || balance < max_tx_fee {
  		return maybe_struct!((Some( "Insufficient UST balance, replenish your account!".to_string()),Some(Utc::now().timestamp())));
@@ -126,15 +125,15 @@ pub async fn anchor_borrow_and_deposit_stable(tasks: Arc<RwLock<HashMap<String, 
  
     let micro = Decimal::from_str("1000000").unwrap();
     
-    let to_borrow = decimal_or_return!(calculate_amount(tasks.clone(),"borrow",true,0).await);
+    let to_borrow = decimal_or_return!(calculate_amount(maybes.clone(),"borrow",true,0).await);
     /* to deposit is "--" if fees can not be paid, therefore this function returns here.*/
-    let to_deposit = decimal_or_return!(calculate_borrow_plan(tasks.clone(),"to_deposit",2).await)
+    let to_deposit = decimal_or_return!(calculate_borrow_plan(maybes.clone(),"to_deposit",2).await)
     							.checked_mul(micro).unwrap()
 								.round_dp_with_strategy(0, rust_decimal::RoundingStrategy::ToZero);
 
-    let gas_fees_uusd = decimal_or_return!(gas_price_to_string(tasks.clone(),10).await);
+    let gas_fees_uusd = decimal_or_return!(gas_price_to_string(maybes.clone(),10).await);
 
- 	match check_anchor_loan_status(tasks.clone(),"borrow",2).await.data.unwrap_or("--".to_string()).as_ref() {
+ 	match check_anchor_loan_status(maybes.clone(),"borrow",2).await.data.unwrap_or("--".to_string()).as_ref() {
 	    	"borrow due" => {},
 	    	_ => {
 	    		if !only_estimate {
@@ -143,11 +142,11 @@ pub async fn anchor_borrow_and_deposit_stable(tasks: Arc<RwLock<HashMap<String, 
 	    	}
 	};
  
-	if data_is_outdated(&tasks,&["terra_balances","borrow_limit","borrow_info","balance"]).await {
+	if data_is_outdated(maybes.clone(),&["terra_balances","borrow_limit","borrow_info","balance"]).await {
 	 		return maybe_struct!((Some( "waiting for data to refresh..".to_string()),Some(Utc::now().timestamp())));
 	}
 
-	let gas_adjustment_preference = decimal_or_return!(meta_data_key_to_string(tasks.clone(),"gas_adjustment_preference",false, 10).await);
+	let gas_adjustment_preference = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"gas_adjustment_preference",false, 10).await);
 
 	let mnemonics = match only_estimate {
 		true => {wallet_acc_address.unsecure().to_string()},
@@ -156,23 +155,23 @@ pub async fn anchor_borrow_and_deposit_stable(tasks: Arc<RwLock<HashMap<String, 
 
     match anchor_borrow_and_deposit_stable_tx(&mnemonics, to_borrow, to_deposit, gas_fees_uusd,  max_tx_fee, gas_adjustment_preference, only_estimate).await {
         	Ok(msg) => {
-        		register_value(&tasks,"anchor_borrow_and_deposit_stable".to_string(),msg.to_owned()).await;
-        		register_value(&tasks,"latest_transaction".to_string(),msg.to_owned()).await;
+        		register_value(&maybes,"anchor_borrow_and_deposit_stable".to_string(),msg.to_owned()).await;
+        		register_value(&maybes,"latest_transaction".to_string(),msg.to_owned()).await;
         		return maybe_struct!((Some( msg),Some(Utc::now().timestamp())));
         	},
         	Err(msg) => {
-        		register_value(&tasks,"anchor_borrow_and_deposit_stable".to_string(),msg.to_string().to_owned()).await;
-        		register_value(&tasks,"latest_transaction".to_string(),msg.to_string().to_owned()).await;
+        		register_value(&maybes,"anchor_borrow_and_deposit_stable".to_string(),msg.to_string().to_owned()).await;
+        		register_value(&maybes,"latest_transaction".to_string(),msg.to_string().to_owned()).await;
         		return maybe_struct!((Some( msg.to_string()),Some(Utc::now().timestamp())));
         	}
         }  
 }
 
 
-pub async fn anchor_redeem_and_repay_stable(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> Maybe<String> {
-    let max_tx_fee = decimal_or_return!(meta_data_key_to_string(tasks.clone(),"max_tx_fee",false, 4).await);
-	let balance = decimal_or_return!(terra_balance_to_string(tasks.clone(),"uusd",false,2).await);
- 	let min_ust_balance = decimal_or_return!(meta_data_key_to_string(tasks.clone(),"min_ust_balance",false, 4).await);
+pub async fn anchor_redeem_and_repay_stable(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> Maybe<String> {
+    let max_tx_fee = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"max_tx_fee",false, 4).await);
+	let balance = decimal_or_return!(terra_balance_to_string(maybes.clone(),"uusd",false,2).await);
+ 	let min_ust_balance = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"min_ust_balance",false, 4).await);
 
  	if balance < min_ust_balance || balance < max_tx_fee {
  		return maybe_struct!((Some( "Insufficient UST balance, replenish your account!".to_string()),Some(Utc::now().timestamp())));
@@ -181,20 +180,20 @@ pub async fn anchor_redeem_and_repay_stable(tasks: Arc<RwLock<HashMap<String, Ma
     let zero = Decimal::from_str("0").unwrap(); 
     let micro = Decimal::from_str("1000000").unwrap();
     
-    let exchange_rate = decimal_or_return!(a_terra_exchange_rate_to_string(tasks.clone(),10).await);
+    let exchange_rate = decimal_or_return!(a_terra_exchange_rate_to_string(maybes.clone(),10).await);
    
-	let to_withdraw_from_deposit = decimal_or_return!(calculate_repay_plan(tasks.clone(),"to_withdraw_from_deposit",2).await)
+	let to_withdraw_from_deposit = decimal_or_return!(calculate_repay_plan(maybes.clone(),"to_withdraw_from_deposit",2).await)
 								   .checked_div(exchange_rate).unwrap()
 								   .checked_mul(micro).unwrap()
 								   .round_dp_with_strategy(0, rust_decimal::RoundingStrategy::ToZero);
 
-    let to_repay = decimal_or_return!(calculate_repay_plan(tasks.clone(),"to_repay",2).await)
+    let to_repay = decimal_or_return!(calculate_repay_plan(maybes.clone(),"to_repay",2).await)
     			   .checked_mul(micro).unwrap()
 				   .round_dp_with_strategy(0, rust_decimal::RoundingStrategy::ToZero);
 
-    let gas_fees_uusd = decimal_or_return!(gas_price_to_string(tasks.clone(),10).await);
+    let gas_fees_uusd = decimal_or_return!(gas_price_to_string(maybes.clone(),10).await);
 
-    match check_anchor_loan_status(tasks.clone(),"repay",2).await.data.unwrap_or("--".to_string()).as_ref() {
+    match check_anchor_loan_status(maybes.clone(),"repay",2).await.data.unwrap_or("--".to_string()).as_ref() {
 	    	"repay due" => {},
 	    	_ => {
 	    		if !only_estimate {
@@ -203,14 +202,14 @@ pub async fn anchor_redeem_and_repay_stable(tasks: Arc<RwLock<HashMap<String, Ma
 	    	}
 	};
 
-	if data_is_outdated(&tasks,&["terra_balances","borrow_limit","borrow_info","balance"]).await {
+	if data_is_outdated(maybes.clone(),&["terra_balances","borrow_limit","borrow_info","balance"]).await {
 	 		return maybe_struct!((Some( "waiting for data to refresh..".to_string()),Some(Utc::now().timestamp())));
 	}
 	
     if to_withdraw_from_deposit > zero && to_repay > zero {
   
  
-		let gas_adjustment_preference = decimal_or_return!(meta_data_key_to_string(tasks.clone(),"gas_adjustment_preference",false, 10).await);
+		let gas_adjustment_preference = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"gas_adjustment_preference",false, 10).await);
 		 
 		let mnemonics = match only_estimate {
 			true => {wallet_acc_address.unsecure().to_string()},
@@ -219,13 +218,13 @@ pub async fn anchor_redeem_and_repay_stable(tasks: Arc<RwLock<HashMap<String, Ma
 
         match anchor_redeem_and_repay_stable_tx(&mnemonics,to_withdraw_from_deposit,to_repay,gas_fees_uusd,  max_tx_fee, gas_adjustment_preference, only_estimate).await {
         	Ok(msg) => {
-        		register_value(&tasks,"anchor_redeem_and_repay_stable".to_string(),msg.to_owned()).await;
-        		register_value(&tasks,"latest_transaction".to_string(),msg.to_owned()).await;
+        		register_value(&maybes,"anchor_redeem_and_repay_stable".to_string(),msg.to_owned()).await;
+        		register_value(&maybes,"latest_transaction".to_string(),msg.to_owned()).await;
         		return maybe_struct!((Some( msg),Some(Utc::now().timestamp())));
         	},
         	Err(msg) => {
-        		register_value(&tasks,"anchor_redeem_and_repay_stable".to_string(),msg.to_string().to_owned()).await;
-        		register_value(&tasks,"latest_transaction".to_string(),msg.to_string().to_owned()).await;
+        		register_value(&maybes,"anchor_redeem_and_repay_stable".to_string(),msg.to_string().to_owned()).await;
+        		register_value(&maybes,"latest_transaction".to_string(),msg.to_string().to_owned()).await;
         		return maybe_struct!((Some( msg.to_string()),Some(Utc::now().timestamp())));
         	}
         }  
@@ -233,7 +232,7 @@ pub async fn anchor_redeem_and_repay_stable(tasks: Arc<RwLock<HashMap<String, Ma
 	}else if to_repay > zero {
 		// no redeem, just repay. 
 
-		let gas_adjustment_preference = decimal_or_return!(meta_data_key_to_string(tasks.clone(),"gas_adjustment_preference",false, 10).await);
+		let gas_adjustment_preference = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"gas_adjustment_preference",false, 10).await);
 		  
 		let mnemonics = match only_estimate {
 			true => {wallet_acc_address.unsecure().to_string()},
@@ -242,13 +241,13 @@ pub async fn anchor_redeem_and_repay_stable(tasks: Arc<RwLock<HashMap<String, Ma
 
         match anchor_repay_stable_tx(&mnemonics, to_repay, gas_fees_uusd, max_tx_fee, gas_adjustment_preference, only_estimate).await {
         	Ok(msg) => {
-        		register_value(&tasks,"anchor_redeem_and_repay_stable".to_string(),msg.to_owned()).await;
-        		register_value(&tasks,"latest_transaction".to_string(),msg.to_owned()).await;
+        		register_value(&maybes,"anchor_redeem_and_repay_stable".to_string(),msg.to_owned()).await;
+        		register_value(&maybes,"latest_transaction".to_string(),msg.to_owned()).await;
         		return maybe_struct!((Some( msg),Some(Utc::now().timestamp())));
         	},
         	Err(msg) => {
-        		register_value(&tasks,"anchor_redeem_and_repay_stable".to_string(),msg.to_string().to_owned()).await;
-        		register_value(&tasks,"latest_transaction".to_string(),msg.to_string().to_owned()).await;
+        		register_value(&maybes,"anchor_redeem_and_repay_stable".to_string(),msg.to_string().to_owned()).await;
+        		register_value(&maybes,"latest_transaction".to_string(),msg.to_string().to_owned()).await;
         		return maybe_struct!((Some( msg.to_string()),Some(Utc::now().timestamp())));
         	}
         }
@@ -259,32 +258,32 @@ pub async fn anchor_redeem_and_repay_stable(tasks: Arc<RwLock<HashMap<String, Ma
 }
 
 
-pub async fn anchor_borrow_claim_and_farm_rewards(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> Maybe<String> {
-		let max_tx_fee = decimal_or_return!(meta_data_key_to_string(tasks.clone(),"max_tx_fee",false, 4).await);
-		let balance = decimal_or_return!(terra_balance_to_string(tasks.clone(),"uusd",false,2).await);
-	 	let min_ust_balance = decimal_or_return!(meta_data_key_to_string(tasks.clone(),"min_ust_balance",false, 4).await);
+pub async fn anchor_borrow_claim_and_farm_rewards(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> Maybe<String> {
+		let max_tx_fee = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"max_tx_fee",false, 4).await);
+		let balance = decimal_or_return!(terra_balance_to_string(maybes.clone(),"uusd",false,2).await);
+	 	let min_ust_balance = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"min_ust_balance",false, 4).await);
 
-	 	if data_is_outdated(&tasks,&["terra_balances","borrow_limit","borrow_info"]).await {
+	 	if data_is_outdated(maybes.clone(),&["terra_balances","borrow_limit","borrow_info"]).await {
 	 		return maybe_struct!((Some( "waiting for data to refresh..".to_string()),Some(Utc::now().timestamp())));
 		}
 
 	 	if balance < min_ust_balance || balance < max_tx_fee {
 	 		return maybe_struct!((Some( "Insufficient UST balance, replenish your account!".to_string()),Some(Utc::now().timestamp())));
 	 	}
-	 	match estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"farming","loan_amount","date_next",2).await.data.unwrap_or("--".to_string()).as_ref() {
+	 	match estimate_anchor_protocol_next_claim_and_stake_tx(maybes.clone(),"farming","loan_amount","date_next",2).await.data.unwrap_or("--".to_string()).as_ref() {
 	 		"now" => {},
 	 		 _ => {
 	 		 	return maybe_struct!((Some( "waiting..".to_string()),Some(Utc::now().timestamp())));
 	 			}
 	 	} 
 	
-		let gas_adjustment_preference = decimal_or_return!(meta_data_key_to_string(tasks.clone(),"gas_adjustment_preference",false, 10).await);
+		let gas_adjustment_preference = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"gas_adjustment_preference",false, 10).await);
 
-	    let anc_to_swap = decimal_or_return!(calculate_farm_plan(tasks.clone(),"anc_to_swap",true,0).await);
+	    let anc_to_swap = decimal_or_return!(calculate_farm_plan(maybes.clone(),"anc_to_swap",true,0).await);
 
-	    let anc_to_keep = decimal_or_return!(calculate_farm_plan(tasks.clone(),"anc_to_keep",true,0).await);
+	    let anc_to_keep = decimal_or_return!(calculate_farm_plan(maybes.clone(),"anc_to_keep",true,0).await);
 	
-	    let exchange_rate = decimal_or_return!(simulation_swap_exchange_rate_to_string(tasks.clone(),"simulation_cw20 anchorprotocol ANC terraswapAncUstPair",false,10).await);
+	    let exchange_rate = decimal_or_return!(simulation_swap_exchange_rate_to_string(maybes.clone(),"simulation_cw20 anchorprotocol ANC terraswapAncUstPair",false,10).await);
    
 	    let ust_to_keep = anc_to_keep.checked_mul(exchange_rate).unwrap().round_dp_with_strategy(0, rust_decimal::RoundingStrategy::ToZero);
 
@@ -294,11 +293,11 @@ pub async fn anchor_borrow_claim_and_farm_rewards(tasks: Arc<RwLock<HashMap<Stri
 	    	return maybe_struct!((Some( "waiting..".to_string()),Some(Utc::now().timestamp())));
 	    }
 
-	    let belief_price = decimal_or_return!(simulation_swap_exchange_rate_to_string(tasks.clone(),"simulation_cw20 anchorprotocol ANC terraswapAncUstPair",false,10).await);
+	    let belief_price = decimal_or_return!(simulation_swap_exchange_rate_to_string(maybes.clone(),"simulation_cw20 anchorprotocol ANC terraswapAncUstPair",false,10).await);
 
 	    let max_spread = Decimal::from_str("0.001").unwrap();
 
-        let gas_fees_uusd = decimal_or_return!(gas_price_to_string(tasks.clone(),10).await);
+        let gas_fees_uusd = decimal_or_return!(gas_price_to_string(maybes.clone(),10).await);
 
 		let mnemonics = match only_estimate {
 			true => {wallet_acc_address.unsecure().to_string()},
@@ -308,31 +307,31 @@ pub async fn anchor_borrow_claim_and_farm_rewards(tasks: Arc<RwLock<HashMap<Stri
 	 	// prepare input params, then meta execute msg.
 	    match anchor_governance_claim_and_provide_to_spec_vault(&mnemonics, anc_to_keep, ust_to_keep, anc_to_swap, belief_price, max_spread, gas_fees_uusd, max_tx_fee, gas_adjustment_preference, only_estimate).await {
         	Ok(msg) => {
-        		register_value(&tasks,"anchor_governance_claim_and_farm".to_string(),msg.to_owned()).await;
-        		register_value(&tasks,"latest_transaction".to_string(),msg.to_owned()).await;
+        		register_value(&maybes,"anchor_governance_claim_and_farm".to_string(),msg.to_owned()).await;
+        		register_value(&maybes,"latest_transaction".to_string(),msg.to_owned()).await;
         		return maybe_struct!((Some( msg),Some(Utc::now().timestamp())));
         	},
         	Err(msg) => {
-        		register_value(&tasks,"anchor_governance_claim_and_farm".to_string(),msg.to_string().to_owned()).await;
-        		register_value(&tasks,"latest_transaction".to_string(),msg.to_string().to_owned()).await;
+        		register_value(&maybes,"anchor_governance_claim_and_farm".to_string(),msg.to_string().to_owned()).await;
+        		register_value(&maybes,"latest_transaction".to_string(),msg.to_string().to_owned()).await;
         		return maybe_struct!((Some( msg.to_string()),Some(Utc::now().timestamp())));
         	}
         }
 }
 
-pub async fn anchor_borrow_claim_and_stake_rewards(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> Maybe<String> {
-		let max_tx_fee = decimal_or_return!(meta_data_key_to_string(tasks.clone(),"max_tx_fee",false, 4).await);
-		let balance = decimal_or_return!(terra_balance_to_string(tasks.clone(),"uusd",false,2).await);
-	 	let min_ust_balance = decimal_or_return!(meta_data_key_to_string(tasks.clone(),"min_ust_balance",false, 4).await);
+pub async fn anchor_borrow_claim_and_stake_rewards(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> Maybe<String> {
+		let max_tx_fee = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"max_tx_fee",false, 4).await);
+		let balance = decimal_or_return!(terra_balance_to_string(maybes.clone(),"uusd",false,2).await);
+	 	let min_ust_balance = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"min_ust_balance",false, 4).await);
 
-	 	if data_is_outdated(&tasks,&["terra_balances","borrow_limit","borrow_info"]).await {
+	 	if data_is_outdated(maybes.clone(),&["terra_balances","borrow_limit","borrow_info"]).await {
 	 		return maybe_struct!((Some( "waiting for data to refresh..".to_string()),Some(Utc::now().timestamp())));
 		}
 
 	 	if balance < min_ust_balance || balance < max_tx_fee {
 	 		return maybe_struct!((Some( "Insufficient UST balance, replenish your account!".to_string()),Some(Utc::now().timestamp())));
 	 	}
-	 	match estimate_anchor_protocol_next_claim_and_stake_tx(tasks.clone(),"staking","loan_amount","date_next",2).await.data.unwrap_or("--".to_string()).as_ref() {
+	 	match estimate_anchor_protocol_next_claim_and_stake_tx(maybes.clone(),"staking","loan_amount","date_next",2).await.data.unwrap_or("--".to_string()).as_ref() {
 	 		"now" => {},
 	 		 _ => {
 	 		 	return maybe_struct!((Some( "waiting..".to_string()),Some(Utc::now().timestamp())));
@@ -340,10 +339,10 @@ pub async fn anchor_borrow_claim_and_stake_rewards(tasks: Arc<RwLock<HashMap<Str
 	 	};
 
 	
-		let gas_adjustment_preference = decimal_or_return!(meta_data_key_to_string(tasks.clone(),"gas_adjustment_preference",false, 10).await);
+		let gas_adjustment_preference = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"gas_adjustment_preference",false, 10).await);
 
-	    let anc_to_claim = decimal_or_return!(borrower_rewards_to_string(tasks.clone(), true,0).await);
-        let gas_fees_uusd = decimal_or_return!(gas_price_to_string(tasks.clone(),10).await);
+	    let anc_to_claim = decimal_or_return!(borrower_rewards_to_string(maybes.clone(), true,0).await);
+        let gas_fees_uusd = decimal_or_return!(gas_price_to_string(maybes.clone(),10).await);
 
 		let mnemonics = match only_estimate {
 			true => {wallet_acc_address.unsecure().to_string()},
@@ -352,25 +351,25 @@ pub async fn anchor_borrow_claim_and_stake_rewards(tasks: Arc<RwLock<HashMap<Str
 
 	    match anchor_governance_claim_and_stake(&mnemonics, anc_to_claim, gas_fees_uusd, max_tx_fee, gas_adjustment_preference, only_estimate).await {
         	Ok(msg) => {
-        		register_value(&tasks,"anchor_governance_claim_and_stake".to_string(),msg.to_owned()).await;
-        		register_value(&tasks,"latest_transaction".to_string(),msg.to_owned()).await;
+        		register_value(&maybes,"anchor_governance_claim_and_stake".to_string(),msg.to_owned()).await;
+        		register_value(&maybes,"latest_transaction".to_string(),msg.to_owned()).await;
         		return maybe_struct!((Some( msg),Some(Utc::now().timestamp())));
         	},
         	Err(msg) => {
-        		register_value(&tasks,"anchor_governance_claim_and_stake".to_string(),msg.to_string().to_owned()).await;
-        		register_value(&tasks,"latest_transaction".to_string(),msg.to_string().to_owned()).await;
+        		register_value(&maybes,"anchor_governance_claim_and_stake".to_string(),msg.to_string().to_owned()).await;
+        		register_value(&maybes,"latest_transaction".to_string(),msg.to_string().to_owned()).await;
         		return maybe_struct!((Some( msg.to_string()),Some(Utc::now().timestamp())));
         	}
         }
 }
  
-pub async fn anchor_borrow_claim_rewards(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,  wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> Maybe<String> {
+pub async fn anchor_borrow_claim_rewards(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>,  wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> Maybe<String> {
          
-        let max_tx_fee = decimal_or_return!(meta_data_key_to_string(tasks.clone(),"max_tx_fee",false, 4).await);
+        let max_tx_fee = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"max_tx_fee",false, 4).await);
 		 
-		let gas_adjustment_preference = decimal_or_return!(meta_data_key_to_string(tasks.clone(),"gas_adjustment_preference",false, 10).await);
+		let gas_adjustment_preference = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"gas_adjustment_preference",false, 10).await);
   
-        let gas_fees_uusd = decimal_or_return!(gas_price_to_string(tasks.clone(),10).await);
+        let gas_fees_uusd = decimal_or_return!(gas_price_to_string(maybes.clone(),10).await);
 		
 		let mnemonics = match only_estimate {
 			true => {wallet_acc_address.unsecure().to_string()},
@@ -386,15 +385,15 @@ pub async fn anchor_borrow_claim_rewards(tasks: Arc<RwLock<HashMap<String, Maybe
         	}
         }
 }
-pub async fn anchor_governance_stake_balance(tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>>,  wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> Maybe<String> {
+pub async fn anchor_governance_stake_balance(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>,  wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> Maybe<String> {
         
-        let max_tx_fee = decimal_or_return!(meta_data_key_to_string(tasks.clone(),"max_tx_fee",false, 4).await);
+        let max_tx_fee = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"max_tx_fee",false, 4).await);
 
-		let gas_adjustment_preference = decimal_or_return!(meta_data_key_to_string(tasks.clone(),"gas_adjustment_preference",false, 10).await);
+		let gas_adjustment_preference = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"gas_adjustment_preference",false, 10).await);
 	 
-		let anc_balance = decimal_or_return!(borrower_anc_deposited_to_string(tasks.clone(), true,0).await);
+		let anc_balance = decimal_or_return!(borrower_anc_deposited_to_string(maybes.clone(), true,0).await);
   
-		let gas_fees_uusd = decimal_or_return!(gas_price_to_string(tasks.clone(),10).await);
+		let gas_fees_uusd = decimal_or_return!(gas_price_to_string(maybes.clone(),10).await);
 
 		let mnemonics = match only_estimate {
 			true => {wallet_acc_address.unsecure().to_string()},

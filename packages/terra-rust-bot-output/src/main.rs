@@ -42,7 +42,7 @@ async fn main() -> anyhow::Result<()> {
 
             match load_state("./terra-rust-bot-state.json").await {
                 None => {
-                    println!("Unable to load ./terra-rust-bot.json.");
+                    println!("Unable to load ./terra-rust-bot-state.json.");
                 },
                 Some(state) => {
                     match terra_rust_bot_user_settings(&message) {

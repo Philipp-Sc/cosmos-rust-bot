@@ -4,13 +4,23 @@ use rust_decimal::Decimal;
 use std::str::FromStr;
 use std::fs;
 use std::io;
-
+use std::hash::{Hash};
 
 #[derive(Debug)]
 pub struct Maybe<T> {
-    pub data: anyhow::Result<T>,   
+    pub data: anyhow::Result<T>,
     pub timestamp: i64,
 }
+
+impl<T:Clone> Clone for Maybe<T> {
+    fn clone(&self) -> Maybe<T> {
+        match self {
+            Maybe{data: Err(err),timestamp}=> Maybe{data: Err(anyhow::anyhow!(err.to_string())),timestamp:*timestamp},
+            Maybe{data: Ok(value),timestamp}=> Maybe{data: Ok(value.clone()),timestamp:*timestamp},
+        }
+    }
+}
+
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct UserSettings {
@@ -60,8 +70,7 @@ impl Default for UserSettings {
     }
 }
 
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Clone)]
 pub struct Entry {
     pub timestamp: i64,
     pub key: String,

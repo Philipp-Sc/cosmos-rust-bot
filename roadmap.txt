@@ -1,4 +1,3 @@
-
 // roadmap
 
 // TOMORROW - THURSDAY
@@ -11,6 +10,9 @@
 // todo: terra-rust-bot.json require password to use hot_reload or! encrypt same as command.json.
 // todo: this means attacker must use terra-rust-bot tools to change things and therefore needs password.
 // commandline token swap
+
+
+* `allowed_commands:` default `null`, specify a list `["command1","command2",..]` of commands that can be issued via the **command.json** file. (can **not** be updated once terra-rust-bot is started)
 
 
 // todo: IL protection. (Makes Auto Farming viable 5% -> 16%+)

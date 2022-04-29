@@ -12,7 +12,7 @@ name = "terra-rust-bot"
 [dependencies] 
 terra-rust-api-layer = { path = "./packages/terra-rust-api-layer"}
 terra-rust-bot-essentials = { path = "./packages/terra-rust-bot-essentials"}
-tokio = { version = "1.4", features = ["full"] }
+tokio = { version = "1.18", features = ["full"] }
 anyhow="1.0"  
 serde = { version = "1.0", features = ["derive"] } 
 serde_json = "1.0"
@@ -30,8 +30,6 @@ regex = "1.5.5"
 litcrypt = "0.3"
 crossbeam-channel = "0.4.0"
 notify = "4.0.17"
- 
-
 
 [profile.release]
 # Enable link-time optimization, eliminates more code and inlines across crate boundaries.

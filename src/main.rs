@@ -9,7 +9,7 @@ use terra_rust_bot_essentials::output::*;
 use terra_rust_bot_essentials::shared::{load_user_settings,get_input,Entry};
 
 mod state;
-use crate::state::control::model::{Maybe,MaybeOrPromise,requirements_next,abort_tasks};
+use crate::state::control::model::{Maybe, requirements_next, requirements_setup};
 use crate::state::control::model::requirements::{UserSettings};
 use crate::state::control::model::wallet::{encrypt_text_with_secret,decrypt_text_with_secret};
 use crate::state::control::try_run_function;
@@ -31,28 +31,34 @@ use secstr::*;
 use std::collections::HashMap; 
 use std::time::{Duration};
 use std::sync::Arc; 
-use tokio::sync::RwLock;
+use tokio::sync::{Mutex, RwLock};
+use tokio::task::JoinSet;
 use chrono::{Utc};
 use std::fs;
 use core::pin::Pin;
 use core::future::Future;
 
-extern crate num_cpus;
 
 use notify::{Watcher, RecursiveMode, watcher};
 use std::sync::mpsc::channel;
+use terra_rust_api_layer::services::blockchain::smart_contracts::objects::ResponseResult;
 
- #[tokio::main]
+
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
+
+#[tokio::main]
 async fn main() -> anyhow::Result<()> {
 
         let num_cpus = num_cpus::get();
 
-        let state: Arc<RwLock<Vec<Option<Entry>>>> = Arc::new(RwLock::new(vec![None; 1000]));
-        // using timestamps to update each slot with a short delay.
-        let mut timestamps_display: Vec<i64> = vec![0i64; 1000];
+        let state: Arc<RwLock<HashMap<i64,Entry>>> = Arc::new(RwLock::new(HashMap::new()));
+
         let mut display_out_timestamp = 0i64;
         // stores all requirements either as task or the resolved value.
-        let tasks: Arc<RwLock<HashMap<String, MaybeOrPromise>>> = Arc::new(RwLock::new(HashMap::new()));
+        let mut join_set: JoinSet<()> = JoinSet::new();
+        //let mut maybes: &'static HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>> = &HashMap::new();
+        let mut maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>> = HashMap::new();
 
         let mut user_settings: UserSettings = load_user_settings("./terra-rust-bot.json");
 
@@ -70,7 +76,7 @@ async fn main() -> anyhow::Result<()> {
         watcher.watch("./terra-rust-bot.json", RecursiveMode::Recursive).unwrap();
 
         loop {
-            let mut is_first_run: bool = true;
+            requirements_setup(&mut maybes).await;
             /*
              * This loop has three major blocking elements.
              * 1) Awaiting running tasks if thread limit is reached. No harm of waiting here.
@@ -93,57 +99,67 @@ async fn main() -> anyhow::Result<()> {
                     }
                 }
 
-                let now = Utc::now().timestamp();
-
-                let mut offset: usize = 0;
                 // initiate next batch of parallel tasks
-                add_view_to_state(&state,requirements_next(now, num_cpus,&mut offset, &tasks, &user_settings, &wallet_acc_address).await).await;
+                let mut entries : Vec<Entry> = requirements_next(num_cpus,&mut join_set,&mut maybes, &user_settings, &wallet_acc_address).await;
 
-
+                let copy_of_maybes = maybes.clone();
                 // trying to calculate whatever the bot needs to calculate based on the task (query) results,
                 // if one task is slow, because the requirement is not yet resolved, it will timeout after 0.1s, so the loop can continue.
 
+                let mut maybe_futures:Vec<(Entry,Pin<Box<dyn Future<Output=Maybe<String>>+Send>>)> = Vec::new();
+
                 if user_settings.terra_market_info {
-                    try_calculate_promises(&state,&mut timestamps_display, now,display_market_info(&tasks, &state, &mut offset, is_first_run).await).await;
+                    maybe_futures.append(&mut display_market_info(&copy_of_maybes).await);
                 }
                 if user_settings.anchor_general_info {
-                    try_calculate_promises(&state,&mut timestamps_display, now,display_anchor_info(&tasks, &state, &mut offset, is_first_run).await).await;
+                    maybe_futures.append(&mut display_anchor_info(&copy_of_maybes).await);
                 }
                 if user_settings.anchor_account_info {
-                    try_calculate_promises(&state,&mut timestamps_display, now,display_anchor_account(&tasks, &state, &mut offset, is_first_run).await).await;
+                    maybe_futures.append(&mut display_anchor_account(&copy_of_maybes).await);
                 }
 
                 if user_settings.anchor_protocol_auto_stake {
                     // starts the agent specific function as task.
                     // (only if previous task of the same key has finished)
-                    let task: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(anchor_borrow_claim_and_stake_rewards(tasks.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(), user_settings.test));
-                    try_run_function(&tasks, task, "anchor_auto_stake", user_settings.test).await;
+                    let task: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(anchor_borrow_claim_and_stake_rewards(copy_of_maybes.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(), user_settings.test));
+                    try_run_function(&mut join_set,&copy_of_maybes, task, "anchor_auto_stake", user_settings.test).await;
                     // if resolved the task will be transformed into a maybe result at the end of the lazy_* method.
-                    try_calculate_promises(&state,&mut timestamps_display, now,lazy_anchor_account_auto_stake_rewards(&tasks, &state, &mut offset, user_settings.test, is_first_run).await).await;
+                    maybe_futures.append(&mut lazy_anchor_account_auto_stake_rewards(&copy_of_maybes, user_settings.test).await);
                     // also tries to calculate all state updates for terra-rust-bot-state.json.
                 }
                 if user_settings.anchor_protocol_auto_farm {
-                    let task: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(anchor_borrow_claim_and_farm_rewards(tasks.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(), user_settings.test));
-                    try_run_function(&tasks, task, "anchor_auto_farm", user_settings.test).await;
-                    try_calculate_promises(&state,&mut timestamps_display, now,lazy_anchor_account_auto_farm_rewards(&tasks, &state, &mut offset, user_settings.test, is_first_run).await).await;
+                    let task: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(anchor_borrow_claim_and_farm_rewards(copy_of_maybes.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(), user_settings.test));
+                    try_run_function(&mut join_set,&copy_of_maybes, task, "anchor_auto_farm", user_settings.test).await;
+                    maybe_futures.append(&mut lazy_anchor_account_auto_farm_rewards(&copy_of_maybes,user_settings.test).await);
                 }
                 if user_settings.anchor_protocol_auto_repay {
-                    let task: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(anchor_redeem_and_repay_stable(tasks.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(), user_settings.test));
-                    try_run_function(&tasks, task, "anchor_auto_repay", user_settings.test).await;
-                    try_calculate_promises(&state,&mut timestamps_display, now,lazy_anchor_account_auto_repay(&tasks, &state, &mut offset, user_settings.test, is_first_run).await).await;
+                    let task: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(anchor_redeem_and_repay_stable(copy_of_maybes.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(), user_settings.test));
+                    try_run_function(&mut join_set,&copy_of_maybes, task, "anchor_auto_repay", user_settings.test).await;
+                    maybe_futures.append(&mut lazy_anchor_account_auto_repay(&copy_of_maybes, user_settings.test).await);
                 }
                 if user_settings.anchor_protocol_auto_borrow {
-                    let task: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(anchor_borrow_and_deposit_stable(tasks.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(), user_settings.test));
-                    try_run_function(&tasks, task, "anchor_auto_borrow", user_settings.test).await;
-                    try_calculate_promises(&state,&mut timestamps_display, now,lazy_anchor_account_auto_borrow(&tasks, &state, &mut offset, user_settings.test, is_first_run).await).await;
+                    let task: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(anchor_borrow_and_deposit_stable(copy_of_maybes.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(), user_settings.test));
+                    try_run_function(&mut join_set,&copy_of_maybes, task, "anchor_auto_borrow", user_settings.test).await;
+                    maybe_futures.append(&mut lazy_anchor_account_auto_borrow(&copy_of_maybes, user_settings.test).await);
                 }
 
-                display_all_logs(&tasks, &state, &mut offset).await;
-                display_all_errors(&tasks, &state, &mut offset).await;
 
-                if is_first_run {
-                    is_first_run = false;
+
+                state.write().await.clear();
+
+                try_calculate_promises(&state,maybe_futures).await;
+
+                let mut logs : Vec<Entry> = display_all_logs(&copy_of_maybes).await;
+                let mut errors : Vec<Entry> = display_all_errors(&copy_of_maybes).await;
+                entries.append(&mut logs);
+                entries.append(&mut errors);
+
+                for x in 0..entries.len() {
+                    insert_to_state(&state,x as u64,&entries[x]).await;
                 }
+
+
+
 
                 // ensuring one file write per 300ms, not faster.
                 let now = Utc::now().timestamp_millis();
@@ -151,14 +167,14 @@ async fn main() -> anyhow::Result<()> {
                 if display_out_timestamp == 0i64 || now - display_out_timestamp > 300i64 {
                     // writing display to file.
                     // let new_line = format!("{esc}c", esc = 27 as char);
-                    let vec: Vec<Option<Entry>> = state.read().await.to_vec();
-                    let vec: Vec<Entry> = vec.into_iter().filter_map(|x| x).collect();
+                    let vector = state.read().await;
+                    let vec: Vec<Entry> =  vector.iter().map(|x| x.1.clone()).collect();
                     let line = format!("{}", serde_json::to_string(&*vec).unwrap());
                     fs::write("./packages/terra-rust-bot-output/terra-rust-bot-state.json", &line).ok();
                     display_out_timestamp = now;
                 }
             }
-            abort_tasks(&tasks).await.ok();
+            join_set.shutdown().await;
             if user_settings.hot_reload {
                 user_settings = load_user_settings("./terra-rust-bot.json");
             }
@@ -192,11 +208,14 @@ async fn get_wallet_details(user_settings: &UserSettings) -> (Arc<SecUtf8>,Arc<S
     (wallet_seed_phrase,wallet_acc_address)
 }
 
-async fn try_calculate_promises(state: &Arc<RwLock<Vec<Option<Entry>>>>,timestamps_display: &mut Vec<i64>,now: i64,maybe_futures:Vec<(usize,Pin<Box<dyn Future<Output=Maybe<String>>+Send>>)>) {
+async fn try_calculate_promises(state: &Arc<RwLock<HashMap<i64,Entry>>>,maybe_futures:Vec<(Entry,Pin<Box<dyn Future<Output=Maybe<String>>+Send>>)>) {
     for t in maybe_futures {
-        if timestamps_display[t.0] == 0i64 || now - timestamps_display[t.0] > 1i64 {
-            try_add_to_state(&state, t.0, Box::pin(t.1)).await.ok();
-            timestamps_display[t.0] = now;
-        }
+        let h = calculate_hash(&t.0) as i64;
+        push_to_state(&state,h, &t.0, Box::pin(t.1)).await.ok();
     }
+}
+fn calculate_hash<T: Hash>(t: &T) -> u64 {
+    let mut s = DefaultHasher::new();
+    t.hash(&mut s);
+    s.finish()
 }

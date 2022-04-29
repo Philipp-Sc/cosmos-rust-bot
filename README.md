@@ -138,9 +138,6 @@ At the same time **TRB** can be compiled to a single executable that is easy to 
 
 ### terra-rust-bot.json
 
-* `allowed_commands:` default `null`, specify a list `["command1","command2",..]` of commands that can be issued via the **command.json** file. (can **not** be updated once terra-rust-bot is started)
-
-
 * `pause_requested:` if `true` terra-rust-bot will pause (all running tasks will be aborted) until `pause_requested` is set to `false`. (`hot_reload: true` required)
 * `hot_reload`: if `true` and the terra-rust-bot.json file gets updated terra-rust-bot will reload it. This gives you live control over the bot. (`remove: false` required)
 

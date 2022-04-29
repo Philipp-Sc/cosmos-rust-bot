@@ -3,7 +3,7 @@ use terra_rust_bot_essentials::output::*;
 
 use terra_rust_bot_essentials::shared::Entry;
 use crate::state::control::model::{Maybe};
-use crate::state::control::model::{MaybeOrPromise};
+
 
 use crate::view::*;
 use crate::view::interface::*;
@@ -17,12 +17,12 @@ use core::future::Future;
 use std::sync::Arc; 
 use tokio::sync::RwLock;    
  
-pub async fn lazy_anchor_account_auto_claim_airdrop(tasks: &Arc<RwLock<HashMap<String, MaybeOrPromise>>>, wallet_acc_address: &Arc<SecUtf8>, wallet_seed_phrase: &Arc<SecUtf8>, state: &Arc<RwLock<Vec<Option<Entry>>>>,offset: &mut usize, is_test: bool, is_first_run: bool) -> Vec<(usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>)> {
+pub async fn lazy_anchor_account_auto_claim_airdrop(maybes: &mut HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, wallet_acc_address: &Arc<SecUtf8>, wallet_seed_phrase: &Arc<SecUtf8>, state: &Arc<RwLock<Vec<Option<Entry>>>>,offset: &mut usize, is_test: bool, is_first_run: bool) -> Vec<(Entry,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>)> {
      
     let mut anchor_view: Vec<(Entry,usize)> = Vec::new();
-    let mut anchor_tasks: Vec<(usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>)> = Vec::new();
+    let mut anchor_tasks: Vec<(Entry,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>)> = Vec::new();
 
-    anchor_view.push((Entry {
+    let t1 = Entry {
         timestamp: 0i64, 
         key: "balance".to_string(),
         prefix: None,
@@ -36,9 +36,8 @@ pub async fn lazy_anchor_account_auto_claim_airdrop(tasks: &Arc<RwLock<HashMap<S
     *offset += 1;
  
     anchor_view.push(("--".purple().to_string(),*offset));
-    let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset, Box::pin(terra_balance_to_string(tasks.clone(),"uusd",false,2)));
-    anchor_tasks.push(t);
-    *offset += 1;
+    let t2: Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>> = Box::pin(terra_balance_to_string(maybes.clone(),"uusd",false,2));
+    view.push((t1,t2));
  
     /*
     
@@ -54,7 +53,7 @@ pub async fn lazy_anchor_account_auto_claim_airdrop(tasks: &Arc<RwLock<HashMap<S
     anchor_view.push(("--".purple().to_string(),*offset));
     
     // function able to execute auto stake, therefore registering it as task to run concurrently. 
-    let important_task: Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>> = Box::pin(anchor_borrow_claim_and_stake_rewards(tasks.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(),is_test));
+    let important_task: Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>> = Box::pin(anchor_borrow_claim_and_stake_rewards(maybes.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(),is_test));
     let timeout_duration = 120u64;
     let mut block_duration_after_resolve = 10i64;
     /* a small duration is optimal, since the data is already there */
@@ -65,12 +64,11 @@ pub async fn lazy_anchor_account_auto_claim_airdrop(tasks: &Arc<RwLock<HashMap<S
         // since test mode does not perform transactions, there is no downside by doing this.
         block_duration_after_resolve = 30i64;
     }
-    try_register_function(&tasks,"anchor_auto_stake".to_owned(),important_task,timeout_duration, block_duration_after_resolve).await;  
+    try_register_function(maybes.clone(),"anchor_auto_stake".to_owned(),important_task,timeout_duration, block_duration_after_resolve).await;
           
     // display task here
-    let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset, Box::pin(await_function(tasks.clone(),"anchor_auto_stake".to_owned())));
-    anchor_tasks.push(t);
-    *offset += 1;
+    let t2: Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>> = Box::pin(await_function(maybes.clone(),"anchor_auto_stake".to_owned()));
+    view.push((t1,t2));
 
     */
 
