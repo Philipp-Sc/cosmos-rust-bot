@@ -7,24 +7,22 @@ echo "updated wallet.rs"
 
 export LITCRYPT_ENCRYPT_KEY=$(openssl rand -hex 256)
 
-export RUSTFLAGS="--cfg tokio_unstable"
-
 case $1 in
 	"dev")
 	echo "development build"
-	cargo build
+	RUSTFLAGS="--cfg tokio_unstable" cargo build
 	mv ./target/debug/terra-rust-bot my-bot
 	;;
 
 	"prod")
 	echo "release build"
-	cargo build --release
+	RUSTFLAGS="--cfg tokio_unstable" cargo build --release
 	mv ./target/release/terra-rust-bot my-bot
 	;;
 
 	"native")
 	echo "optimized release build"
-	RUSTFLAGS="-C target-cpu=native" cargo build --release
+	RUSTFLAGS="--cfg tokio_unstable -C target-cpu=native" cargo build --release
 	mv ./target/release/terra-rust-bot my-bot
 	;;
 	
