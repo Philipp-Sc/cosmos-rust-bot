@@ -12,15 +12,14 @@ pub struct Maybe<T> {
     pub timestamp: i64,
 }
 
-impl<T:Clone> Clone for Maybe<T> {
+impl<T: Clone> Clone for Maybe<T> {
     fn clone(&self) -> Maybe<T> {
         match self {
-            Maybe{data: Err(err),timestamp}=> Maybe{data: Err(anyhow::anyhow!(err.to_string())),timestamp:*timestamp},
-            Maybe{data: Ok(value),timestamp}=> Maybe{data: Ok(value.clone()),timestamp:*timestamp},
+            Maybe { data: Err(err), timestamp } => Maybe { data: Err(anyhow::anyhow!(err.to_string())), timestamp: *timestamp },
+            Maybe { data: Ok(value), timestamp } => Maybe { data: Ok(value.clone()), timestamp: *timestamp },
         }
     }
 }
-
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct UserSettings {
@@ -44,6 +43,7 @@ pub struct UserSettings {
     pub max_tx_fee: Decimal,
     pub ust_balance_preference: Decimal,
 }
+
 impl Default for UserSettings {
     fn default() -> UserSettings {
         UserSettings {
@@ -77,43 +77,43 @@ pub struct Entry {
     pub prefix: Option<String>,
     pub value: String,
     pub suffix: Option<String>,
+    pub index: Option<i32>,
     pub group: Option<String>,
 }
 
 pub type State = Vec<Option<Entry>>;
 
 pub fn get_input(prompt: &str) -> String {
-    println!("{}",prompt);
+    println!("{}", prompt);
     let mut input = String::new();
     match io::stdin().read_line(&mut input) {
-        Ok(_goes_into_input_above) => {},
-        Err(_no_updates_is_fine) => {},
+        Ok(_goes_into_input_above) => {}
+        Err(_no_updates_is_fine) => {}
     }
     input.trim().to_string()
 }
 
 pub fn load_user_settings(path: &str) -> UserSettings {
-
     let user_settings: UserSettings = match fs::read_to_string(path) {
         Ok(file) => {
             match serde_json::from_str(&file) {
                 Ok(res) => {
                     res
-                },
+                }
                 Err(err) => {
-                    println!("{:?}",err);
+                    println!("{:?}", err);
                     Default::default()
                 }
             }
-        },
+        }
         Err(err) => {
-            println!("{:?}",err);
+            println!("{:?}", err);
             Default::default()
         }
     };
     if user_settings.remove {
         let res = fs::remove_file(path);
-        println!("{:?}",res);
+        println!("{:?}", res);
     }
     user_settings
 }
@@ -121,18 +121,22 @@ pub fn load_user_settings(path: &str) -> UserSettings {
 pub async fn load_state(path: &str) -> Option<State> {
     let mut state: Option<State> = None;
     let mut try_counter = 0;
-    while state.is_none() && try_counter<3 {
+    while state.is_none() && try_counter < 3 {
         match fs::read_to_string(path) {
             Ok(file) => {
                 match serde_json::from_str(&file) {
-                    Ok(res) => { state = Some(res); },
-                    Err(_) => { try_counter = try_counter + 1; },
+                    Ok(res) => { state = Some(res); }
+                    Err(_) => { try_counter = try_counter + 1; }
                 };
-            },
+            }
             Err(_) => {
                 try_counter = try_counter + 1;
             }
         }
+    }
+    if let Some(mut s) = state {
+        s.sort_by(|a, b| a.as_ref().unwrap().index.unwrap_or(0i32).cmp(&b.as_ref().unwrap().index.unwrap_or(0i32)));
+        return Some(s);
     }
     state
 }

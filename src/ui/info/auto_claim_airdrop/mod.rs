@@ -14,31 +14,31 @@ use std::collections::HashMap;
 use core::pin::Pin;
 use core::future::Future;
 
-use std::sync::Arc; 
-use tokio::sync::RwLock;    
- 
-pub async fn lazy_anchor_account_auto_claim_airdrop(maybes: &mut HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, wallet_acc_address: &Arc<SecUtf8>, wallet_seed_phrase: &Arc<SecUtf8>, state: &Arc<RwLock<Vec<Option<Entry>>>>,offset: &mut usize, is_test: bool, is_first_run: bool) -> Vec<(Entry,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>)> {
-     
-    let mut anchor_view: Vec<(Entry,usize)> = Vec::new();
-    let mut anchor_tasks: Vec<(Entry,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>)> = Vec::new();
+use std::sync::Arc;
+use tokio::sync::RwLock;
+
+pub async fn lazy_anchor_account_auto_claim_airdrop(maybes: &mut HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, wallet_acc_address: &Arc<SecUtf8>, wallet_seed_phrase: &Arc<SecUtf8>, state: &Arc<RwLock<Vec<Option<Entry>>>>, offset: &mut usize, is_test: bool, is_first_run: bool) -> Vec<(Entry, Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>>)> {
+    let mut anchor_view: Vec<(Entry, usize)> = Vec::new();
+    let mut anchor_tasks: Vec<(Entry, Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>>)> = Vec::new();
 
     let t1 = Entry {
-        timestamp: 0i64, 
+        timestamp: 0i64,
         key: "balance".to_string(),
         prefix: None,
         value: "--".to_string(),
         suffix: Some("UST".to_string()),
+        index: Some(1),
         group: Some("[Anchor Protocol][Auto Claim Airdrops]".to_string()),
-    },*offset));
- 
+    }, *offset));
 
-    anchor_view.push((format!("{}{}","\n\n   [Auto Stake UST]".truecolor(75,219,75),"         balance:           ".purple().to_string()),*offset));
+
+    anchor_view.push((format!("{}{}", "\n\n   [Auto Stake UST]".truecolor(75, 219, 75), "         balance:           ".purple().to_string()), *offset));
     *offset += 1;
- 
-    anchor_view.push(("--".purple().to_string(),*offset));
-    let t2: Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>> = Box::pin(terra_balance_to_string(maybes.clone(),"uusd",false,2));
-    view.push((t1,t2));
- 
+
+    anchor_view.push(("--".purple().to_string(), *offset));
+    let t2: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(terra_balance_to_string(maybes.clone(), "uusd", false, 2));
+    view.push((t1, t2));
+
     /*
     
     let mut field = "result:  ";
@@ -72,14 +72,14 @@ pub async fn lazy_anchor_account_auto_claim_airdrop(maybes: &mut HashMap<String,
 
     */
 
-    
-    anchor_view.push(("\n\n".to_string(),*offset));
+
+    anchor_view.push(("\n\n".to_string(), *offset));
     *offset += 1;
 
 
     if is_first_run {
-        add_view_to_state(&state, anchor_view).await; 
-    }     
+        add_view_to_state(&state, anchor_view).await;
+    }
 
     return anchor_tasks;
 }
