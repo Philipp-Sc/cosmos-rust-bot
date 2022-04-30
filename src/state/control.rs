@@ -1,8 +1,8 @@
 pub mod model;
 
 
-use std::collections::HashMap; 
-use std::sync::Arc; 
+use std::collections::HashMap;
+use std::sync::Arc;
 use tokio::sync::{Mutex};
 
 use core::pin::Pin;
@@ -16,24 +16,23 @@ use crate::state::control::model::try_get_resolved;
 use tokio::task::JoinSet;
 
 
-pub async fn data_is_outdated(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, req: &[&str]) -> bool {
+pub async fn data_is_outdated(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, req: &[&str]) -> bool {
     match try_get_resolved(&maybes, "latest_transaction").await {
-		Maybe {data: _, timestamp} => {
-			let mut timestamps = get_timestamps_of_tasks(&maybes).await.iter().filter(|x| req.contains(&x.0.as_str())).map(|x| x.1).collect::<Vec<i64>>();
-    		timestamps.sort();
-			if timestamps.len()>0 && timestamps[0] <= timestamp + 10 {
-    			return true;
-    		}
-    		return false;
-    	},
+        Maybe { data: _, timestamp } => {
+            let mut timestamps = get_timestamps_of_tasks(&maybes).await.iter().filter(|x| req.contains(&x.0.as_str())).map(|x| x.1).collect::<Vec<i64>>();
+            timestamps.sort();
+            if timestamps.len() > 0 && timestamps[0] <= timestamp + 10 {
+                return true;
+            }
+            return false;
+        }
     }
 }
 
-pub async fn try_run_function(join_set: &mut JoinSet<()>, maybes: &HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, task: Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>, key: &str, is_test: bool) {
-	
-	let timeout_duration = 120u64;  
-	/* if task hangs for some reason (awaiting data, performaing estimate, broadcasting transaction) then timeout */
-       
+pub async fn try_run_function(join_set: &mut JoinSet<()>, maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, task: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>>, key: &str, is_test: bool) {
+    let timeout_duration = 120u64;
+    /* if task hangs for some reason (awaiting data, performing estimate, broadcasting transaction) then timeout */
+
     let mut block_duration_after_resolve = 1i64;
     /* a small duration is optimal, since the data is already there */
     /* only issue is if there just was a transaction, this is handled by ensuring that the relevant data is recent enough.*/
@@ -43,9 +42,8 @@ pub async fn try_run_function(join_set: &mut JoinSet<()>, maybes: &HashMap<Strin
         // since test mode does not perform transactions, there is no downside by doing this.
         block_duration_after_resolve = 30i64;
     }
-    try_register_function(join_set,maybes,key.to_owned(),task,timeout_duration, block_duration_after_resolve).await;
-    /* will register and run task if conditions are right */ 
- 
+    try_register_function(join_set, maybes, key.to_owned(), task, timeout_duration, block_duration_after_resolve).await;
+    /* will register and run task if conditions are right */
 }
 
 

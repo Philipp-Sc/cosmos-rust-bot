@@ -48,7 +48,7 @@ use crate::state::control::model::wallet::{decrypt_text_with_secret};
 
 
  
-pub async fn anchor_claim_and_stake_airdrops(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>,wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> Maybe<String> {
+pub async fn anchor_claim_and_stake_airdrops(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> Maybe<String> {
 		let max_tx_fee = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"max_tx_fee",false, 4).await);
 		let balance = decimal_or_return!(terra_balance_to_string(maybes.clone(),"uusd",false,2).await);
 	 	let min_ust_balance = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"min_ust_balance",false, 4).await);
@@ -113,7 +113,7 @@ pub async fn anchor_claim_and_stake_airdrops(maybes: HashMap<String, Arc<Mutex<M
 
 
 
-pub async fn anchor_borrow_and_deposit_stable(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> Maybe<String> {
+pub async fn anchor_borrow_and_deposit_stable(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> Maybe<String> {
 
 	let max_tx_fee = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"max_tx_fee",false, 4).await);
 	let balance = decimal_or_return!(terra_balance_to_string(maybes.clone(),"uusd",false,2).await);
@@ -168,7 +168,7 @@ pub async fn anchor_borrow_and_deposit_stable(maybes: HashMap<String, Arc<Mutex<
 }
 
 
-pub async fn anchor_redeem_and_repay_stable(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> Maybe<String> {
+pub async fn anchor_redeem_and_repay_stable(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> Maybe<String> {
     let max_tx_fee = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"max_tx_fee",false, 4).await);
 	let balance = decimal_or_return!(terra_balance_to_string(maybes.clone(),"uusd",false,2).await);
  	let min_ust_balance = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"min_ust_balance",false, 4).await);
@@ -258,7 +258,7 @@ pub async fn anchor_redeem_and_repay_stable(maybes: HashMap<String, Arc<Mutex<Ma
 }
 
 
-pub async fn anchor_borrow_claim_and_farm_rewards(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> Maybe<String> {
+pub async fn anchor_borrow_claim_and_farm_rewards(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> Maybe<String> {
 		let max_tx_fee = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"max_tx_fee",false, 4).await);
 		let balance = decimal_or_return!(terra_balance_to_string(maybes.clone(),"uusd",false,2).await);
 	 	let min_ust_balance = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"min_ust_balance",false, 4).await);
@@ -319,7 +319,7 @@ pub async fn anchor_borrow_claim_and_farm_rewards(maybes: HashMap<String, Arc<Mu
         }
 }
 
-pub async fn anchor_borrow_claim_and_stake_rewards(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> Maybe<String> {
+pub async fn anchor_borrow_claim_and_stake_rewards(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> Maybe<String> {
 		let max_tx_fee = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"max_tx_fee",false, 4).await);
 		let balance = decimal_or_return!(terra_balance_to_string(maybes.clone(),"uusd",false,2).await);
 	 	let min_ust_balance = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"min_ust_balance",false, 4).await);
@@ -363,7 +363,7 @@ pub async fn anchor_borrow_claim_and_stake_rewards(maybes: HashMap<String, Arc<M
         }
 }
  
-pub async fn anchor_borrow_claim_rewards(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>,  wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> Maybe<String> {
+pub async fn anchor_borrow_claim_rewards(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,  wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> Maybe<String> {
          
         let max_tx_fee = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"max_tx_fee",false, 4).await);
 		 
@@ -385,7 +385,7 @@ pub async fn anchor_borrow_claim_rewards(maybes: HashMap<String, Arc<Mutex<Maybe
         	}
         }
 }
-pub async fn anchor_governance_stake_balance(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>,  wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> Maybe<String> {
+pub async fn anchor_governance_stake_balance(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,  wallet_acc_address: Arc<SecUtf8>, wallet_seed_phrase: Arc<SecUtf8>, only_estimate: bool) -> Maybe<String> {
         
         let max_tx_fee = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"max_tx_fee",false, 4).await);
 

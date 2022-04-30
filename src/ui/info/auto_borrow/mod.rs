@@ -17,7 +17,7 @@ use std::sync::Arc;
 use terra_rust_api_layer::services::blockchain::smart_contracts::objects::ResponseResult;
 use tokio::sync::{Mutex};
 
-pub async fn lazy_anchor_account_auto_borrow(maybes: &HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, is_test: bool) -> Vec<(Entry, Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>>)> {
+pub async fn lazy_anchor_account_auto_borrow(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, is_test: bool) -> Vec<(Entry, Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>>)> {
     let mut view: Vec<(Entry, Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>>)> = Vec::new();
 
     let t1 = Entry {

@@ -4,14 +4,15 @@
  *
  */
 
-pub mod objects; 
-use objects::*;  
-use objects::meta::api::data::terra_contracts::{get_contract,get_mirrorprotocol_assets};
+pub mod objects;
+
+use objects::*;
+use objects::meta::api::data::terra_contracts::{get_contract, get_mirrorprotocol_assets};
 use objects::meta::api::{
     get_fcd_else_lcd_query,
     query_core_market_swap_rate,
     query_core_bank_balances};
-use anyhow::anyhow;   
+use anyhow::anyhow;
 
 use moneymarket::market::QueryMsg as MarketQueryMsg;
 use basset::hub::QueryMsg as BassetHubQueryMsg;
@@ -25,14 +26,13 @@ use anchor_token::airdrop::QueryMsg as AirdropQueryMsg;
 use anchor_token::airdrop::IsClaimedResponse;
 
 
-
 use mirror_protocol::oracle::QueryMsg as MirrorOracleQueryMsg;
 use mirror_protocol::oracle::PriceResponse;
 
 use cw20::Cw20QueryMsg;
 use cw20::BalanceResponse;
 
-use terraswap::asset::{Asset,AssetInfo};
+use terraswap::asset::{Asset, AssetInfo};
 use terraswap::pair::QueryMsg as TerraswapQueryMsg;
 use terraswap::pair::SimulationResponse as TerraswapSimulationResponse;
 
@@ -52,7 +52,7 @@ use moneymarket::interest_model::ConfigResponse as InterestModelConfigResponse;
 use moneymarket::market::BorrowerInfoResponse;
 use moneymarket::overseer::BorrowLimitResponse;
 
-use anchor_token::gov:: StakerResponse;
+use anchor_token::gov::StakerResponse;
 
 use moneymarket::overseer::WhitelistResponse;
 
@@ -60,16 +60,16 @@ use moneymarket::overseer::WhitelistResponse;
 
 
 pub async fn airdrop_is_claimed(wallet_acc_address: &str, stage: u64) -> anyhow::Result<ResponseResult> {
-    let contract_addr = get_contract("anchorprotocol","airdrop");
-   
+    let contract_addr = get_contract("anchorprotocol", "airdrop");
+
     let query = AirdropQueryMsg::IsClaimed {
-                    stage: stage as u8,
-                    address: wallet_acc_address.to_string(),
+        stage: stage as u8,
+        address: wallet_acc_address.to_string(),
     };
     let query_msg_json = serde_json::to_string(&query)?;
-    
-    let res: String = get_fcd_else_lcd_query(&contract_addr,&query_msg_json).await?; 
-    let response: Response<IsClaimedResponse> = serde_json::from_str(&res)?; 
+
+    let res: String = get_fcd_else_lcd_query(&contract_addr, &query_msg_json).await?;
+    let response: Response<IsClaimedResponse> = serde_json::from_str(&res)?;
     Ok(ResponseResult::IsClaimedResponse(response))
 }
 
@@ -77,25 +77,25 @@ pub async fn airdrop_is_claimed(wallet_acc_address: &str, stage: u64) -> anyhow:
 // blunaHubState: state, anchorprotocol, bLunaHub
 // anchor_protocol_state: state, anchorprotocol, mmMarket 
 
-pub async fn state_query_msg(protocol: String, contract: String) -> anyhow::Result<ResponseResult> { 
-    let contract_addr = get_contract(&protocol,&contract);
+pub async fn state_query_msg(protocol: String, contract: String) -> anyhow::Result<ResponseResult> {
+    let contract_addr = get_contract(&protocol, &contract);
     match contract.as_str() {
         "mmMarket" => {
-            let query = MarketQueryMsg::State { block_height: None}; 
+            let query = MarketQueryMsg::State { block_height: None };
             let query_msg_json = serde_json::to_string(&query)?;
 
-            let res: String = get_fcd_else_lcd_query(&contract_addr,&query_msg_json).await?; 
+            let res: String = get_fcd_else_lcd_query(&contract_addr, &query_msg_json).await?;
             let response: Response<MarketStateResponse> = serde_json::from_str(&res)?;
             return Ok(ResponseResult::State(StateResponse::mmMarket(response)));
-        },
+        }
         "bLunaHub" => {
             let query = BassetHubQueryMsg::State {};
             let query_msg_json = serde_json::to_string(&query)?;
 
-            let res: String = get_fcd_else_lcd_query(&contract_addr,&query_msg_json).await?; 
+            let res: String = get_fcd_else_lcd_query(&contract_addr, &query_msg_json).await?;
             let response: Response<BassetHubStateResponse> = serde_json::from_str(&res)?;
-            return Ok(ResponseResult::State(StateResponse::bLunaHub(response))); 
-        },
+            return Ok(ResponseResult::State(StateResponse::bLunaHub(response)));
+        }
         _ => {
             return Err(anyhow!("Unexpected Error: Unknown Contract {:?}",contract));
         }
@@ -104,51 +104,49 @@ pub async fn state_query_msg(protocol: String, contract: String) -> anyhow::Resu
 
 // aust_to_ust: epoch_state, anchorprotocol, mmMarket
 pub async fn epoch_state_query_msg(protocol: String, contract: String) -> anyhow::Result<ResponseResult> {
-  
     let query = MarketQueryMsg::EpochState {
-            block_height: None,
-            distributed_interest: None
-    };     
+        block_height: None,
+        distributed_interest: None,
+    };
     let query_msg_json = serde_json::to_string(&query)?;
 
-    let contract_addr = get_contract(&protocol,&contract);
-    
-    let res: String = get_fcd_else_lcd_query(&contract_addr,&query_msg_json).await?; 
-    
+    let contract_addr = get_contract(&protocol, &contract);
+
+    let res: String = get_fcd_else_lcd_query(&contract_addr, &query_msg_json).await?;
+
     match contract.as_str() {
         "mmMarket" => {
             let res: Response<MarketEpochStateResponse> = serde_json::from_str(&res)?;
             return Ok(ResponseResult::EpochState(EpochStateResponse::mmMarket(res)));
-        },
+        }
         _ => {
             return Err(anyhow!("Unexpected Error: Unknown Contract {:?}",contract));
         }
-    } 
+    }
 }
 
 // anchor_protocol_interest_model_config: anchorprotocol, mmInterestModel
 // anchor_protocol_collector_config: anchorprotocol, collector 
 pub async fn config_query_msg(protocol: String, contract: String) -> anyhow::Result<ResponseResult> {
-    
-    let contract_addr = get_contract(&protocol,&contract);
+    let contract_addr = get_contract(&protocol, &contract);
 
     match contract.as_str() {
-        "mmInterestModel" => { 
+        "mmInterestModel" => {
             let query = InterestModelQueryMsg::Config {};
             let query_msg_json = serde_json::to_string(&query)?;
 
-            let res: String = get_fcd_else_lcd_query(&contract_addr,&query_msg_json).await?; 
+            let res: String = get_fcd_else_lcd_query(&contract_addr, &query_msg_json).await?;
             let response: Response<InterestModelConfigResponse> = serde_json::from_str(&res)?;
             return Ok(ResponseResult::Config(ConfigResponse::mmInterestModel(response)));
-        },
+        }
         "collector" => {
             let query = CollectorQueryMsg::Config {};
             let query_msg_json = serde_json::to_string(&query)?;
 
-            let res: String = get_fcd_else_lcd_query(&contract_addr,&query_msg_json).await?; 
+            let res: String = get_fcd_else_lcd_query(&contract_addr, &query_msg_json).await?;
             let response: Response<CollectorConfigResponse> = serde_json::from_str(&res)?;
-            return Ok(ResponseResult::Config(ConfigResponse::Collector(response))); 
-        },
+            return Ok(ResponseResult::Config(ConfigResponse::Collector(response)));
+        }
         _ => {
             return Err(anyhow!("Unexpected Error: Unknown Contract {:?}",contract));
         }
@@ -156,11 +154,14 @@ pub async fn config_query_msg(protocol: String, contract: String) -> anyhow::Res
 }
 
 // core_swap usdr uusd
-pub async fn native_token_core_swap(from_native_token: String, to_native_token: String) ->  anyhow::Result<ResponseResult> {
-    let res: String = query_core_market_swap_rate(&from_native_token,&to_native_token).await?; 
+pub async fn native_token_core_swap(from_native_token: String, to_native_token: String) -> anyhow::Result<ResponseResult> {
+    let res: String = query_core_market_swap_rate(&from_native_token, &to_native_token).await?;
     let res: Response<CoreSwapResponse> = serde_json::from_str(&res)?;
     Ok(ResponseResult::CoreSwap(res))
 }
+
+// todo: for each DEX implement the following two functions.
+// todo: add contract addresses for each DEX pools
 
 // luna_to_bluna: uluna, anchorprotocol,terraswapblunaLunaPair
 // luna_to_ust: uluna, terraswap, uusd_uluna_pair_contract
@@ -168,21 +169,21 @@ pub async fn native_token_core_swap(from_native_token: String, to_native_token: 
 // ust_to_luna: uusd, terraswap, uusd_uluna_pair_contract
 // ust_to_psi: uusd, nexusprotocol, Psi-UST pair
 // ust_to_anc: uusd, anchorprotocol, terraswapAncUstPair
-pub async fn native_token_to_swap_pair(protocol: String, native_token: String, pair_contract: String) ->  anyhow::Result<ResponseResult> {
+pub async fn native_token_to_swap_pair(protocol: String, native_token: String, pair_contract: String) -> anyhow::Result<ResponseResult> {
     let contract_addr = get_contract(&protocol, &pair_contract);
 
     let query = TerraswapQueryMsg::Simulation {
         offer_asset: Asset {
-                        info: AssetInfo::NativeToken {
-                            denom: native_token,
-                        },
-                        amount: Uint128::from_str("1000000").unwrap(),
-                },
-    }; 
+            info: AssetInfo::NativeToken {
+                denom: native_token,
+            },
+            amount: Uint128::from_str("1000000").unwrap(),
+        },
+    };
 
     let query_msg_json = serde_json::to_string(&query)?;
-    
-    let res: String = get_fcd_else_lcd_query(&contract_addr,&query_msg_json).await?; 
+
+    let res: String = get_fcd_else_lcd_query(&contract_addr, &query_msg_json).await?;
     let res: Response<TerraswapSimulationResponse> = serde_json::from_str(&res)?;
     Ok(ResponseResult::Simulation(res))
 }
@@ -192,89 +193,94 @@ pub async fn native_token_to_swap_pair(protocol: String, native_token: String, p
 // psi_to_nluna: nexusprotocol, Psi token, Psi-nLuna pair
 // psi_to_ust: nexusprotocol,  Psi token, Psi-UST pair
 // anc_to_ust: anchorprotocol, ANC, terraswapAncUstPair 
-pub async fn cw20_to_swap_pair(protocol: String, token_contract: String, pair_contract: String) ->  anyhow::Result<ResponseResult> {
+pub async fn cw20_to_swap_pair(protocol: String, token_contract: String, pair_contract: String) -> anyhow::Result<ResponseResult> {
     let contract_addr = get_contract(&protocol, &pair_contract);
-    
+
     let query = TerraswapQueryMsg::Simulation {
         offer_asset: Asset {
-                        info: AssetInfo::Token {
-                            contract_addr: get_contract(&protocol,&token_contract),
-                        },
-                        amount: Uint128::from_str("1000000").unwrap(),
-                }
-    }; 
+            info: AssetInfo::Token {
+                contract_addr: get_contract(&protocol, &token_contract),
+            },
+            amount: Uint128::from_str("1000000").unwrap(),
+        }
+    };
     let query_msg_json = serde_json::to_string(&query)?;
 
-    let res: String = get_fcd_else_lcd_query(&contract_addr,&query_msg_json).await?;
+    let res: String = get_fcd_else_lcd_query(&contract_addr, &query_msg_json).await?;
     let res: Response<TerraswapSimulationResponse> = serde_json::from_str(&res)?;
     Ok(ResponseResult::Simulation(res))
 }
+
 pub async fn masset_to_ust(masset: String) -> anyhow::Result<ResponseResult> {
-    let contract_addr = get_mirrorprotocol_assets(&masset,"pair");
-    
+    let contract_addr = get_mirrorprotocol_assets(&masset, "pair");
+
     let query = TerraswapQueryMsg::Simulation {
         offer_asset: Asset {
-                        info: AssetInfo::Token {
-                            contract_addr: get_mirrorprotocol_assets(&masset,"token"),
-                        },
-                        amount: Uint128::from_str("1000000").unwrap(),
-                }
-    }; 
+            info: AssetInfo::Token {
+                contract_addr: get_mirrorprotocol_assets(&masset, "token"),
+            },
+            amount: Uint128::from_str("1000000").unwrap(),
+        }
+    };
     let query_msg_json = serde_json::to_string(&query)?;
 
-    let res: String = get_fcd_else_lcd_query(&contract_addr,&query_msg_json).await?;
+    let res: String = get_fcd_else_lcd_query(&contract_addr, &query_msg_json).await?;
     let res: Response<TerraswapSimulationResponse> = serde_json::from_str(&res)?;
     Ok(ResponseResult::Simulation(res))
-}  
-pub async fn masset_oracle_price(masset: String) ->  anyhow::Result<ResponseResult> {
+}
+
+pub async fn masset_oracle_price(masset: String) -> anyhow::Result<ResponseResult> {
     // https://docs.mirror.finance/contracts/oracle#price
-    let contract_addr = get_contract("mirrorprotocol","oracle");
-    
+    let contract_addr = get_contract("mirrorprotocol", "oracle");
+
     let query = MirrorOracleQueryMsg::Price {
-            base_asset: get_mirrorprotocol_assets(&masset,"token"),
-            quote_asset: "uusd".to_string(),
+        base_asset: get_mirrorprotocol_assets(&masset, "token"),
+        quote_asset: "uusd".to_string(),
     };
     let query_msg_json = serde_json::to_string(&query)?;
 
 
-    let res: String = get_fcd_else_lcd_query(&contract_addr,&query_msg_json).await?;
+    let res: String = get_fcd_else_lcd_query(&contract_addr, &query_msg_json).await?;
     let res: Response<PriceResponse> = serde_json::from_str(&res)?;
     Ok(ResponseResult::Price(res))
 }
-pub async fn anchor_protocol_borrower_limit(wallet_acc_address: String) ->  anyhow::Result<ResponseResult> {
+
+pub async fn anchor_protocol_borrower_limit(wallet_acc_address: String) -> anyhow::Result<ResponseResult> {
     // https://docs.anchorprotocol.com/smart-contracts/money-market/overseer#borrowlimitresponse
-    let contract_addr = get_contract("anchorprotocol","mmOverseer");
+    let contract_addr = get_contract("anchorprotocol", "mmOverseer");
     let query = OverseerQueryMsg::BorrowLimit {
-            borrower: wallet_acc_address.to_string(),
-            block_time: None
+        borrower: wallet_acc_address.to_string(),
+        block_time: None,
     };
     let query_msg_json = serde_json::to_string(&query)?;
 
-    let res: String = get_fcd_else_lcd_query(&contract_addr,&query_msg_json).await?;
+    let res: String = get_fcd_else_lcd_query(&contract_addr, &query_msg_json).await?;
     let res: Response<BorrowLimitResponse> = serde_json::from_str(&res)?;
     Ok(ResponseResult::BorrowLimit(res))
 }
-pub async fn anchor_protocol_borrower_info(wallet_acc_address: String) ->  anyhow::Result<ResponseResult> {
+
+pub async fn anchor_protocol_borrower_info(wallet_acc_address: String) -> anyhow::Result<ResponseResult> {
     // https://docs.anchorprotocol.com/smart-contracts/money-market/market#borrowerinforesponse
     /*
      * Gets information for the specified borrower. 
      * Returns an interest-and-reward-accrued value if block_height field is filled. 
      * Returns the stored (no interest / reward accrued) state if not filled. **This seems not to be the case anymore**
      * */
-    let contract_addr = get_contract("anchorprotocol","mmMarket");
+    let contract_addr = get_contract("anchorprotocol", "mmMarket");
 
-    let query = MarketQueryMsg:: BorrowerInfo {
+    let query = MarketQueryMsg::BorrowerInfo {
         borrower: wallet_acc_address.to_string(),
         block_height: Some(1),
     };
     let query_msg_json = serde_json::to_string(&query)?;
 
-    let res: String = get_fcd_else_lcd_query(&contract_addr,&query_msg_json).await?;
+    let res: String = get_fcd_else_lcd_query(&contract_addr, &query_msg_json).await?;
     let res: Response<BorrowerInfoResponse> = serde_json::from_str(&res)?;
     Ok(ResponseResult::BorrowInfo(res))
-} 
-pub async fn anchor_protocol_anc_balance(wallet_acc_address: String) ->  anyhow::Result<ResponseResult> {
-    let contract_addr = get_contract("anchorprotocol","ANC");
+}
+
+pub async fn anchor_protocol_anc_balance(wallet_acc_address: String) -> anyhow::Result<ResponseResult> {
+    let contract_addr = get_contract("anchorprotocol", "ANC");
 
     let query = Cw20QueryMsg::Balance {
         address: wallet_acc_address.to_string()
@@ -282,52 +288,55 @@ pub async fn anchor_protocol_anc_balance(wallet_acc_address: String) ->  anyhow:
     let query_msg_json = serde_json::to_string(&query)?;
 
 
-    let res: String = get_fcd_else_lcd_query(&contract_addr,&query_msg_json).await?;
+    let res: String = get_fcd_else_lcd_query(&contract_addr, &query_msg_json).await?;
     let res: Response<BalanceResponse> = serde_json::from_str(&res)?;
     Ok(ResponseResult::Balance(res))
-} 
-pub async fn anchor_protocol_balance(wallet_acc_address: String) ->  anyhow::Result<ResponseResult> {
-    let contract_addr = get_contract("anchorprotocol","aTerra");
-    
+}
+
+pub async fn anchor_protocol_balance(wallet_acc_address: String) -> anyhow::Result<ResponseResult> {
+    let contract_addr = get_contract("anchorprotocol", "aTerra");
+
     let query = Cw20QueryMsg::Balance {
         address: wallet_acc_address.to_string()
     };
     let query_msg_json = serde_json::to_string(&query)?;
 
-    let res: String = get_fcd_else_lcd_query(&contract_addr,&query_msg_json).await?;
+    let res: String = get_fcd_else_lcd_query(&contract_addr, &query_msg_json).await?;
     let res: Response<BalanceResponse> = serde_json::from_str(&res)?;
     Ok(ResponseResult::Balance(res))
-} 
-pub async fn terra_balances(wallet_acc_address: String) ->  anyhow::Result<ResponseResult> {
+}
+
+pub async fn terra_balances(wallet_acc_address: String) -> anyhow::Result<ResponseResult> {
     let res: String = query_core_bank_balances(wallet_acc_address.as_str()).await?;
     let res: Response<Vec<Coin>> = serde_json::from_str(&res)?;
     Ok(ResponseResult::Balances(res))
-} 
-pub async fn anchor_protocol_staker(wallet_acc_address: String) ->  anyhow::Result<ResponseResult> {
+}
+
+pub async fn anchor_protocol_staker(wallet_acc_address: String) -> anyhow::Result<ResponseResult> {
     // https://docs.anchorprotocol.com/smart-contracts/anchor-token/gov#staker 
-    let contract_addr = get_contract("anchorprotocol","gov");
-    
+    let contract_addr = get_contract("anchorprotocol", "gov");
+
     let query = GovQueryMsg::Staker {
-            address: wallet_acc_address.to_string(),
-        };
+        address: wallet_acc_address.to_string(),
+    };
     let query_msg_json = serde_json::to_string(&query)?;
-    
-    let res: String = get_fcd_else_lcd_query(&contract_addr,&query_msg_json).await?;
+
+    let res: String = get_fcd_else_lcd_query(&contract_addr, &query_msg_json).await?;
     let res: Response<StakerResponse> = serde_json::from_str(&res)?;
     Ok(ResponseResult::Staker(res))
-}  
+}
 
-pub async fn anchor_protocol_whitelist() ->  anyhow::Result<ResponseResult> { 
-    let contract_addr = get_contract("anchorprotocol","mmOverseer");
+pub async fn anchor_protocol_whitelist() -> anyhow::Result<ResponseResult> {
+    let contract_addr = get_contract("anchorprotocol", "mmOverseer");
 
     let query = OverseerQueryMsg::Whitelist {
-                collateral_token: None,
-                start_after: None,
-                limit: None,
-        };
+        collateral_token: None,
+        start_after: None,
+        limit: None,
+    };
     let query_msg_json = serde_json::to_string(&query)?;
 
-    let res: String = get_fcd_else_lcd_query(&contract_addr,&query_msg_json).await?;
-    let res: Response<WhitelistResponse> = serde_json::from_str(&res)?; 
+    let res: String = get_fcd_else_lcd_query(&contract_addr, &query_msg_json).await?;
+    let res: Response<WhitelistResponse> = serde_json::from_str(&res)?;
     Ok(ResponseResult::AnchorWhitelistResponse(res))
 }  

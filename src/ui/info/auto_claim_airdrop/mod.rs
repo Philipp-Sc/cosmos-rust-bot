@@ -17,7 +17,7 @@ use core::future::Future;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-pub async fn lazy_anchor_account_auto_claim_airdrop(maybes: &mut HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, wallet_acc_address: &Arc<SecUtf8>, wallet_seed_phrase: &Arc<SecUtf8>, state: &Arc<RwLock<Vec<Option<Entry>>>>, offset: &mut usize, is_test: bool, is_first_run: bool) -> Vec<(Entry, Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>>)> {
+pub async fn lazy_anchor_account_auto_claim_airdrop(maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, wallet_acc_address: &Arc<SecUtf8>, wallet_seed_phrase: &Arc<SecUtf8>, state: &Arc<RwLock<Vec<Option<Entry>>>>, offset: &mut usize, is_test: bool, is_first_run: bool) -> Vec<(Entry, Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>>)> {
     let mut anchor_view: Vec<(Entry, usize)> = Vec::new();
     let mut anchor_tasks: Vec<(Entry, Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>>)> = Vec::new();
 

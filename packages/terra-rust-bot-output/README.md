@@ -1,24 +1,23 @@
 <div align="center">
-   
+
   <h1>Terra Rust Bot Output</h1> 
   <p>View the state of terra-rust-bot</p> 
-   
-   
-  <img src="gallery/terminal_output_auto_stake.png" width="350">
-  <img src="gallery/terminal_output_market.png" width="250">
+
+  <img src="https://github.com/Philipp-Sc/media/raw/main/terra-rust-bot/terra-rust-bot-output/gallery/terminal_output_auto_stake.png" height="350">
+  <img src="https://github.com/Philipp-Sc/media/raw/main/terra-rust-bot/terra-rust-bot-output/gallery/terminal_output_market.png" height="350">
   </div>
 <br/>
 
-### [Install](#install) · [Usage](#usage)  
- 
-This package can be used to view the latest informaction directly from the terra-rust-bot. 
+### [Install](#install) · [Usage](#usage)
 
+This package can be used to view the latest informaction directly from the terra-rust-bot.
 
 ## How it works
- 
+
 #### Configuration
-* The current state from terra-rust-bot is written to **./packages/terra-rust-bot-output/terra-rust-bot-state.json**. You can use this package **terra-rust-bot-output** directly to view all the information in a human readable format.
- 
+
+* The current state from terra-rust-bot is written to **./packages/terra-rust-bot-output/terra-rust-bot-state.json**.
+  You can use this package **terra-rust-bot-output** directly to view all the information in a human readable format.
 
 ## Install
 
@@ -27,13 +26,12 @@ This package can be used to view the latest informaction directly from the terra
 * `cd ./packages/terra-rust-bot-output`
 * `cargo build`
 
-
 ## Usage
 
-* After that you should be able to run:  
-* `./target/debug/terra-rust-bot-output local-display -m "\help"  ` 
+* After that you should be able to run:
+* `./target/debug/terra-rust-bot-output local-display -m "\help"  `
 * This will show you all possible commands.
- 
+
  ```
  [Available Commands]
 UPDATE SETTINGS

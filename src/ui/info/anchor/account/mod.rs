@@ -14,7 +14,7 @@ use terra_rust_api_layer::services::blockchain::smart_contracts::objects::Respon
 use tokio::sync::{Mutex};
 
 
-pub async fn display_anchor_account(maybes: &HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>) -> Vec<(Entry, Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>>)> {
+pub async fn display_anchor_account(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>) -> Vec<(Entry, Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>>)> {
     let mut view: Vec<(Entry, Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>>)> = Vec::new();
 
 

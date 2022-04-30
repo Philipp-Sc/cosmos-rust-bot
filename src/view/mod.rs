@@ -86,7 +86,7 @@ macro_rules! percent_decimal_or_return {
 // so we can see how old each data point is.
 // if data is to old throw alerts
 
-pub async fn calculate_borrow_plan(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, field: &str, digits_rounded_to: u32) -> Maybe<String> {
+pub async fn calculate_borrow_plan(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, field: &str, digits_rounded_to: u32) -> Maybe<String> {
     let mut ust_amount_liquid = decimal_or_return!(terra_balance_to_string(maybes.clone(),"uusd",false,10).await);
     let min_ust_balance = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"min_ust_balance",false,10).await);
     ust_amount_liquid = ust_amount_liquid.checked_sub(min_ust_balance).unwrap();
@@ -157,7 +157,7 @@ pub async fn calculate_borrow_plan(maybes: HashMap<String, Arc<Mutex<Maybe<Respo
     return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
 }
 
-pub async fn calculate_repay_plan(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, field: &str, digits_rounded_to: u32) -> Maybe<String> {
+pub async fn calculate_repay_plan(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, field: &str, digits_rounded_to: u32) -> Maybe<String> {
     let min_ust_balance = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"min_ust_balance",false,10).await);
 
     let ust_amount_liquid = decimal_or_return!(terra_balance_to_string(maybes.clone(),"uusd",false,10).await)
@@ -338,7 +338,7 @@ pub async fn calculate_repay_plan(maybes: HashMap<String, Arc<Mutex<Maybe<Respon
 }
 
 
-pub async fn calculate_farm_plan(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, field: &str, as_micro: bool, digits_rounded_to: u32) -> Maybe<String> {
+pub async fn calculate_farm_plan(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, field: &str, as_micro: bool, digits_rounded_to: u32) -> Maybe<String> {
     let gas_fees_uusd = decimal_or_return!(gas_price_to_string(maybes.clone(),10).await);
     let gas_adjustment_preference = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"gas_adjustment_preference",false,10).await);
 
@@ -410,7 +410,7 @@ pub async fn calculate_farm_plan(maybes: HashMap<String, Arc<Mutex<Maybe<Respons
 }
 
 
-pub async fn calculate_amount(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, key: &str, as_micro: bool, digits_rounded_to: u32) -> Maybe<String> {
+pub async fn calculate_amount(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, key: &str, as_micro: bool, digits_rounded_to: u32) -> Maybe<String> {
     /* Calculate the repay amount required based on the desired "target_percent" value from user config.
      * target_percent is where ltv will be at once repay is complete.
      */
@@ -469,7 +469,7 @@ pub async fn calculate_amount(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseRe
     }
 }
 
-pub async fn check_anchor_loan_status(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, key: &str, digits_rounded_to: u32) -> Maybe<String> {
+pub async fn check_anchor_loan_status(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, key: &str, digits_rounded_to: u32) -> Maybe<String> {
     let zero = Decimal::from_str("0").unwrap();
 
     let trigger_percentage = match key {
@@ -523,7 +523,7 @@ pub async fn check_anchor_loan_status(maybes: HashMap<String, Arc<Mutex<Maybe<Re
           .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::ToZero).to_string())),Some(Utc::now().timestamp())));
 }
 
-pub async fn estimate_anchor_protocol_next_claim_and_stake_tx(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, field_type: &str, field_amount: &str, field: &str, digits_rounded_to: u32) -> Maybe<String> {
+pub async fn estimate_anchor_protocol_next_claim_and_stake_tx(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, field_type: &str, field_amount: &str, field: &str, digits_rounded_to: u32) -> Maybe<String> {
     let mut loan_amount = Decimal::from_str("0").unwrap();
 
     if "loan_amount" == field_amount {
@@ -552,7 +552,7 @@ pub async fn estimate_anchor_protocol_next_claim_and_stake_tx(maybes: HashMap<St
     maybe_struct!((Some(res[field].as_str().unwrap_or("--").to_string()),now))
 }
 
-pub async fn estimate_anchor_protocol_tx_fee_claim_and_farm(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, digits_rounded_to: u32) -> Maybe<String> {
+pub async fn estimate_anchor_protocol_tx_fee_claim_and_farm(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, digits_rounded_to: u32) -> Maybe<String> {
     let tx_fee_claim_rewards = decimal_or_return!(estimate_anchor_protocol_tx_fee(maybes.clone(), "anchor_protocol_txs_claim_rewards","fee_amount_at_threshold".to_owned(),false,10).await);
     let tx_fee_provide_liquidity = decimal_or_return!(estimate_anchor_protocol_tx_fee(maybes.clone(), "anchor_protocol_txs_provide_liquidity","fee_amount_at_threshold".to_owned(),false,10).await);
     let tx_fee_stake_rewards = decimal_or_return!(estimate_anchor_protocol_tx_fee(maybes.clone(), "anchor_protocol_txs_staking_lp","fee_amount_at_threshold".to_owned(),false,10).await);
@@ -562,7 +562,7 @@ pub async fn estimate_anchor_protocol_tx_fee_claim_and_farm(maybes: HashMap<Stri
                              .to_string()),Some(Utc::now().timestamp())));
 }
 
-pub async fn estimate_spec_tx_fee_provide(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, digits_rounded_to: u32) -> Maybe<String> {
+pub async fn estimate_spec_tx_fee_provide(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, digits_rounded_to: u32) -> Maybe<String> {
     let gas_fees_uusd = decimal_or_return!(gas_price_to_string(maybes.clone(),10).await);
 
     let gas_adjustment_preference = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"gas_adjustment_preference",false,10).await);
@@ -577,7 +577,7 @@ pub async fn estimate_spec_tx_fee_provide(maybes: HashMap<String, Arc<Mutex<Mayb
             .to_string()),Some(Utc::now().timestamp())));
 }
 
-pub async fn estimate_anchor_protocol_tx_fee_claim(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, digits_rounded_to: u32) -> Maybe<String> {
+pub async fn estimate_anchor_protocol_tx_fee_claim(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, digits_rounded_to: u32) -> Maybe<String> {
     let gas_fees_uusd = decimal_or_return!(gas_price_to_string(maybes.clone(),10).await);
 
     let gas_adjustment_preference = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"gas_adjustment_preference",false,10).await);
@@ -593,7 +593,7 @@ pub async fn estimate_anchor_protocol_tx_fee_claim(maybes: HashMap<String, Arc<M
 }
 
 
-pub async fn estimate_anchor_protocol_tx_fee_claim_and_provide_to_spec_vault(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, digits_rounded_to: u32) -> Maybe<String> {
+pub async fn estimate_anchor_protocol_tx_fee_claim_and_provide_to_spec_vault(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, digits_rounded_to: u32) -> Maybe<String> {
     let gas_fees_uusd = decimal_or_return!(gas_price_to_string(maybes.clone(),10).await);
     let gas_adjustment_preference = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"gas_adjustment_preference",false,10).await);
 
@@ -609,7 +609,7 @@ pub async fn estimate_anchor_protocol_tx_fee_claim_and_provide_to_spec_vault(may
             .to_string()),Some(Utc::now().timestamp())));
 }
 
-pub async fn estimate_anchor_protocol_tx_fee_claim_and_stake(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, digits_rounded_to: u32) -> Maybe<String> {
+pub async fn estimate_anchor_protocol_tx_fee_claim_and_stake(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, digits_rounded_to: u32) -> Maybe<String> {
     let gas_fees_uusd = decimal_or_return!(gas_price_to_string(maybes.clone(),10).await);
 
     let gas_adjustment_preference = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"gas_adjustment_preference",false,10).await);
@@ -626,7 +626,7 @@ pub async fn estimate_anchor_protocol_tx_fee_claim_and_stake(maybes: HashMap<Str
             .to_string()),Some(Utc::now().timestamp())));
 }
 
-pub async fn estimate_anchor_protocol_tx_fee(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, tx_key: &str, key: String, as_micro: bool, digits_rounded_to: u32) -> Maybe<String> {
+pub async fn estimate_anchor_protocol_tx_fee(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, tx_key: &str, key: String, as_micro: bool, digits_rounded_to: u32) -> Maybe<String> {
     let mut tax_rate = Decimal::from_str("0").unwrap();
 
     match try_get_resolved(&maybes, "tax_rate").await {
@@ -766,7 +766,7 @@ pub async fn estimate_anchor_protocol_tx_fee(maybes: HashMap<String, Arc<Mutex<M
     }
 }
 
-pub async fn apy_on_collateral_by(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, amount_field: &str, apr_field: &str, digits_rounded_to: u32) -> Maybe<String> {
+pub async fn apy_on_collateral_by(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, amount_field: &str, apr_field: &str, digits_rounded_to: u32) -> Maybe<String> {
     let borrow_limit = decimal_or_return!(borrow_limit_to_string(maybes.clone(), false, 10).await);
 
     let mut loan_amount = Decimal::from_str("0").unwrap();
@@ -812,7 +812,7 @@ pub async fn apy_on_collateral_by(maybes: HashMap<String, Arc<Mutex<Maybe<Respon
     }
 }
 
-pub async fn anc_staked_balance_in_ust_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, digits_rounded_to: u32) -> Maybe<String> {
+pub async fn anc_staked_balance_in_ust_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, digits_rounded_to: u32) -> Maybe<String> {
     let mut _exchange_rate = Decimal::from_str("0").unwrap();
 
     match try_get_resolved(&maybes, "simulation_cw20 anchorprotocol ANC terraswapAncUstPair").await {
@@ -842,7 +842,7 @@ pub async fn anc_staked_balance_in_ust_to_string(maybes: HashMap<String, Arc<Mut
 }
 
 
-pub async fn anchor_claim_and_stake_transaction_gas_fees_ratio_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, digits_rounded_to: u32) -> Maybe<String> {
+pub async fn anchor_claim_and_stake_transaction_gas_fees_ratio_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, digits_rounded_to: u32) -> Maybe<String> {
     let mut _pending_rewards = Decimal::from_str("0").unwrap();
     match try_get_resolved(&maybes, "borrow_info").await {
         Maybe { data: Ok(response_result), .. } => {
@@ -883,7 +883,7 @@ pub async fn anchor_claim_and_stake_transaction_gas_fees_ratio_to_string(maybes:
     }
 }
 
-pub async fn borrower_rewards_in_ust_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, digits_rounded_to: u32) -> Maybe<String> {
+pub async fn borrower_rewards_in_ust_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, digits_rounded_to: u32) -> Maybe<String> {
     let mut _pending_rewards = Decimal::from_str("0").unwrap();
     match try_get_resolved(&maybes, "borrow_info").await {
         Maybe { data: Ok(response_result), .. } => {
@@ -914,7 +914,7 @@ pub async fn borrower_rewards_in_ust_to_string(maybes: HashMap<String, Arc<Mutex
                    .to_string()),Some(Utc::now().timestamp())));
 }
 
-pub async fn borrower_deposit_liquidity_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, digits_rounded_to: u32) -> Maybe<String> {
+pub async fn borrower_deposit_liquidity_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, digits_rounded_to: u32) -> Maybe<String> {
     let mut _balance = Decimal::from_str("0").unwrap();
     match try_get_resolved(&maybes, "balance").await {
         Maybe { data: Ok(response_result), .. } => {
@@ -960,7 +960,7 @@ pub async fn borrower_deposit_liquidity_to_string(maybes: HashMap<String, Arc<Mu
            .to_string())),Some(Utc::now().timestamp())));
 }
 
-pub async fn borrower_ltv_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, digits_rounded_to: u32) -> Maybe<String> {
+pub async fn borrower_ltv_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, digits_rounded_to: u32) -> Maybe<String> {
     let mut _borrow_limit = Decimal::from_str("0").unwrap();
 
     match try_get_resolved(&maybes, "borrow_limit").await {
@@ -1004,7 +1004,7 @@ pub async fn borrower_ltv_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<Resp
     }
 }
 
-pub async fn borrower_ust_deposited_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, as_micro: bool, digits_rounded_to: u32) -> Maybe<String> {
+pub async fn borrower_ust_deposited_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, as_micro: bool, digits_rounded_to: u32) -> Maybe<String> {
     let mut _balance = Decimal::from_str("0").unwrap();
     match try_get_resolved(&maybes, "balance").await {
         Maybe { data: Ok(response_result), .. } => {
@@ -1036,7 +1036,7 @@ pub async fn borrower_ust_deposited_to_string(maybes: HashMap<String, Arc<Mutex<
 }
 
 
-pub async fn borrow_apr_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, digits_rounded_to: u32) -> Maybe<String> {
+pub async fn borrow_apr_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, digits_rounded_to: u32) -> Maybe<String> {
     // utilisationRatio = stablecoinsLent / stablecoinsDeposited
     // borrowRate = utilisationRatio * interestMultiplier + baseRate
     // borrow_apr = blocksPerYear * borrowRate
@@ -1112,7 +1112,7 @@ pub async fn borrow_apr_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<Respon
     }
 }
 
-pub async fn anchor_airdrops_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>) -> Maybe<String> {
+pub async fn anchor_airdrops_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>) -> Maybe<String> {
     match try_get_resolved(&maybes, "anchor_airdrops").await {
         Maybe { data: Ok(res), .. } => {
             let anchor_airdrops = res.as_airdrop_response().unwrap();
@@ -1142,7 +1142,7 @@ pub async fn anchor_airdrops_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<R
     }
 }
 
-pub async fn anything_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, key: &str) -> Maybe<String> {
+pub async fn anything_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, key: &str) -> Maybe<String> {
     match try_get_resolved(&maybes, key).await {
         Maybe { data: Ok(res), .. } => {
             return maybe_struct!((Some( serde_json::to_string_pretty(&res).unwrap_or("--".to_string())),Some(Utc::now().timestamp())));
@@ -1153,7 +1153,7 @@ pub async fn anything_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<Response
     }
 }
 
-pub async fn net_apr_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, digits_rounded_to: u32) -> Maybe<String> {
+pub async fn net_apr_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, digits_rounded_to: u32) -> Maybe<String> {
     // utilisationRatio = stablecoinsLent / stablecoinsDeposited
     // borrowRate = utilisationRatio * interestMultiplier + baseRate
     // borrow_apr = blocksPerYear * borrowRate
@@ -1241,7 +1241,7 @@ pub async fn net_apr_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseR
 }
 
 
-pub async fn borrow_rate_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, key: &str, key_1: &str, key_2: &str, digits_rounded_to: u32) -> Maybe<String> {
+pub async fn borrow_rate_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, key: &str, key_1: &str, key_2: &str, digits_rounded_to: u32) -> Maybe<String> {
     let mut _interest_multiplier = cosmwasm_bignumber::Decimal256::zero();
     let mut _base_rate = cosmwasm_bignumber::Decimal256::zero();
 
@@ -1284,7 +1284,7 @@ pub async fn borrow_rate_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<Respo
     return maybe_struct!((Some( Decimal::from_str(_interest_multiplier.to_string().as_str()).unwrap().checked_mul(utilization_ratio).unwrap().checked_add(Decimal::from_str(_base_rate.to_string().as_str()).unwrap()).unwrap().round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero).to_string()),Some(Utc::now().timestamp())));
 }
 
-pub async fn utilization_ratio_to_string(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, digits_rounded_to: u32) -> Maybe<String> {
+pub async fn utilization_ratio_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, digits_rounded_to: u32) -> Maybe<String> {
     let mut _total_liabilities = cosmwasm_bignumber::Decimal256::zero();
 
     let mut _a_terra_exchange_rate = cosmwasm_bignumber::Decimal256::zero();
@@ -1314,7 +1314,7 @@ pub async fn utilization_ratio_to_string(maybes: HashMap<String, Arc<Mutex<Maybe
     return maybe_struct!((Some( format!("{}%",utilization_ratio.checked_mul(Decimal::from_str("100").unwrap()).unwrap().round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero).to_string())),Some(Utc::now().timestamp())));
 }
 
-pub async fn estimate_anchor_protocol_auto_repay_tx_fee(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, digits_rounded_to: u32) -> Maybe<String> {
+pub async fn estimate_anchor_protocol_auto_repay_tx_fee(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, digits_rounded_to: u32) -> Maybe<String> {
     let gas_fees_uusd = decimal_or_return!(gas_price_to_string(maybes.clone(),10).await);
 
     let gas_adjustment_preference = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"gas_adjustment_preference",false,10).await);
@@ -1334,7 +1334,7 @@ pub async fn estimate_anchor_protocol_auto_repay_tx_fee(maybes: HashMap<String, 
             .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero).to_string()),Some(Utc::now().timestamp())));
 }
 
-pub async fn estimate_anchor_protocol_auto_borrow_tx_fee(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, digits_rounded_to: u32) -> Maybe<String> {
+pub async fn estimate_anchor_protocol_auto_borrow_tx_fee(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, digits_rounded_to: u32) -> Maybe<String> {
     let gas_fees_uusd = decimal_or_return!(gas_price_to_string(maybes.clone(),10).await);
 
     let gas_adjustment_preference = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"gas_adjustment_preference",false,10).await);

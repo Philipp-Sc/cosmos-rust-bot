@@ -70,16 +70,47 @@ use terra_rust_bot_essentials::shared::Entry;
 pub type Maybe<T> = MaybeImported<T>;
 
 
+pub async fn add_item(pointer: &Arc<Mutex<Vec<Maybe<ResponseResult>>>>, item: Maybe<ResponseResult>) {
+    let mut lock = pointer.lock().await;
+    lock.insert(0, item);
+    if lock.len() > 4 {
+        lock.drain(4..);
+    }
+}
+
+pub async fn get_item(pointer: &Arc<Mutex<Vec<Maybe<ResponseResult>>>>) -> Maybe<ResponseResult> {
+    let lock = pointer.lock().await;
+    let mut result: Option<Maybe<ResponseResult>> = None;
+    for i in 0..lock.len() {
+        match &lock[i] {
+            Maybe { data: Err(err), .. } => {
+                if err.to_string() != "Error: Not yet resolved!".to_string() {
+                    result = Some(lock[i].clone());
+                    break;
+                }
+            }
+            Maybe { data: Ok(_), .. } => {
+                result = Some(lock[i].clone());
+                break;
+            }
+        };
+    }
+    if let Some(res) = result {
+        return res;
+    } else {
+        return lock[0].clone();
+    }
+}
+
 /*
  * returns the value for the given key, if the enum is of the type Maybe.
  * will not await the future if it is not yet resolved.
  * in that case it returns an error.
  */
-pub async fn try_get_resolved(maybes: &HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, key: &str) -> Maybe<ResponseResult> {
+pub async fn try_get_resolved(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, key: &str) -> Maybe<ResponseResult> {
     match maybes.get(key.to_string().as_str()) {
         Some(pointer) => {
-            let lock = pointer.lock().await;
-            lock.clone()
+            get_item(pointer).await
         }
         None => {
             Maybe {
@@ -90,34 +121,32 @@ pub async fn try_get_resolved(maybes: &HashMap<String, Arc<Mutex<Maybe<ResponseR
     }
 }
 
-pub async fn get_timestamps_of_tasks(maybes: &HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>) -> Vec<(String, i64)> {
+pub async fn get_timestamps_of_tasks(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>) -> Vec<(String, i64)> {
     let mut keys: Vec<(String, i64)> = Vec::new();
 
     for key in maybes.keys() {
         let pointer = maybes.get(key.to_string().as_str()).unwrap();
-        let lock = pointer.lock().await;
-        let timestamp: i64 = lock.timestamp;
+        let timestamp: i64 = get_item(pointer).await.timestamp;
         keys.push((key.to_owned(), timestamp));
     }
     return keys;
 }
 
-pub async fn register_value(maybes: &HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, key: String, value: String) {
+pub async fn register_value(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, key: String, value: String) {
     let pointer = maybes.get(key.to_string().as_str()).unwrap();
     let result: Maybe<ResponseResult> = Maybe { data: Ok(ResponseResult::Text(value)), timestamp: Utc::now().timestamp() };
-    let mut lock = pointer.lock().await;
-    *lock = result;
+    add_item(pointer, result).await;
 }
 
-pub async fn try_register_function(join_set: &mut JoinSet<()>, maybes: &HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, key: String, f: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>>, timeout_duration: u64, block_duration_after_resolve: i64) {
+pub async fn try_register_function(join_set: &mut JoinSet<()>, maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, key: String, f: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>>, timeout_duration: u64, block_duration_after_resolve: i64) {
     let timestamp;
     let state;
 
     match maybes.get(&key) {
         Some(val) => {
-            match &*val.lock().await {
+            match val.lock().await[0].clone() {
                 Maybe { data: Err(err), timestamp: t } => {
-                    timestamp = *t;
+                    timestamp = t;
                     if err.to_string() == "Error: Not yet resolved!".to_string() {
                         state = "pending";
                     } else if err.to_string() == "Error: Entry reserved!".to_string() {
@@ -128,7 +157,7 @@ pub async fn try_register_function(join_set: &mut JoinSet<()>, maybes: &HashMap<
                 }
                 Maybe { data: Ok(_), timestamp: t } => {
                     state = "resolved";
-                    timestamp = *t;
+                    timestamp = t;
                 }
             }
         }
@@ -144,13 +173,12 @@ pub async fn try_register_function(join_set: &mut JoinSet<()>, maybes: &HashMap<
         join_set.spawn(async move {
             let result = timeout(Duration::from_secs(timeout_duration), f).await.unwrap_or(Maybe { data: Ok("timeout".to_string()), timestamp: Utc::now().timestamp() });
             let result: Maybe<ResponseResult> = Maybe { data: Ok(ResponseResult::Text(result.data.unwrap_or("--".to_string()))), timestamp: Utc::now().timestamp() };
-            let mut lock = pointer.lock().await;
-            *lock = result;
+            add_item(&pointer, result).await;
         });
     }
 }
 
-pub async fn await_function(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, key: String) -> Maybe<String> {
+pub async fn await_function(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, key: String) -> Maybe<String> {
     match try_get_resolved(&maybes, &key).await {
         Maybe { data: Ok(succ), timestamp: t } => {
             Maybe { data: Ok(succ.as_text().unwrap().to_string()), timestamp: t }
@@ -161,24 +189,26 @@ pub async fn await_function(maybes: HashMap<String, Arc<Mutex<Maybe<ResponseResu
     }
 }
 
-pub async fn requirements_next(num_cpus: usize, join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, user_settings: &UserSettings, wallet_acc_address: &Arc<SecUtf8>) -> Vec<Entry> {
-    let start = Utc::now().timestamp() + 1;
-    while Utc::now().timestamp() < start && !join_set.is_empty() {
-        timeout(Duration::from_millis(100), join_set.join_one()).await.ok();
+pub async fn requirements_next(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, user_settings: &UserSettings, wallet_acc_address: &Arc<SecUtf8>) -> Vec<Entry> {
+    for _ in 0..join_set.len() {
+        let result = timeout(Duration::from_millis(0), join_set.join_one()).await;
+        match result {
+            Ok(_) => {}
+            Err(_) => { break; }
+        };
     }
 
     let req = my_requirement_list(&user_settings);
 
     let mut task_list: Vec<(String, String, i64)> = Vec::new();
 
-
     let now = Utc::now().timestamp();
     for (k, v) in maybes.iter() {
         let state: &str;
         let time: i64;
-        match &*v.lock().await {
+        match v.lock().await[0].clone() {
             Maybe { data: Err(err), timestamp } => {
-                time = *timestamp;
+                time = timestamp;
                 if err.to_string() == "Error: Not yet resolved!".to_string() {
                     state = "pending";
                 } else if err.to_string() == "Error: Entry reserved!".to_string() {
@@ -188,7 +218,7 @@ pub async fn requirements_next(num_cpus: usize, join_set: &mut JoinSet<()>, mayb
                 }
             }
             Maybe { data: Ok(_), timestamp } => {
-                time = *timestamp;
+                time = timestamp;
                 state = "resolved";
             }
         }
@@ -222,12 +252,7 @@ pub async fn requirements_next(num_cpus: usize, join_set: &mut JoinSet<()>, mayb
     }
     task_list.sort_by_key(|k| k.2);
 
-    let mut n = 0;
-    if task_list.iter().filter(|x| x.1 == "pending".to_string()).count() < 32 {
-        n = num_cpus;
-    }
-    let req_to_update: Vec<String> = task_list.iter().filter(|x| x.1 == "upcoming".to_string()).map(|x| x.0.to_string()).take(n).collect();
-
+    let req_to_update: Vec<String> = task_list.iter().filter(|x| x.1 == "upcoming".to_string()).map(|x| x.0.to_string()).collect();
 
     let mut entries: Vec<Entry> = Vec::new();
     for x in 0..task_list.len() {
@@ -352,7 +377,7 @@ pub async fn requirements_next(num_cpus: usize, join_set: &mut JoinSet<()>, mayb
 /*
  * Preparing entries so that they can be used without the need to mutate the hashmap later on.
  */
-pub async fn requirements_setup(maybes: &mut HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>) {
+pub async fn requirements_setup(maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>) {
     let list = vec![
         "anchor_auto_stake",
         "anchor_auto_farm",
@@ -366,7 +391,7 @@ pub async fn requirements_setup(maybes: &mut HashMap<String, Arc<Mutex<Maybe<Res
         "anchor_governance_claim_and_stake"];
 
     for key in list {
-        maybes.insert(key.to_string(), Arc::new(Mutex::new(Maybe { data: Err(anyhow::anyhow!("Error: Entry reserved!")), timestamp: Utc::now().timestamp() })));
+        maybes.insert(key.to_string(), Arc::new(Mutex::new(vec![Maybe { data: Err(anyhow::anyhow!("Error: Entry reserved!")), timestamp: Utc::now().timestamp() }])));
     }
 }
 
@@ -376,15 +401,22 @@ pub async fn requirements_setup(maybes: &mut HashMap<String, Arc<Mutex<Maybe<Res
 * retrieve the value when it is needed: "data.get_mut(String).unwrap().await"
 * use try_join!, join! or select! macros to optimise retrieval of multiple values.
 */
-async fn requirements(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, Arc<Mutex<Maybe<ResponseResult>>>>, user_settings: &UserSettings, wallet_acc_address: &Arc<SecUtf8>, req: Vec<String>) {
+async fn requirements(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, user_settings: &UserSettings, wallet_acc_address: &Arc<SecUtf8>, req: Vec<String>) {
     for cmd in req {
         let vec: Vec<&str> = cmd.split(" ").collect();
         let length = vec.len();
         let mut into_iter = vec.into_iter();
 
-        maybes.insert(cmd.to_string(), Arc::new(Mutex::new(Maybe { data: Err(anyhow::anyhow!("Error: Not yet resolved!")), timestamp: Utc::now().timestamp() })));
-
+        let contains_key = maybes.contains_key(&cmd);
+        if !contains_key {
+            maybes.insert(cmd.to_string(), Arc::new(Mutex::new(vec![Maybe { data: Err(anyhow::anyhow!("Error: Not yet resolved!")), timestamp: Utc::now().timestamp() }])));
+        }
         let pointer = maybes.get(cmd.as_str()).unwrap().clone();
+
+        if contains_key {
+            add_item(&pointer, Maybe { data: Err(anyhow::anyhow!("Error: Not yet resolved!")), timestamp: Utc::now().timestamp() }).await;
+        }
+
 
         let mut f: Option<Pin<Box<dyn Future<Output=anyhow::Result<ResponseResult>> + Send + 'static>>> = None;
 
@@ -475,43 +507,35 @@ async fn requirements(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, A
                         }
                     };
                     let result: Maybe<ResponseResult> = Maybe { data: Ok(ResponseResult::Text(gas_prices.uusd.to_string().to_owned())), timestamp: Utc::now().timestamp() };
-                    let mut lock = pointer.lock().await;
-                    *lock = result;
+                    add_item(&pointer, result).await;
                 }
                 "trigger_percentage" => {
                     let result: Maybe<ResponseResult> = Maybe { data: Ok(ResponseResult::Text(user_settings.trigger_percentage.to_string().to_owned())), timestamp: Utc::now().timestamp() };
-                    let mut lock = pointer.lock().await;
-                    *lock = result;
+                    add_item(&pointer, result).await;
                 }
                 "borrow_percentage" => {
                     let result: Maybe<ResponseResult> = Maybe { data: Ok(ResponseResult::Text(user_settings.borrow_percentage.to_string().to_owned())), timestamp: Utc::now().timestamp() };
-                    let mut lock = pointer.lock().await;
-                    *lock = result;
+                    add_item(&pointer, result).await;
                 }
                 "target_percentage" => {
                     let result: Maybe<ResponseResult> = Maybe { data: Ok(ResponseResult::Text(user_settings.target_percentage.to_string().to_owned())), timestamp: Utc::now().timestamp() };
-                    let mut lock = pointer.lock().await;
-                    *lock = result;
+                    add_item(&pointer, result).await;
                 }
                 "gas_adjustment_preference" => {
                     let result: Maybe<ResponseResult> = Maybe { data: Ok(ResponseResult::Text(user_settings.gas_adjustment_preference.to_string().to_owned())), timestamp: Utc::now().timestamp() };
-                    let mut lock = pointer.lock().await;
-                    *lock = result;
+                    add_item(&pointer, result).await;
                 }
                 "min_ust_balance" => {
                     let result: Maybe<ResponseResult> = Maybe { data: Ok(ResponseResult::Text(user_settings.min_ust_balance.to_string().to_owned())), timestamp: Utc::now().timestamp() };
-                    let mut lock = pointer.lock().await;
-                    *lock = result;
+                    add_item(&pointer, result).await;
                 }
                 "ust_balance_preference" => {
                     let result: Maybe<ResponseResult> = Maybe { data: Ok(ResponseResult::Text(user_settings.ust_balance_preference.to_string().to_owned())), timestamp: Utc::now().timestamp() };
-                    let mut lock = pointer.lock().await;
-                    *lock = result;
+                    add_item(&pointer, result).await;
                 }
                 "max_tx_fee" => {
                     let result: Maybe<ResponseResult> = Maybe { data: Ok(ResponseResult::Text(user_settings.max_tx_fee.to_string().to_owned())), timestamp: Utc::now().timestamp() };
-                    let mut lock = pointer.lock().await;
-                    *lock = result;
+                    add_item(&pointer, result).await;
                 }
                 &_ => {}
             };
@@ -577,8 +601,7 @@ async fn requirements(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, A
                 {
                     let result = m.await;
                     let result: Maybe<ResponseResult> = Maybe { data: result, timestamp: Utc::now().timestamp() };
-                    let mut lock = pointer.lock().await;
-                    *lock = result;
+                    add_item(&pointer, result).await;
                 }
             });
         }
