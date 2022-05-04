@@ -1,5 +1,14 @@
 // roadmap
 
+// show all mirror token/ pairs
+
+// show all other pairs
+
+// same as market
+
+// side a side different dex
+
+
 // TOMORROW - THURSDAY
 // todo: open API/extend utilities so that useful functions can be provided e.g. when to compound? see open issues
 

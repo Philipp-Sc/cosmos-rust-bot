@@ -283,7 +283,7 @@ pub async fn anchor_borrow_claim_and_farm_rewards(maybes: HashMap<String, Arc<Mu
 
 	    let anc_to_keep = decimal_or_return!(calculate_farm_plan(maybes.clone(),"anc_to_keep",true,0).await);
 	
-	    let exchange_rate = decimal_or_return!(simulation_swap_exchange_rate_to_string(maybes.clone(),"simulation_cw20 anchorprotocol ANC terraswapAncUstPair",false,10).await);
+	    let exchange_rate = decimal_or_return!(simulation_swap_exchange_rate_to_string(maybes.clone(),"simulation_cw20 terraswap anchorprotocol ANC terraswapAncUstPair",false,10).await);
    
 	    let ust_to_keep = anc_to_keep.checked_mul(exchange_rate).unwrap().round_dp_with_strategy(0, rust_decimal::RoundingStrategy::ToZero);
 
@@ -293,7 +293,7 @@ pub async fn anchor_borrow_claim_and_farm_rewards(maybes: HashMap<String, Arc<Mu
 	    	return maybe_struct!((Some( "waiting..".to_string()),Some(Utc::now().timestamp())));
 	    }
 
-	    let belief_price = decimal_or_return!(simulation_swap_exchange_rate_to_string(maybes.clone(),"simulation_cw20 anchorprotocol ANC terraswapAncUstPair",false,10).await);
+	    let belief_price = decimal_or_return!(simulation_swap_exchange_rate_to_string(maybes.clone(),"simulation_cw20 terraswap anchorprotocol ANC terraswapAncUstPair",false,10).await);
 
 	    let max_spread = Decimal::from_str("0.001").unwrap();
 

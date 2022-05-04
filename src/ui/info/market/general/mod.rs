@@ -89,7 +89,7 @@ pub async fn display_market_info(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<Re
         group: Some("[Market][Anchor]".to_string()),
     };
 
-    let t2: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(simulation_swap_return_amount_to_string(maybes.clone(), "simulation anchorprotocol uluna terraswapblunaLunaPair", false, 4));
+    let t2: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(simulation_swap_return_amount_to_string(maybes.clone(), "simulation terraswap anchorprotocol uluna terraswapblunaLunaPair", false, 4));
     view.push((t1, t2));
 
     let t1 = Entry {
@@ -115,7 +115,7 @@ pub async fn display_market_info(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<Re
         group: Some("[Market][Anchor]".to_string()),
     };
 
-    let t2: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(simulation_swap_return_amount_to_string(maybes.clone(), "simulation_cw20 anchorprotocol ANC terraswapAncUstPair", false, 2));
+    let t2: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(simulation_swap_return_amount_to_string(maybes.clone(), "simulation_cw20 terraswap anchorprotocol ANC terraswapAncUstPair", false, 2));
     view.push((t1, t2));
 
     let t1 = Entry {
@@ -141,7 +141,7 @@ pub async fn display_market_info(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<Re
         group: Some("[Market][Nexus]".to_string()),
     };
 
-    let t2: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(simulation_swap_return_amount_to_string(maybes.clone(), "simulation_cw20 nexusprotocol nLunaToken Psi-nLuna_Pair", false, 2));
+    let t2: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(simulation_swap_return_amount_to_string(maybes.clone(), "simulation_cw20 terraswap nexusprotocol nLunaToken Psi-nLuna_Pair", false, 2));
     view.push((t1, t2));
 
     let t1 = Entry {
@@ -154,7 +154,7 @@ pub async fn display_market_info(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<Re
         group: Some("[Market][Nexus]".to_string()),
     };
 
-    let t2: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(simulation_swap_return_amount_to_string(maybes.clone(), "simulation_cw20 nexusprotocol PsiToken Psi-UST_Pair", false, 4));
+    let t2: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(simulation_swap_return_amount_to_string(maybes.clone(), "simulation_cw20 terraswap nexusprotocol PsiToken Psi-UST_Pair", false, 4));
     view.push((t1, t2));
 
     let t1 = Entry {
@@ -167,7 +167,7 @@ pub async fn display_market_info(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<Re
         group: Some("[Market][Mirror]".to_string()),
     };
 
-    let t2: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(simulation_swap_return_amount_to_string(maybes.clone(), "simulation_cw20 uusd mir", false, 2));
+    let t2: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(simulation_swap_return_amount_to_string(maybes.clone(), "simulation_cw20 terraswap uusd mir", false, 2));
     view.push((t1, t2));
 
     let t1 = Entry {
@@ -180,7 +180,7 @@ pub async fn display_market_info(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<Re
         group: Some("[Market][Mirror]".to_string()),
     };
 
-    let t2: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(simulation_swap_return_amount_to_string(maybes.clone(), "simulation_cw20 uusd m_tsla", false, 2));
+    let t2: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(simulation_swap_return_amount_to_string(maybes.clone(), "simulation_cw20 terraswap uusd m_tsla", false, 2));
     view.push((t1, t2));
 
     let t1 = Entry {
@@ -193,7 +193,7 @@ pub async fn display_market_info(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<Re
         group: Some("[Market][Mirror]".to_string()),
     };
 
-    let t2: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(simulation_swap_return_amount_to_string(maybes.clone(), "simulation_cw20 uusd m_spy", false, 2));
+    let t2: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(simulation_swap_return_amount_to_string(maybes.clone(), "simulation_cw20 terraswap uusd m_spy", false, 2));
     view.push((t1, t2));
 
     let t1 = Entry {
@@ -206,7 +206,7 @@ pub async fn display_market_info(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<Re
         group: Some("[Market][Mirror]".to_string()),
     };
 
-    let t2: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(simulation_swap_return_amount_to_string(maybes.clone(), "simulation_cw20 uusd m_btc", false, 2));
+    let t2: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(simulation_swap_return_amount_to_string(maybes.clone(), "simulation_cw20 terraswap uusd m_btc", false, 2));
     view.push((t1, t2));
 
     let t1 = Entry {
@@ -219,7 +219,7 @@ pub async fn display_market_info(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<Re
         group: Some("[Market][Mirror]".to_string()),
     };
 
-    let t2: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(simulation_swap_return_amount_to_string(maybes.clone(), "simulation_cw20 uusd m_eth", false, 2));
+    let t2: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(simulation_swap_return_amount_to_string(maybes.clone(), "simulation_cw20 terraswap uusd m_eth", false, 2));
     view.push((t1, t2));
 
     return view;

@@ -342,7 +342,7 @@ pub async fn calculate_farm_plan(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<Res
     let gas_fees_uusd = decimal_or_return!(gas_price_to_string(maybes.clone(),10).await);
     let gas_adjustment_preference = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"gas_adjustment_preference",false,10).await);
 
-    let exchange_rate = decimal_or_return!(simulation_swap_exchange_rate_to_string(maybes.clone(),"simulation_cw20 anchorprotocol ANC terraswapAncUstPair",false,10).await);
+    let exchange_rate = decimal_or_return!(simulation_swap_exchange_rate_to_string(maybes.clone(),"simulation_cw20 terraswap anchorprotocol ANC terraswapAncUstPair",false,10).await);
 
     let fee_to_claim_anc_rewards_uusd_in_anc = decimal_or_return!(estimate_anchor_protocol_tx_fee(maybes.clone(), "anchor_protocol_txs_claim_rewards","avg_gas_used".to_owned(),true,0).await)
         .checked_mul(gas_fees_uusd).unwrap()
@@ -367,7 +367,7 @@ pub async fn calculate_farm_plan(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<Res
     // if pair_anc is used to swap that amount of anc
     // then the ust returned is lower than the remaining ANC value
 
-    let exchange_return = decimal_or_return!(simulation_swap_return_amount_to_string(maybes.clone(),"simulation_cw20 anchorprotocol ANC terraswapAncUstPair",false,10).await);
+    let exchange_return = decimal_or_return!(simulation_swap_return_amount_to_string(maybes.clone(),"simulation_cw20 terraswap anchorprotocol ANC terraswapAncUstPair",false,10).await);
     let return_ust_amount = pair_anc_excluding_exchange_fees.checked_div(exchange_return).unwrap();
     let return_amount_in_anc = return_ust_amount.checked_mul(exchange_rate).unwrap();
 
@@ -813,25 +813,15 @@ pub async fn apy_on_collateral_by(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<Re
 }
 
 pub async fn anc_staked_balance_in_ust_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, digits_rounded_to: u32) -> Maybe<String> {
-    let mut _exchange_rate = Decimal::from_str("0").unwrap();
+    let exchange_rate = decimal_or_return!(simulation_swap_return_amount_to_string(maybes.clone(),"simulation_cw20 terraswap anchorprotocol ANC terraswapAncUstPair",false,10).await);
 
-    match try_get_resolved(&maybes, "simulation_cw20 anchorprotocol ANC terraswapAncUstPair").await {
-        Maybe { data: Ok(response_result), .. } => {
-            let amount: cosmwasm_std::Decimal = cosmwasm_std::Decimal::from_str(response_result.as_simulation().unwrap().result.return_amount.to_string().as_str()).unwrap();
-            let micro: cosmwasm_std::Uint128 = cosmwasm_std::Uint128::from_str("1000000").unwrap();
-            _exchange_rate = Decimal::from_str((amount / micro).to_string().as_str()).unwrap();
-        },
-        Maybe { data: Err(_), .. } => {
-            return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
-        }
-    }
 
     match try_get_resolved(&maybes, "staker").await {
         Maybe { data: Ok(response_result), .. } => {
             let balance = response_result.as_staker().unwrap().result.balance;
             let balance = Decimal::from_str(balance.to_string().as_str()).unwrap();
             let micro = Decimal::from_str("1000000").unwrap();
-            return maybe_struct!((Some( balance.checked_div(micro).unwrap().checked_mul(_exchange_rate).unwrap()
+            return maybe_struct!((Some( balance.checked_div(micro).unwrap().checked_mul(exchange_rate).unwrap()
                    .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
                    .to_string()),Some(Utc::now().timestamp())));
         },
@@ -855,20 +845,10 @@ pub async fn anchor_claim_and_stake_transaction_gas_fees_ratio_to_string(maybes:
         }
     }
 
-    let mut _exchange_rate = Decimal::from_str("0").unwrap();
 
-    match try_get_resolved(&maybes, "simulation_cw20 anchorprotocol ANC terraswapAncUstPair").await {
-        Maybe { data: Ok(response_result), .. } => {
-            let amount: cosmwasm_std::Decimal = cosmwasm_std::Decimal::from_str(response_result.as_simulation().unwrap().result.return_amount.to_string().as_str()).unwrap();
-            let micro: cosmwasm_std::Uint128 = cosmwasm_std::Uint128::from_str("1000000").unwrap();
-            _exchange_rate = Decimal::from_str((amount / micro).to_string().as_str()).unwrap();
-        },
-        Maybe { data: Err(_), .. } => {
-            return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
-        }
-    }
+    let exchange_rate = decimal_or_return!(simulation_swap_exchange_rate_to_string(maybes.clone(),"simulation_cw20 terraswap anchorprotocol ANC terraswapAncUstPair",false,10).await);
 
-    _pending_rewards = _pending_rewards.checked_mul(_exchange_rate).unwrap();
+    _pending_rewards = _pending_rewards.checked_mul(exchange_rate).unwrap();
 
 
     let anchor_protocol_tx_fee = decimal_or_return!(estimate_anchor_protocol_tx_fee_claim_and_stake(maybes.clone(),  10).await);
@@ -896,20 +876,9 @@ pub async fn borrower_rewards_in_ust_to_string(maybes: HashMap<String, Arc<Mutex
         }
     }
 
-    let mut _exchange_rate = Decimal::from_str("0").unwrap();
+    let exchange_rate = decimal_or_return!(simulation_swap_exchange_rate_to_string(maybes.clone(),"simulation_cw20 terraswap anchorprotocol ANC terraswapAncUstPair",false,10).await);
 
-    match try_get_resolved(&maybes, "simulation_cw20 anchorprotocol ANC terraswapAncUstPair").await {
-        Maybe { data: Ok(response_result), .. } => {
-            let amount: cosmwasm_std::Decimal = cosmwasm_std::Decimal::from_str(response_result.as_simulation().unwrap().result.return_amount.to_string().as_str()).unwrap();
-            let micro: cosmwasm_std::Uint128 = cosmwasm_std::Uint128::from_str("1000000").unwrap();
-            _exchange_rate = Decimal::from_str((amount / micro).to_string().as_str()).unwrap();
-        },
-        Maybe { data: Err(_), .. } => {
-            return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
-        }
-    }
-
-    return maybe_struct!((Some( _pending_rewards.checked_mul(_exchange_rate).unwrap()
+    return maybe_struct!((Some( _pending_rewards.checked_mul(exchange_rate).unwrap()
                    .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
                    .to_string()),Some(Utc::now().timestamp())));
 }

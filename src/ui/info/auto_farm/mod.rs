@@ -112,7 +112,7 @@ pub async fn lazy_anchor_account_auto_farm_rewards(maybes: &HashMap<String, Arc<
         group: Some("[Anchor Protocol][Auto Farm]".to_string()),
     };
 
-    let t2: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(simulation_swap_exchange_rate_to_string(maybes.clone(), "simulation_cw20 anchorprotocol ANC terraswapAncUstPair", false, 2));
+    let t2: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(simulation_swap_exchange_rate_to_string(maybes.clone(), "simulation_cw20 terraswap anchorprotocol ANC terraswapAncUstPair", false, 2));
     view.push((t1, t2));
 
     let t1 = Entry {

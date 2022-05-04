@@ -560,7 +560,7 @@ async fn requirements(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, A
                 "config" => {
                     f = Some(Box::pin(config_query_msg(second_copy, third_copy)));
                 }
-                "simulation_cw20" => {
+                "simulation_cw20_" => {
                     f = Some(Box::pin(masset_to_ust(third_copy)));
                 }
                 "core_swap" => {
@@ -570,14 +570,29 @@ async fn requirements(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, A
             }
         } else if length == 4 {
             let first = into_iter.next().unwrap();
+            let _second = into_iter.next().unwrap();
+            let _third = into_iter.next().unwrap();
+            let fourth = into_iter.next().unwrap();
+            let fourth_copy = fourth.to_owned();
+
+            match first.as_ref() {
+                "simulation_cw20" => {
+                    f = Some(Box::pin(masset_to_ust(fourth_copy)));
+                }
+                &_ => {}
+            }
+        } else if length == 5 {
+            let first = into_iter.next().unwrap();
             let second = into_iter.next().unwrap();
             let third = into_iter.next().unwrap();
             let fourth = into_iter.next().unwrap();
+            let five = into_iter.next().unwrap();
 
 
             let second_copy = second.to_owned();
             let third_copy = third.to_owned();
             let fourth_copy = fourth.to_owned();
+            let five_copy = five.to_owned();
 
             match first.as_ref() {
                 // luna_to_bluna: simulation uluna anchorprotocol terraswapblunaLunaPair
@@ -587,10 +602,10 @@ async fn requirements(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, A
                 // ust_to_psi: simulation uusd nexusprotocol Psi-UST pair
                 // ust_to_anc: simulation uusd anchorprotocol terraswapAncUstPair
                 "simulation" => {
-                    f = Some(Box::pin(native_token_to_swap_pair(second_copy, third_copy, fourth_copy)));
+                    f = Some(Box::pin(native_token_to_swap_pair(second_copy, third_copy, fourth_copy, five_copy)));
                 }
                 "simulation_cw20" => {
-                    f = Some(Box::pin(cw20_to_swap_pair(second_copy, third_copy, fourth_copy)));
+                    f = Some(Box::pin(cw20_to_swap_pair(second_copy, third_copy, fourth_copy, five_copy)));
                 }
                 &_ => {}
             }

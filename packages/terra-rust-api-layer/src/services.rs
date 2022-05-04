@@ -13,7 +13,24 @@ use blockchain::smart_contracts::{airdrop_is_claimed};
 use blockchain::smart_contracts::objects::meta::api::data::endpoints::{get_spectrumprotocol_api,get_anchorprotocol_airdrop_api,get_anchorprotocol_api};
 
 
-use anyhow::anyhow; 
+use anyhow::anyhow;
+
+
+/*
+https://raw.githubusercontent.com/terra-money/assets/master/cw20/contracts.js
+https://raw.githubusercontent.com/terra-money/assets/master/cw20/pairs.dex.js
+https://raw.githubusercontent.com/terra-money/assets/master/cw20/pairs.js
+https://raw.githubusercontent.com/terra-money/assets/master/cw20/tokens.js
+*/
+// todo: need to test this
+pub async fn query_terra_money_assets_cw20_tokens() ->  anyhow::Result<ResponseResult> {
+    // {"anc_price":"3.591430997773948743","height":5549202,"timestamp":1638643455550,"anc_emission_rate":"20381363.851572310123647620","total_liabilities":"1479450867061244.823197164919607620","distribution_apy":"0.230403324402556547"}
+    let res: String = query_api("https://raw.githubusercontent.com/terra-money/assets/master/cw20/tokens.js").await?;
+    let res = serde_json::from_str(&res)?;
+    Ok(ResponseResult::Text(res))
+}
+
+
 
 pub async fn query_api_distribution_apy() ->  anyhow::Result<ResponseResult> {
     // {"anc_price":"3.591430997773948743","height":5549202,"timestamp":1638643455550,"anc_emission_rate":"20381363.851572310123647620","total_liabilities":"1479450867061244.823197164919607620","distribution_apy":"0.230403324402556547"}
@@ -50,9 +67,6 @@ pub async fn query_api_spec_anc_ust_lp_reward() ->  anyhow::Result<ResponseResul
 }
 
 
-
-
-
 pub async fn query_anchor_airdrops(wallet_acc_address: String) ->  anyhow::Result<ResponseResult> {
     let res: String = query_api(&format!("{}/api/get?address={}&chainId=columbus-4",get_anchorprotocol_airdrop_api(),wallet_acc_address)).await?;
     let mut res: AnchorAirdrops = serde_json::from_str(&res)?;
@@ -64,3 +78,9 @@ pub async fn query_anchor_airdrops(wallet_acc_address: String) ->  anyhow::Resul
     } 
     Ok(ResponseResult::AirdropResponse(res))
 }
+
+// clone/import whitelist
+// https://docs.terraswap.io/docs/howto/whitelist_assets/
+// https://github.com/terra-money/assets/blob/master/cw20/tokens.js
+// this may be used to check that the symbol names match with the token contract address
+// necessary to prefent accidentially selecting a scam cw20 token.

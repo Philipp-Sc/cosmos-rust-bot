@@ -37,6 +37,7 @@ case $2 in
 
 	"remote")
 	MYPATH="terra-rust-bot";
+	rm -rf terra-rust-bot;
 	git clone https://github.com/Philipp-Sc/terra-rust-bot.git
 	;;
 
@@ -46,10 +47,11 @@ case $2 in
 	;;
 esac
 
-rm -rf build;
-mkdir build;
+build_dir="build_"$(date +%Y%m%d_%H%M%S)
 
-cd build;
+mkdir $build_dir;
+
+cd $build_dir;
 mkdir packages;
 mkdir bin;
 cd packages;
@@ -57,7 +59,7 @@ mkdir terra-rust-bot-output;
 mkdir terra-rust-signal-bot;
 cd ../../;
 
-cp $MYPATH/bin/ctlscript.sh ./build/bin/;
+cp $MYPATH/ctlscript.sh ./$build_dir/;
 
 
 WD=$(pwd)
@@ -82,9 +84,9 @@ case $3 in
 	$MYPATH/packages/terra-rust-bot-output/install.sh $1 $2;
 	$MYPATH/packages/terra-rust-signal-bot/install.sh $1 $2;
 
-	cp $MYPATH/{my-bot,run.sh,stop.sh,terra-rust-bot.json} ./build/;
-	cp $MYPATH/packages/terra-rust-bot-output/my-bot-output ./build/packages/terra-rust-bot-output/;
-	cp $MYPATH/packages/terra-rust-signal-bot/{terra-rust-signal-bot,signal-bot.sh,always-run.sh,run.sh,stop.sh} ./build/packages/terra-rust-signal-bot/;
+	cp $MYPATH/{my-bot,run.sh,stop.sh,terra-rust-bot.json} ./$build_dir/;
+	cp $MYPATH/packages/terra-rust-bot-output/my-bot-output ./$build_dir/packages/terra-rust-bot-output/;
+	cp $MYPATH/packages/terra-rust-signal-bot/{terra-rust-signal-bot,signal-bot.sh,always-run.sh,run.sh,stop.sh} ./$build_dir/packages/terra-rust-signal-bot/;
 	;;
 
 	"default")
@@ -92,14 +94,14 @@ case $3 in
 	$MYPATH/install.sh $1 $2;
 	$MYPATH/packages/terra-rust-bot-output/install.sh $1 $2;
 
-  	cp $MYPATH/{my-bot,run.sh,stop.sh,terra-rust-bot.json} ./build/;
-  	cp $MYPATH/packages/terra-rust-bot-output/my-bot-output ./build/packages/terra-rust-bot-output/;
+  	cp $MYPATH/{my-bot,run.sh,stop.sh,terra-rust-bot.json} ./$build_dir/;
+  	cp $MYPATH/packages/terra-rust-bot-output/my-bot-output ./$build_dir/packages/terra-rust-bot-output/;
 	;;
 
 	"minimal")
 	# only terra-rust-bot
 	$MYPATH/install.sh $1 $2;
-	cp $MYPATH/{my-bot,run.sh,stop.sh,terra-rust-bot.json} ./build/;
+	cp $MYPATH/{my-bot,run.sh,stop.sh,terra-rust-bot.json} ./$build_dir/;
 	;;
 
 	"")
@@ -108,7 +110,7 @@ case $3 in
 	;;
 esac
 
-echo "build finished!"
-ls -lh ./build
+echo "$build_dir finished!"
+ls -lh ./$build_dir
 echo "the next step for you is to configure the settings by editing 'terra-rust-bot.json'."
-echo "run 'cd build/bin;./ctlscript.sh help' to learn how to use terra-rust-bot."
+echo "run 'cd $build_dir;./ctlscript.sh help' to learn how to use terra-rust-bot."

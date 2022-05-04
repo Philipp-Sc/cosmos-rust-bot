@@ -25,15 +25,16 @@ use anchor_token::gov:: StakerResponse;
 use moneymarket::overseer::WhitelistResponse;
 use mirror_protocol::oracle::PriceResponse;
 
-use terraswap::pair::SimulationResponse as TerraswapSimulationResponse;
-
 #[derive(Debug, Clone, Serialize, Deserialize, EnumAsInner)]  
 pub enum ResponseResult {
     Text(String),
     State(StateResponse),
     EpochState(EpochStateResponse),
     Config(ConfigResponse),
-    Simulation(Response<TerraswapSimulationResponse>),
+    Simulation(Response<SimulationResponse>),
+    Pairs(Response<PairsResponse>),
+    Pair(Response<PairResponse>),
+    TokenInfo(Response<cw20::TokenInfoResponse>),
     CoreSwap(Response<CoreSwapResponse>),
     Price(Response<PriceResponse>),
     BorrowLimit(Response<BorrowLimitResponse>),
@@ -82,8 +83,32 @@ pub struct BlocksPerYearResponse {
 pub struct Response<T> {
     pub height: String,
     pub result: T
-}  
- 
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, EnumAsInner)]
+pub enum SimulationResponse {
+    #[allow(non_camel_case_types)]
+    terraswap(terraswap::pair::SimulationResponse),
+    #[allow(non_camel_case_types)]
+    astroport(astroport::pair::SimulationResponse),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, EnumAsInner)]
+pub enum PairsResponse {
+    #[allow(non_camel_case_types)]
+    terraswap(terraswap::factory::PairsResponse),
+    #[allow(non_camel_case_types)]
+    astroport(astroport::factory::PairsResponse),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, EnumAsInner)]
+pub enum PairResponse {
+    #[allow(non_camel_case_types)]
+    terraswap(terraswap::asset::PairInfo),
+    #[allow(non_camel_case_types)]
+    astroport(astroport::asset::PairInfo),
+}
+
  
 #[derive(Debug, Clone, Serialize, Deserialize, EnumAsInner)]  
 pub enum StateResponse {

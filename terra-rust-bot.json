@@ -1,1 +1,21 @@
-{"pause_requested":false,"hot_reload":false,"remove":false,"test":true,"terra_wallet_address":null,"anchor_protocol_auto_repay":false,"anchor_protocol_auto_borrow":false,"anchor_protocol_auto_stake":false,"anchor_protocol_auto_farm":true,"terra_market_info":false,"anchor_general_info":false,"anchor_account_info":false,"trigger_percentage":"0.95","target_percentage":"0.8","borrow_percentage":"0.7","min_ust_balance":"10","gas_adjustment_preference":"1.2","max_tx_fee":"5","ust_balance_preference":"20"}
+{
+  "pause_requested": false,
+  "hot_reload": false,
+  "remove": false,
+  "test": true,
+  "terra_wallet_address": null,
+  "anchor_protocol_auto_repay": false,
+  "anchor_protocol_auto_borrow": false,
+  "anchor_protocol_auto_stake": false,
+  "anchor_protocol_auto_farm": false,
+  "terra_market_info": true,
+  "anchor_general_info": false,
+  "anchor_account_info": false,
+  "trigger_percentage": "0.95",
+  "target_percentage": "0.8",
+  "borrow_percentage": "0.7",
+  "min_ust_balance": "10",
+  "gas_adjustment_preference": "1.3",
+  "max_tx_fee": "5",
+  "ust_balance_preference": "20"
+}

@@ -5,6 +5,33 @@
 
 use serde_json::json;
 
+
+// terraswap
+// terraswap/packages/terraswap/src/factory.rs
+// * **QueryMsg::Pairs { start_after, limit }** Returns an array that contains items of type [`PairInfo`].
+//Pairs {
+//start_after: Option<[AssetInfo; 2]>,
+//limit: Option<u32>,
+//}
+
+// iterate this until complete
+//https://lcd.terra.dev/wasm/contracts/terra1ulgw0td86nvs4wtpsc80thv6xelk76ut7a7apj/store?query_msg={%22pairs%22:{%22limit%22:30}}
+//https://lcd.terra.dev/wasm/contracts/terra1ulgw0td86nvs4wtpsc80thv6xelk76ut7a7apj/store?query_msg={%22pairs%22:{%22start_after%22:[{%22token%22:{%22contract_addr%22:%22terra1p9wk5tns7jagwch6cdasgd753nzfj544v75qxr%22}},{%22native_token%22:{%22denom%22:%22uusd%22}}],%22limit%22:30}}
+// astroport
+// astroport-fi/astroport-core/blob/main/contracts/factory/src/contract.rs
+//https://lcd.terra.dev/wasm/contracts/terra1fnywlw4edny3vw44x04xd67uzkdqluymgreu7g/store?query_msg={%22pairs%22:{%22limit%22:30}}
+// loop finance
+//https://lcd.terra.dev/wasm/contracts/terra16hdjuvghcumu6prg22cdjl96ptuay6r0hc6yns/store?query_msg={%22pairs%22:{%22limit%22:30}}
+
+
+// 2. token list cw20 and native
+// take all cw20 contracts from 1) and query
+// https://lcd.terra.dev/wasm/contracts/<contract_addr>/store?query_msg={%22token_info%22:{}}
+
+
+
+
+
 pub fn get_contract(source: &str, contract: &str) -> String {
 	let contracts = json!({
 							"mirrorprotocol": {
@@ -63,8 +90,12 @@ pub fn get_contract(source: &str, contract: &str) -> String {
 							// see for more contracts https://assets.terra.money/cw20/pairs.json
 							// see for more contracts https://github.com/terra-money/assets/
 							// even more https://docs.terraswap.io/docs/contract_resources/contract_addresses/
+								"factory":"terra1ulgw0td86nvs4wtpsc80thv6xelk76ut7a7apj",
 								"uusd_uluna_pair_contract":"terra1tndcaqxkpc5ce9qee5ggqf430mr2z3pefe5wj6",
 								"usdr_uluna_pair_contract":"terra1vs2vuks65rq7xj78mwtvn7vvnm2gn7adjlr002"
+							},
+							"astroport":{
+								"factory":"terra1fnywlw4edny3vw44x04xd67uzkdqluymgreu7g"
 							},
 							"nexusprotocol": { 
 							    // https://docs.nexusprotocol.app/launch/smart-contracts/deployed-contracts

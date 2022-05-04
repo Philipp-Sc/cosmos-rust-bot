@@ -25,16 +25,11 @@ use anchor_token::gov::QueryMsg as GovQueryMsg;
 use anchor_token::airdrop::QueryMsg as AirdropQueryMsg;
 use anchor_token::airdrop::IsClaimedResponse;
 
-
 use mirror_protocol::oracle::QueryMsg as MirrorOracleQueryMsg;
 use mirror_protocol::oracle::PriceResponse;
 
 use cw20::Cw20QueryMsg;
 use cw20::BalanceResponse;
-
-use terraswap::asset::{Asset, AssetInfo};
-use terraswap::pair::QueryMsg as TerraswapQueryMsg;
-use terraswap::pair::SimulationResponse as TerraswapSimulationResponse;
 
 use cosmwasm_std::{Uint128};
 use std::str::FromStr;
@@ -45,7 +40,6 @@ use basset::hub::StateResponse as BassetHubStateResponse;
 
 use moneymarket::market::EpochStateResponse as MarketEpochStateResponse;
 
-
 use anchor_token::collector::ConfigResponse as CollectorConfigResponse;
 use moneymarket::interest_model::ConfigResponse as InterestModelConfigResponse;
 
@@ -53,8 +47,8 @@ use moneymarket::market::BorrowerInfoResponse;
 use moneymarket::overseer::BorrowLimitResponse;
 
 use anchor_token::gov::StakerResponse;
-
 use moneymarket::overseer::WhitelistResponse;
+use serde_json::Value;
 
 // https://fcd.terra.dev/wasm/contracts/terra146ahqn6d3qgdvmj8cj96hh03dzmeedhsf0kxqm/store?query_msg={%22latest_stage%22:{}}
 
@@ -160,32 +154,57 @@ pub async fn native_token_core_swap(from_native_token: String, to_native_token: 
     Ok(ResponseResult::CoreSwap(res))
 }
 
-// todo: for each DEX implement the following two functions.
-// todo: add contract addresses for each DEX pools
-
 // luna_to_bluna: uluna, anchorprotocol,terraswapblunaLunaPair
 // luna_to_ust: uluna, terraswap, uusd_uluna_pair_contract
 // sdt_to_uluna: usdr, terraswap, usdr_uluna_pair_contract
 // ust_to_luna: uusd, terraswap, uusd_uluna_pair_contract
 // ust_to_psi: uusd, nexusprotocol, Psi-UST pair
 // ust_to_anc: uusd, anchorprotocol, terraswapAncUstPair
-pub async fn native_token_to_swap_pair(protocol: String, native_token: String, pair_contract: String) -> anyhow::Result<ResponseResult> {
+pub async fn native_token_to_swap_pair(dex: String, protocol: String, native_token: String, pair_contract: String) -> anyhow::Result<ResponseResult> {
     let contract_addr = get_contract(&protocol, &pair_contract);
 
-    let query = TerraswapQueryMsg::Simulation {
-        offer_asset: Asset {
-            info: AssetInfo::NativeToken {
-                denom: native_token,
-            },
-            amount: Uint128::from_str("1000000").unwrap(),
-        },
+    let query_msg_json = match dex.as_str() {
+        "terraswap" => {
+            let query = terraswap::pair::QueryMsg::Simulation {
+                offer_asset: terraswap::asset::Asset {
+                    info: terraswap::asset::AssetInfo::NativeToken {
+                        denom: native_token,
+                    },
+                    amount: Uint128::from_str("1000000").unwrap(),
+                },
+            };
+            serde_json::to_string(&query)?
+        }
+        "astroport" => {
+            let query = astroport::pair::QueryMsg::Simulation {
+                offer_asset: astroport::asset::Asset {
+                    info: astroport::asset::AssetInfo::NativeToken {
+                        denom: native_token,
+                    },
+                    amount: Uint128::from_str("1000000").unwrap(),
+                },
+            };
+            serde_json::to_string(&query)?
+        }
+        _ => {
+            return Err(anyhow!("Error: Unknown DEX!"));
+        }
     };
-
-    let query_msg_json = serde_json::to_string(&query)?;
-
     let res: String = get_fcd_else_lcd_query(&contract_addr, &query_msg_json).await?;
-    let res: Response<TerraswapSimulationResponse> = serde_json::from_str(&res)?;
-    Ok(ResponseResult::Simulation(res))
+    let res = match dex.as_str() {
+        "terraswap" => {
+            let res: Response<terraswap::pair::SimulationResponse> = serde_json::from_str(&res)?;
+            ResponseResult::Simulation(Response { height: res.height, result: SimulationResponse::terraswap(res.result) })
+        }
+        "astroport" => {
+            let res: Response<astroport::pair::SimulationResponse> = serde_json::from_str(&res)?;
+            ResponseResult::Simulation(Response { height: res.height, result: SimulationResponse::astroport(res.result) })
+        }
+        _ => {
+            return Err(anyhow!("Error: Unknown DEX!"));
+        }
+    };
+    Ok(res)
 }
 
 // bluna_to_luna: anchorprotocol, bLunaToken, terraswapblunaLunaPair
@@ -193,30 +212,59 @@ pub async fn native_token_to_swap_pair(protocol: String, native_token: String, p
 // psi_to_nluna: nexusprotocol, Psi token, Psi-nLuna pair
 // psi_to_ust: nexusprotocol,  Psi token, Psi-UST pair
 // anc_to_ust: anchorprotocol, ANC, terraswapAncUstPair 
-pub async fn cw20_to_swap_pair(protocol: String, token_contract: String, pair_contract: String) -> anyhow::Result<ResponseResult> {
+pub async fn cw20_to_swap_pair(dex: String, protocol: String, token_contract: String, pair_contract: String) -> anyhow::Result<ResponseResult> {
     let contract_addr = get_contract(&protocol, &pair_contract);
 
-    let query = TerraswapQueryMsg::Simulation {
-        offer_asset: Asset {
-            info: AssetInfo::Token {
-                contract_addr: get_contract(&protocol, &token_contract),
-            },
-            amount: Uint128::from_str("1000000").unwrap(),
+    let query_msg_json = match dex.as_str() {
+        "terraswap" => {
+            let query = terraswap::pair::QueryMsg::Simulation {
+                offer_asset: terraswap::asset::Asset {
+                    info: terraswap::asset::AssetInfo::Token {
+                        contract_addr: get_contract(&protocol, &token_contract),
+                    },
+                    amount: Uint128::from_str("1000000").unwrap(),
+                }
+            };
+            serde_json::to_string(&query)?
+        }
+        "astroport" => {
+            let query = astroport::pair::QueryMsg::Simulation {
+                offer_asset: astroport::asset::Asset {
+                    info: astroport::asset::AssetInfo::Token {
+                        contract_addr: cosmwasm_std::Addr::unchecked(get_contract(&protocol, &token_contract)),
+                    },
+                    amount: Uint128::from_str("1000000").unwrap(),
+                }
+            };
+            serde_json::to_string(&query)?
+        }
+        _ => {
+            return Err(anyhow!("Error: Unknown DEX!"));
         }
     };
-    let query_msg_json = serde_json::to_string(&query)?;
-
     let res: String = get_fcd_else_lcd_query(&contract_addr, &query_msg_json).await?;
-    let res: Response<TerraswapSimulationResponse> = serde_json::from_str(&res)?;
-    Ok(ResponseResult::Simulation(res))
+    let res = match dex.as_str() {
+        "terraswap" => {
+            let res: Response<terraswap::pair::SimulationResponse> = serde_json::from_str(&res)?;
+            ResponseResult::Simulation(Response { height: res.height, result: SimulationResponse::terraswap(res.result) })
+        }
+        "astroport" => {
+            let res: Response<astroport::pair::SimulationResponse> = serde_json::from_str(&res)?;
+            ResponseResult::Simulation(Response { height: res.height, result: SimulationResponse::astroport(res.result) })
+        }
+        _ => {
+            return Err(anyhow!("Error: Unknown DEX!"));
+        }
+    };
+    Ok(res)
 }
 
 pub async fn masset_to_ust(masset: String) -> anyhow::Result<ResponseResult> {
     let contract_addr = get_mirrorprotocol_assets(&masset, "pair");
 
-    let query = TerraswapQueryMsg::Simulation {
-        offer_asset: Asset {
-            info: AssetInfo::Token {
+    let query = terraswap::pair::QueryMsg::Simulation {
+        offer_asset: terraswap::asset::Asset {
+            info: terraswap::asset::AssetInfo::Token {
                 contract_addr: get_mirrorprotocol_assets(&masset, "token"),
             },
             amount: Uint128::from_str("1000000").unwrap(),
@@ -225,8 +273,8 @@ pub async fn masset_to_ust(masset: String) -> anyhow::Result<ResponseResult> {
     let query_msg_json = serde_json::to_string(&query)?;
 
     let res: String = get_fcd_else_lcd_query(&contract_addr, &query_msg_json).await?;
-    let res: Response<TerraswapSimulationResponse> = serde_json::from_str(&res)?;
-    Ok(ResponseResult::Simulation(res))
+    let res: Response<terraswap::pair::SimulationResponse> = serde_json::from_str(&res)?;
+    Ok(ResponseResult::Simulation(Response { height: res.height, result: SimulationResponse::terraswap(res.result) }))
 }
 
 pub async fn masset_oracle_price(masset: String) -> anyhow::Result<ResponseResult> {
@@ -339,4 +387,72 @@ pub async fn anchor_protocol_whitelist() -> anyhow::Result<ResponseResult> {
     let res: String = get_fcd_else_lcd_query(&contract_addr, &query_msg_json).await?;
     let res: Response<WhitelistResponse> = serde_json::from_str(&res)?;
     Ok(ResponseResult::AnchorWhitelistResponse(res))
-}  
+}
+
+pub async fn get_pair(dex: String, asset_infos: [Value; 2]) -> anyhow::Result<ResponseResult> {
+    let contract_addr = get_contract(&dex, "factory");
+    let query_msg_json = match dex.as_str() {
+        "terraswap" => {
+            let asset_infos: [terraswap::asset::AssetInfo; 2] = [serde_json::from_value(asset_infos[0].clone())?, serde_json::from_value(asset_infos[1].clone())?];
+            let query = terraswap::factory::QueryMsg::Pair {
+                asset_infos: asset_infos,
+            };
+            serde_json::to_string(&query)?
+        }
+        "astroport" => {
+            let asset_infos: [astroport::asset::AssetInfo; 2] = [serde_json::from_value(asset_infos[0].clone())?, serde_json::from_value(asset_infos[1].clone())?];
+            let query = astroport::factory::QueryMsg::Pair {
+                asset_infos: asset_infos,
+            };
+            serde_json::to_string(&query)?
+        }
+        _ => {
+            return Err(anyhow!("Error: Unknown DEX!"));
+        }
+    };
+    let res: String = get_fcd_else_lcd_query(&contract_addr, &query_msg_json).await?;
+    let res: Response<PairResponse> = serde_json::from_str(&res)?;
+    Ok(ResponseResult::Pair(res))
+}
+
+pub async fn get_pairs(dex: String, start_after: Option<[Value; 2]>, limit: Option<u32>) -> anyhow::Result<ResponseResult> {
+    let contract_addr = get_contract(&dex, "factory");
+    let query_msg_json = match dex.as_str() {
+        "terraswap" => {
+            let start_after: Option<[terraswap::asset::AssetInfo; 2]> = match start_after {
+                None => { None }
+                Some(j) => { Some([serde_json::from_value(j[0].clone())?, serde_json::from_value(j[1].clone())?]) }
+            };
+            let query = terraswap::factory::QueryMsg::Pairs {
+                start_after: start_after,
+                limit: limit,
+            };
+            serde_json::to_string(&query)?
+        }
+        "astroport" => {
+            let start_after: Option<[astroport::asset::AssetInfo; 2]> = match start_after {
+                None => { None }
+                Some(j) => { Some([serde_json::from_value(j[0].clone())?, serde_json::from_value(j[1].clone())?]) }
+            };
+            let query = astroport::factory::QueryMsg::Pairs {
+                start_after: start_after,
+                limit: limit,
+            };
+            serde_json::to_string(&query)?
+        }
+        _ => {
+            return Err(anyhow!("Error: Unknown DEX!"));
+        }
+    };
+    let res: String = get_fcd_else_lcd_query(&contract_addr, &query_msg_json).await?;
+    let res: Response<PairsResponse> = serde_json::from_str(&res)?;
+    Ok(ResponseResult::Pairs(res))
+}
+
+pub async fn get_token_info(contract_addr: String) -> anyhow::Result<ResponseResult> {
+    let query = cw20::Cw20QueryMsg::TokenInfo {};
+    let query_msg_json = serde_json::to_string(&query)?;
+    let res: String = get_fcd_else_lcd_query(&contract_addr, &query_msg_json).await?;
+    let res: Response<cw20::TokenInfoResponse> = serde_json::from_str(&res)?;
+    Ok(ResponseResult::TokenInfo(res))
+}
