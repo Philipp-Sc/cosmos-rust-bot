@@ -34,9 +34,11 @@
 
 * `git clone https://github.com/Philipp-Sc/terra-rust-bot.git`
 
-**Build terra-rust-bot**
 
-*To make the process as simple as possible use: ./install.sh*
+* `cd ./terra-rust-bot/install`
+
+**Build terra-rust-bot using the installer script**
+
 
 *You can choose between three different build options:*
 
@@ -44,9 +46,14 @@
 * `prod` optimized build
 * `native` optimize the build for your CPU
 
+*Additionally you can either build from the local source code or the latest remote code.*
+
+- `local` builds from the already cloned repository
+- `remote` gets the latest source code and builds terra-rust-bot
+
 
 * `nohup ./install.sh dev local all &` (builds `all` packages, to - for example - disable the signal messenger
   integration use `default` instead. Use `minimal` to only build the terra-rust-bot.)
-* Note: use `remote` instead of `local` to build the latest version.
+  
 * Note: check the file `nohup.out` for errors. (`cat nohup.out`)
 * Note: after a successful build you can remove everything except `terra-rust-bot/install/build`
