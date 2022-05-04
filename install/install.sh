@@ -53,7 +53,6 @@ mkdir $build_dir;
 
 cd $build_dir;
 mkdir packages;
-mkdir bin;
 cd packages;
 mkdir terra-rust-bot-output;
 mkdir terra-rust-signal-bot;
