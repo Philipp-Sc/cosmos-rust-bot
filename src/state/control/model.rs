@@ -15,12 +15,7 @@ use secstr::*;
 use terra_rust_api_layer::services::blockchain::smart_contracts::objects::{ResponseResult};
 use terra_rust_api_layer::services::blockchain::smart_contracts::objects::meta::api::{fetch_gas_price, get_gas_price};
 
-use terra_rust_api_layer::services::{
-    query_api_distribution_apy,
-    query_api_gov_reward,
-    query_anchor_airdrops,
-    query_api_anc_ust_lp_reward,
-    query_api_spec_anc_ust_lp_reward};
+use terra_rust_api_layer::services::{query_api_distribution_apy, query_api_gov_reward, query_anchor_airdrops, query_api_anc_ust_lp_reward, query_api_spec_anc_ust_lp_reward /*query_terra_money_assets_cw20_tokens*/};
 
 use terra_rust_api_layer::services::blockchain::{
     get_tax_rate,
@@ -29,21 +24,7 @@ use terra_rust_api_layer::services::blockchain::{
     get_block_txs_deposit_stable_apy,
     get_block_txs_fee_data};
 
-use terra_rust_api_layer::services::blockchain::smart_contracts::{
-    state_query_msg,
-    epoch_state_query_msg,
-    config_query_msg,
-    native_token_core_swap,
-    native_token_to_swap_pair,
-    cw20_to_swap_pair,
-    masset_to_ust,
-    anchor_protocol_borrower_limit,
-    anchor_protocol_borrower_info,
-    anchor_protocol_balance,
-    anchor_protocol_staker,
-    anchor_protocol_anc_balance,
-    terra_balances,
-    anchor_protocol_whitelist};
+use terra_rust_api_layer::services::blockchain::smart_contracts::{state_query_msg, epoch_state_query_msg, config_query_msg, native_token_core_swap, anchor_protocol_borrower_limit, anchor_protocol_borrower_info, anchor_protocol_balance, anchor_protocol_staker, anchor_protocol_anc_balance, terra_balances, anchor_protocol_whitelist, swap_token};
 
 use std::collections::HashMap;
 
@@ -62,6 +43,7 @@ use chrono::{Utc};
 
 use core::pin::Pin;
 use core::future::Future;
+use terra_rust_api_layer::services::blockchain::smart_contracts::objects::meta::api::data::terra_contracts::AssetWhitelist;
 
 
 use terra_rust_bot_essentials::shared::Maybe as MaybeImported;
@@ -189,7 +171,7 @@ pub async fn await_function(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<Response
     }
 }
 
-pub async fn requirements_next(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, user_settings: &UserSettings, wallet_acc_address: &Arc<SecUtf8>) -> Vec<Entry> {
+pub async fn requirements_next(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, user_settings: &UserSettings, wallet_acc_address: &Arc<SecUtf8>, asset_whitelist: &Arc<AssetWhitelist>) -> Vec<Entry> {
     for _ in 0..join_set.len() {
         let result = timeout(Duration::from_millis(0), join_set.join_one()).await;
         match result {
@@ -370,7 +352,7 @@ pub async fn requirements_next(join_set: &mut JoinSet<()>, maybes: &mut HashMap<
     };
     entries.push(entry);
 
-    requirements(join_set, maybes, &user_settings, &wallet_acc_address, req_to_update).await;
+    requirements(join_set, maybes, &user_settings, &wallet_acc_address, req_to_update, asset_whitelist).await;
     entries
 }
 
@@ -401,11 +383,10 @@ pub async fn requirements_setup(maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe
 * retrieve the value when it is needed: "data.get_mut(String).unwrap().await"
 * use try_join!, join! or select! macros to optimise retrieval of multiple values.
 */
-async fn requirements(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, user_settings: &UserSettings, wallet_acc_address: &Arc<SecUtf8>, req: Vec<String>) {
+async fn requirements(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, user_settings: &UserSettings, wallet_acc_address: &Arc<SecUtf8>, req: Vec<String>, asset_whitelist: &Arc<AssetWhitelist>) {
     for cmd in req {
-        let vec: Vec<&str> = cmd.split(" ").collect();
+        let vec: Vec<&str> = cmd.split(",").collect();
         let length = vec.len();
-        let mut into_iter = vec.into_iter();
 
         let contains_key = maybes.contains_key(&cmd);
         if !contains_key {
@@ -417,13 +398,18 @@ async fn requirements(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, A
             add_item(&pointer, Maybe { data: Err(anyhow::anyhow!("Error: Not yet resolved!")), timestamp: Utc::now().timestamp() }).await;
         }
 
-
         let mut f: Option<Pin<Box<dyn Future<Output=anyhow::Result<ResponseResult>> + Send + 'static>>> = None;
 
+        let asset_whitelist = asset_whitelist.clone();
+        let wallet_acc_address = wallet_acc_address.clone();
+
         if length == 1 {
-            match into_iter.next().unwrap() {
+            match vec[0] {
+                /*"terra_money_assets_cw20_tokens" => {
+                    f = Some(Box::pin(query_terra_money_assets_cw20_tokens()));
+                }*/
                 "anchor_protocol_whitelist" => {
-                    f = Some(Box::pin(anchor_protocol_whitelist()));
+                    f = Some(Box::pin(anchor_protocol_whitelist(asset_whitelist)));
                 }
                 "earn_apy" => {
                     f = Some(Box::pin(get_block_txs_deposit_stable_apy()));
@@ -432,25 +418,25 @@ async fn requirements(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, A
                     f = Some(Box::pin(blocks_per_year_query()));
                 }
                 "anchor_airdrops" => {
-                    f = Some(Box::pin(query_anchor_airdrops(wallet_acc_address.unsecure().to_string())));
+                    f = Some(Box::pin(query_anchor_airdrops(asset_whitelist, wallet_acc_address)));
                 }
                 "borrow_limit" => {
-                    f = Some(Box::pin(anchor_protocol_borrower_limit(wallet_acc_address.unsecure().to_string())));
+                    f = Some(Box::pin(anchor_protocol_borrower_limit(asset_whitelist, wallet_acc_address)));
                 }
                 "borrow_info" => {
-                    f = Some(Box::pin(anchor_protocol_borrower_info(wallet_acc_address.unsecure().to_string())));
+                    f = Some(Box::pin(anchor_protocol_borrower_info(asset_whitelist, wallet_acc_address)));
                 }
                 "balance" => {
-                    f = Some(Box::pin(anchor_protocol_balance(wallet_acc_address.unsecure().to_string())));
+                    f = Some(Box::pin(anchor_protocol_balance(asset_whitelist, wallet_acc_address)));
                 }
                 "terra_balances" => {
-                    f = Some(Box::pin(terra_balances(wallet_acc_address.unsecure().to_string())));
+                    f = Some(Box::pin(terra_balances(wallet_acc_address)));
                 }
                 "anc_balance" => {
-                    f = Some(Box::pin(anchor_protocol_anc_balance(wallet_acc_address.unsecure().to_string())));
+                    f = Some(Box::pin(anchor_protocol_anc_balance(asset_whitelist, wallet_acc_address)));
                 }
                 "staker" => {
-                    f = Some(Box::pin(anchor_protocol_staker(wallet_acc_address.unsecure().to_string())));
+                    f = Some(Box::pin(anchor_protocol_staker(asset_whitelist, wallet_acc_address)));
                 }
                 "api/v2/distribution-apy" => {
                     f = Some(Box::pin(query_api_distribution_apy()));
@@ -465,31 +451,31 @@ async fn requirements(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, A
                     f = Some(Box::pin(query_api_gov_reward()));
                 }
                 "anchor_protocol_txs_claim_rewards" => {
-                    f = Some(Box::pin(get_block_txs_fee_data("claim_rewards")));
+                    f = Some(Box::pin(get_block_txs_fee_data("claim_rewards", asset_whitelist)));
                 }
                 "anchor_protocol_txs_staking" => {
-                    f = Some(Box::pin(get_block_txs_fee_data("staking")));
+                    f = Some(Box::pin(get_block_txs_fee_data("staking", asset_whitelist)));
                 }
                 "anchor_protocol_txs_redeem_stable" => {
-                    f = Some(Box::pin(get_block_txs_fee_data("redeem_stable")));
+                    f = Some(Box::pin(get_block_txs_fee_data("redeem_stable", asset_whitelist)));
                 }
                 "anchor_protocol_txs_deposit_stable" => {
-                    f = Some(Box::pin(get_block_txs_fee_data("deposit_stable")));
+                    f = Some(Box::pin(get_block_txs_fee_data("deposit_stable", asset_whitelist)));
                 }
                 "anchor_protocol_txs_borrow_stable" => {
-                    f = Some(Box::pin(get_block_txs_fee_data("borrow_stable")));
+                    f = Some(Box::pin(get_block_txs_fee_data("borrow_stable", asset_whitelist)));
                 }
                 "anchor_protocol_txs_repay_stable" => {
-                    f = Some(Box::pin(get_block_txs_fee_data("repay_stable")));
+                    f = Some(Box::pin(get_block_txs_fee_data("repay_stable", asset_whitelist)));
                 }
                 "anchor_protocol_txs_provide_liquidity" => {
-                    f = Some(Box::pin(get_block_txs_fee_data("provide_liquidity")));
+                    f = Some(Box::pin(get_block_txs_fee_data("provide_liquidity", asset_whitelist)));
                 }
                 "txs_provide_to_spec_anc_ust_vault" => {
-                    f = Some(Box::pin(get_block_txs_fee_data("provide_to_spec_anc_ust_vault")));
+                    f = Some(Box::pin(get_block_txs_fee_data("provide_to_spec_anc_ust_vault", asset_whitelist)));
                 }
                 "anchor_protocol_txs_staking_lp" => {
-                    f = Some(Box::pin(get_block_txs_fee_data("staking_lp")));
+                    f = Some(Box::pin(get_block_txs_fee_data("staking_lp", asset_whitelist)));
                 }
                 "tax_rate" => {
                     f = Some(Box::pin(get_tax_rate()));
@@ -540,72 +526,36 @@ async fn requirements(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, A
                 &_ => {}
             };
         } else if length == 3 {
-            let first = into_iter.next().unwrap();
-            let second = into_iter.next().unwrap();
-            let third = into_iter.next().unwrap();
-
-            let second_copy = second.to_owned();
-            let third_copy = third.to_owned();
-
-            match first.as_ref() {
+            match vec[0] {
                 "state" => {
-                    // "state anchorprotocol bLunaHub"
-                    // "state anchorprotocol mmMarket"
-                    f = Some(Box::pin(state_query_msg(second_copy, third_copy)));
+                    f = Some(Box::pin(state_query_msg(asset_whitelist, vec[1].to_owned(), vec[2].to_owned())));
                 }
                 "epoch_state" => {
-                    // "epoch_state anchorprotocol mmMarket"
-                    f = Some(Box::pin(epoch_state_query_msg(second_copy, third_copy)));
+                    f = Some(Box::pin(epoch_state_query_msg(asset_whitelist, vec[1].to_owned(), vec[2].to_owned())));
                 }
                 "config" => {
-                    f = Some(Box::pin(config_query_msg(second_copy, third_copy)));
-                }
-                "simulation_cw20_" => {
-                    f = Some(Box::pin(masset_to_ust(third_copy)));
+                    f = Some(Box::pin(config_query_msg(asset_whitelist, vec[1].to_owned(), vec[2].to_owned())));
                 }
                 "core_swap" => {
-                    f = Some(Box::pin(native_token_core_swap(second_copy, third_copy)));
+                    f = Some(Box::pin(native_token_core_swap(vec[1].to_owned(), vec[2].to_owned())));
                 }
                 &_ => {}
             }
-        } else if length == 4 {
-            let first = into_iter.next().unwrap();
-            let _second = into_iter.next().unwrap();
-            let _third = into_iter.next().unwrap();
-            let fourth = into_iter.next().unwrap();
-            let fourth_copy = fourth.to_owned();
-
-            match first.as_ref() {
-                "simulation_cw20" => {
-                    f = Some(Box::pin(masset_to_ust(fourth_copy)));
-                }
-                &_ => {}
-            }
-        } else if length == 5 {
-            let first = into_iter.next().unwrap();
-            let second = into_iter.next().unwrap();
-            let third = into_iter.next().unwrap();
-            let fourth = into_iter.next().unwrap();
-            let five = into_iter.next().unwrap();
-
-
-            let second_copy = second.to_owned();
-            let third_copy = third.to_owned();
-            let fourth_copy = fourth.to_owned();
-            let five_copy = five.to_owned();
-
-            match first.as_ref() {
-                // luna_to_bluna: simulation uluna anchorprotocol terraswapblunaLunaPair
-                // luna_to_ust: simulation uluna terraswap uusd_uluna_pair_contract
-                // sdt_to_uluna: simulation usdr terraswap usdr_uluna_pair_contract
-                // ust_to_luna: simulation uusd terraswap uusd_uluna_pair_contract
-                // ust_to_psi: simulation uusd nexusprotocol Psi-UST pair
-                // ust_to_anc: simulation uusd anchorprotocol terraswapAncUstPair
-                "simulation" => {
-                    f = Some(Box::pin(native_token_to_swap_pair(second_copy, third_copy, fourth_copy, five_copy)));
-                }
-                "simulation_cw20" => {
-                    f = Some(Box::pin(cw20_to_swap_pair(second_copy, third_copy, fourth_copy, five_copy)));
+        } else if length == 6 {
+            match vec[0] {
+                "swap_simulation" => {
+                    f = Some(Box::pin(swap_token(asset_whitelist,
+                                                 vec[1].to_owned(),
+                                                 match vec[2] {
+                                                     "none" => { None }
+                                                     protocol => { Some(protocol.to_string()) }
+                                                 },
+                                                 vec[3].to_owned(),
+                                                 match vec[4] {
+                                                     "none" => { None }
+                                                     protocol => { Some(protocol.to_string()) }
+                                                 },
+                                                 vec[5].to_owned())));
                 }
                 &_ => {}
             }

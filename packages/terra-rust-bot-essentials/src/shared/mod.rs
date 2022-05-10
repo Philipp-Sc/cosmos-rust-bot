@@ -5,6 +5,7 @@ use std::str::FromStr;
 use std::fs;
 use std::io;
 use std::hash::{Hash};
+use serde_json::{Value};
 
 #[derive(Debug)]
 pub struct Maybe<T> {
@@ -91,6 +92,16 @@ pub fn get_input(prompt: &str) -> String {
         Err(_no_updates_is_fine) => {}
     }
     input.trim().to_string()
+}
+
+pub fn load_asset_whitelist(path: &str) -> Value {
+    serde_json::json!({
+        "contracts": serde_json::from_str::<Value>(&fs::read_to_string(format!("{}contracts.json", path)).unwrap()).unwrap(),
+        "pairs_dex": serde_json::from_str::<Value>(&fs::read_to_string(format!("{}pairs.dex.json", path)).unwrap()).unwrap(),
+        "pairs": serde_json::from_str::<Value>(&fs::read_to_string(format!("{}pairs.json", path)).unwrap()).unwrap(),
+        "tokens": serde_json::from_str::<Value>(&fs::read_to_string(format!("{}tokens.json", path)).unwrap()).unwrap(),
+        "custom": serde_json::from_str::<Value>(&fs::read_to_string(format!("{}custom.json", path)).unwrap()).unwrap(),
+    })
 }
 
 pub fn load_user_settings(path: &str) -> UserSettings {

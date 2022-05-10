@@ -88,7 +88,7 @@ pub async fn display_anchor_info(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<Re
         index: Some(6),
         group: Some("[Anchor Protocol Info][Expert]".to_string()),
     };
-    let t2: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(borrow_rate_to_string(maybes.clone(), "config anchorprotocol mmInterestModel", "state anchorprotocol mmMarket", "epoch_state anchorprotocol mmMarket", 10));
+    let t2: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(borrow_rate_to_string(maybes.clone(), "config,Anchor,Interest Model", "state,Anchor,Market", "epoch_state,Anchor,Market", 10));
     view.push((t1, t2));
 
     let t1 = Entry {

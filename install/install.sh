@@ -53,12 +53,14 @@ mkdir $build_dir;
 
 cd $build_dir;
 mkdir packages;
+mkdir assets;
 cd packages;
 mkdir terra-rust-bot-output;
 mkdir terra-rust-signal-bot;
 cd ../../;
 
 cp $MYPATH/ctlscript.sh ./$build_dir/;
+cp -r $MYPATH/assets/cw20 ./$build_dir/assets/;
 
 
 WD=$(pwd)

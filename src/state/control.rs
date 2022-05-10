@@ -18,12 +18,15 @@ use tokio::task::JoinSet;
 
 pub async fn data_is_outdated(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, req: &[&str]) -> bool {
     match try_get_resolved(&maybes, "latest_transaction").await {
-        Maybe { data: _, timestamp } => {
+        Maybe { data: Ok(_), timestamp } => {
             let mut timestamps = get_timestamps_of_tasks(&maybes).await.iter().filter(|x| req.contains(&x.0.as_str())).map(|x| x.1).collect::<Vec<i64>>();
             timestamps.sort();
-            if timestamps.len() > 0 && timestamps[0] <= timestamp + 10 {
+            if timestamps.len() > 0 && timestamps[0] + 10 > timestamp {
                 return true;
             }
+            return false;
+        }
+        Maybe { data: Err(_), timestamp } => {
             return false;
         }
     }

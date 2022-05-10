@@ -157,6 +157,8 @@ pub async fn calculate_borrow_plan(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<R
     return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
 }
 
+// todo: check/test this function with a small wallet, where all aUST will be used to repay. likely a error will occur.!?
+
 pub async fn calculate_repay_plan(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, field: &str, digits_rounded_to: u32) -> Maybe<String> {
     let min_ust_balance = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"min_ust_balance",false,10).await);
 
@@ -179,6 +181,8 @@ pub async fn calculate_repay_plan(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<Re
         return maybe_struct!((Some( further_funds_needed.to_string()),Some(Utc::now().timestamp())));
     }
 
+
+    let exchange_rate = decimal_or_return!(a_terra_exchange_rate_to_string(maybes.clone(),10).await);
     let a_ust_deposit_liquid = decimal_or_return!(borrower_ust_deposited_to_string(maybes.clone(),false,10).await);
 
     if field == "available_in_deposit" {
@@ -302,7 +306,7 @@ pub async fn calculate_repay_plan(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<Re
         to_repay = to_repay.checked_sub(fee_to_repay_stable).unwrap();
     }
 
-    // looking to withdraw more UST to maintain the prefered UST balance
+    // looking to withdraw more UST to maintain the preferred UST balance
     if ust_extra > zero && a_ust_amount_leftover > zero && ust_amount_leftover < ust_balance_preference {
         if a_ust_amount_leftover >= ust_extra {
             to_withdraw_from_deposit = to_withdraw_from_deposit.checked_add(ust_extra).unwrap();
@@ -322,7 +326,11 @@ pub async fn calculate_repay_plan(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<Re
         return maybe_struct!((Some( to_withdraw_from_account.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::ToZero).to_string()),Some(Utc::now().timestamp())));
     }
     if field == "to_withdraw_from_deposit" {
-        return maybe_struct!((Some( to_withdraw_from_deposit.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::ToZero).to_string()),Some(Utc::now().timestamp())));
+        return maybe_struct!((Some( to_withdraw_from_deposit
+                                    .checked_div(exchange_rate).unwrap()
+                                    .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::ToZero)
+								    .checked_mul(Decimal::from_str("1000000").unwrap()).unwrap()
+								    .round_dp_with_strategy(0, rust_decimal::RoundingStrategy::ToZero).to_string()),Some(Utc::now().timestamp())));
     }
     if field == "to_repay" {
         return maybe_struct!((Some( to_repay.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::ToZero).to_string()),Some(Utc::now().timestamp())));
@@ -342,7 +350,7 @@ pub async fn calculate_farm_plan(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<Res
     let gas_fees_uusd = decimal_or_return!(gas_price_to_string(maybes.clone(),10).await);
     let gas_adjustment_preference = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"gas_adjustment_preference",false,10).await);
 
-    let exchange_rate = decimal_or_return!(simulation_swap_exchange_rate_to_string(maybes.clone(),"simulation_cw20 terraswap anchorprotocol ANC terraswapAncUstPair",false,10).await);
+    let exchange_rate = decimal_or_return!(simulation_swap_exchange_rate_to_string(maybes.clone(),"swap_simulation,terraswap,Anchor,ANC,none,uusd",false,10).await);
 
     let fee_to_claim_anc_rewards_uusd_in_anc = decimal_or_return!(estimate_anchor_protocol_tx_fee(maybes.clone(), "anchor_protocol_txs_claim_rewards","avg_gas_used".to_owned(),true,0).await)
         .checked_mul(gas_fees_uusd).unwrap()
@@ -367,7 +375,7 @@ pub async fn calculate_farm_plan(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<Res
     // if pair_anc is used to swap that amount of anc
     // then the ust returned is lower than the remaining ANC value
 
-    let exchange_return = decimal_or_return!(simulation_swap_return_amount_to_string(maybes.clone(),"simulation_cw20 terraswap anchorprotocol ANC terraswapAncUstPair",false,10).await);
+    let exchange_return = decimal_or_return!(simulation_swap_return_amount_to_string(maybes.clone(),"swap_simulation,terraswap,Anchor,ANC,none,uusd",false,10).await);
     let return_ust_amount = pair_anc_excluding_exchange_fees.checked_div(exchange_return).unwrap();
     let return_amount_in_anc = return_ust_amount.checked_mul(exchange_rate).unwrap();
 
@@ -397,12 +405,12 @@ pub async fn calculate_farm_plan(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<Res
             return maybe_struct!((Some( anc_to_keep
                 .checked_div(micro).unwrap()
                 .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string()),Some(Utc::now().timestamp())));
-        },
+        }
         "anc_to_swap" => {
             return maybe_struct!((Some( anc_to_swap
                 .checked_div(micro).unwrap()
                 .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::AwayFromZero).to_string()),Some(Utc::now().timestamp())));
-        },
+        }
         _ => {
             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
         }
@@ -425,7 +433,7 @@ pub async fn calculate_amount(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<Respon
     match try_get_resolved(&maybes, "borrow_limit").await {
         Maybe { data: Ok(response_result), .. } => {
             _borrow_limit = Decimal::from_str(response_result.as_borrow_limit().unwrap().result.borrow_limit.to_string().as_str()).unwrap();
-        },
+        }
         Maybe { data: Err(_), .. } => {
             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
         }
@@ -438,7 +446,7 @@ pub async fn calculate_amount(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<Respon
     match try_get_resolved(&maybes, "borrow_info").await {
         Maybe { data: Ok(response_result), .. } => {
             _loan_amount = Decimal::from_str(response_result.as_borrow_info().unwrap().result.loan_amount.to_string().as_str()).unwrap();
-        },
+        }
         Maybe { data: Err(_), .. } => {
             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
         }
@@ -473,8 +481,8 @@ pub async fn check_anchor_loan_status(maybes: HashMap<String, Arc<Mutex<Vec<Mayb
     let zero = Decimal::from_str("0").unwrap();
 
     let trigger_percentage = match key {
-        "repay" => { decimal_or_return!(meta_data_key_to_string(maybes.clone(),"trigger_percentage",false,10).await) },
-        "borrow" => { decimal_or_return!(meta_data_key_to_string(maybes.clone(),"borrow_percentage",false,10).await) },
+        "repay" => { decimal_or_return!(meta_data_key_to_string(maybes.clone(),"trigger_percentage",false,10).await) }
+        "borrow" => { decimal_or_return!(meta_data_key_to_string(maybes.clone(),"borrow_percentage",false,10).await) }
         &_ => { return maybe_struct!((Some( "Invalid key".to_string()),Some(Utc::now().timestamp()))); }
     };
 
@@ -483,7 +491,7 @@ pub async fn check_anchor_loan_status(maybes: HashMap<String, Arc<Mutex<Vec<Mayb
     match try_get_resolved(&maybes, "borrow_limit").await {
         Maybe { data: Ok(response_result), .. } => {
             _borrow_limit = Decimal::from_str(response_result.as_borrow_limit().unwrap().result.borrow_limit.to_string().as_str()).unwrap();
-        },
+        }
         Maybe { data: Err(_), .. } => {
             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
         }
@@ -494,7 +502,7 @@ pub async fn check_anchor_loan_status(maybes: HashMap<String, Arc<Mutex<Vec<Mayb
     match try_get_resolved(&maybes, "borrow_info").await {
         Maybe { data: Ok(response_result), .. } => {
             _loan_amount = Decimal::from_str(response_result.as_borrow_info().unwrap().result.loan_amount.to_string().as_str()).unwrap();
-        },
+        }
         Maybe { data: Err(_), .. } => {
             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
         }
@@ -507,8 +515,8 @@ pub async fn check_anchor_loan_status(maybes: HashMap<String, Arc<Mutex<Vec<Mayb
     let current_percent = _loan_amount.checked_div(_borrow_limit).unwrap();
 
     let left_to_trigger = match key {
-        "repay" => { trigger_percentage.checked_sub(current_percent).unwrap() },
-        "borrow" => { current_percent.checked_sub(trigger_percentage).unwrap() },
+        "repay" => { trigger_percentage.checked_sub(current_percent).unwrap() }
+        "borrow" => { current_percent.checked_sub(trigger_percentage).unwrap() }
         &_ => { return maybe_struct!((Some( "Invalid key".to_string()),Some(Utc::now().timestamp()))); }
     };
 
@@ -536,13 +544,13 @@ pub async fn estimate_anchor_protocol_next_claim_and_stake_tx(maybes: HashMap<St
     let pending_rewards_in_ust = decimal_or_return!(borrower_rewards_in_ust_to_string(maybes.clone(),  10).await);
     let distribution_apr = percent_decimal_or_return!(distribution_apr_to_string(maybes.clone(),  10).await);
     let pool_apy = match field_type {
-        "staking" => { percent_decimal_or_return!(staking_apy_to_string(maybes.clone(),  10).await) },
-        "farming" => { percent_decimal_or_return!(spec_anc_ust_lp_apy_to_string(maybes.clone(),  10).await) },
+        "staking" => { percent_decimal_or_return!(staking_apy_to_string(maybes.clone(),  10).await) }
+        "farming" => { percent_decimal_or_return!(spec_anc_ust_lp_apy_to_string(maybes.clone(),  10).await) }
         _ => { return maybe_struct!((Some( "Error".to_string()),Some(Utc::now().timestamp()))); }
     };
     let transaction_fee = match field_type {
-        "staking" => { decimal_or_return!(estimate_anchor_protocol_tx_fee_claim_and_stake(maybes.clone(),  10).await) },
-        "farming" => { decimal_or_return!(estimate_anchor_protocol_tx_fee_claim_and_provide_to_spec_vault(maybes.clone(),  10).await) },
+        "staking" => { decimal_or_return!(estimate_anchor_protocol_tx_fee_claim_and_stake(maybes.clone(),  10).await) }
+        "farming" => { decimal_or_return!(estimate_anchor_protocol_tx_fee_claim_and_provide_to_spec_vault(maybes.clone(),  10).await) }
         _ => { return maybe_struct!((Some( "Error".to_string()),Some(Utc::now().timestamp()))); }
     };
 
@@ -632,7 +640,7 @@ pub async fn estimate_anchor_protocol_tx_fee(maybes: HashMap<String, Arc<Mutex<V
     match try_get_resolved(&maybes, "tax_rate").await {
         Maybe { data: Ok(response_result), .. } => {
             tax_rate = Decimal::from_str(response_result.as_tax_rate().unwrap().result.as_str()).unwrap();
-        },
+        }
         Maybe { data: Err(_), .. } => {}
     }
 
@@ -647,7 +655,7 @@ pub async fn estimate_anchor_protocol_tx_fee(maybes: HashMap<String, Arc<Mutex<V
                     break;
                 }
             }
-        },
+        }
         Maybe { data: Err(_), .. } => {}
     }
 
@@ -709,57 +717,57 @@ pub async fn estimate_anchor_protocol_tx_fee(maybes: HashMap<String, Arc<Mutex<V
                             return maybe_struct!((Some( avg_gas_wanted
                               .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
                               .to_string()),Some(Utc::now().timestamp())));
-                        },
+                        }
                         "avg_fee_amount_without_stability_fee" => {
                             return maybe_struct!((Some( avg_fee_amount_without_stability_fee
                               .checked_div(micro).unwrap()
                               .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
                               .to_string()),Some(Utc::now().timestamp())));
-                        },
+                        }
                         "avg_fee_amount_adjusted_without_stability_fee" => {
                             return maybe_struct!((Some( avg_fee_amount_adjusted_without_stability_fee
                               .checked_div(micro).unwrap()
                               .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
                               .to_string()),Some(Utc::now().timestamp())));
-                        },
+                        }
                         "avg_fee_amount" => {
                             return maybe_struct!((Some( avg_fee_amount
                               .checked_div(micro).unwrap()
                               .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
                               .to_string()),Some(Utc::now().timestamp())));
-                        },
+                        }
                         "avg_gas_adjustment" => {
                             return maybe_struct!((Some( avg_gas_adjustment
                               .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
                               .to_string()),Some(Utc::now().timestamp())));
-                        },
+                        }
                         "avg_gas_used" => {
                             return maybe_struct!((Some( avg_gas_used
                               .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
                               .to_string()),Some(Utc::now().timestamp())));
-                        },
+                        }
                         "fee_amount_at_threshold" => {
                             return maybe_struct!((Some( fee_amount_at_threshold
                               .checked_div(micro).unwrap()
                               .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
                               .to_string()),Some(Utc::now().timestamp())));
-                        },
+                        }
                         "fee_amount_adjusted" => {
                             return maybe_struct!((Some( fee_amount_adjusted
                               .checked_div(micro).unwrap()
                               .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
                               .to_string()),Some(Utc::now().timestamp())));
-                        },
+                        }
                         &_ => {
                             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
                         }
                     }
-                },
+                }
                 Maybe { data: Ok(_), .. } | Maybe { data: Err(_), .. } => {
                     return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
                 }
             }
-        },
+        }
         Maybe { data: Err(_), .. } => {
             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
         }
@@ -803,7 +811,7 @@ pub async fn apy_on_collateral_by(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<Re
         .checked_mul(loan_amount).unwrap().checked_div(collateral_value) {
         None => {
             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
-        },
+        }
         Some(e) => {
             return maybe_struct!((Some( format!("{}%",e
                   .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
@@ -813,7 +821,7 @@ pub async fn apy_on_collateral_by(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<Re
 }
 
 pub async fn anc_staked_balance_in_ust_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, digits_rounded_to: u32) -> Maybe<String> {
-    let exchange_rate = decimal_or_return!(simulation_swap_return_amount_to_string(maybes.clone(),"simulation_cw20 terraswap anchorprotocol ANC terraswapAncUstPair",false,10).await);
+    let exchange_rate = decimal_or_return!(simulation_swap_return_amount_to_string(maybes.clone(),"swap_simulation,terraswap,Anchor,ANC,none,uusd",false,10).await);
 
 
     match try_get_resolved(&maybes, "staker").await {
@@ -824,7 +832,7 @@ pub async fn anc_staked_balance_in_ust_to_string(maybes: HashMap<String, Arc<Mut
             return maybe_struct!((Some( balance.checked_div(micro).unwrap().checked_mul(exchange_rate).unwrap()
                    .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
                    .to_string()),Some(Utc::now().timestamp())));
-        },
+        }
         Maybe { data: Err(_), .. } => {
             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
         }
@@ -839,14 +847,14 @@ pub async fn anchor_claim_and_stake_transaction_gas_fees_ratio_to_string(maybes:
             _pending_rewards = Decimal::from_str(response_result.as_borrow_info().unwrap().result.pending_rewards.to_string().as_str()).unwrap();
             let micro = Decimal::from_str("1000000").unwrap();
             _pending_rewards = _pending_rewards.checked_div(micro).unwrap();
-        },
+        }
         Maybe { data: Err(_), .. } => {
             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
         }
     }
 
 
-    let exchange_rate = decimal_or_return!(simulation_swap_exchange_rate_to_string(maybes.clone(),"simulation_cw20 terraswap anchorprotocol ANC terraswapAncUstPair",false,10).await);
+    let exchange_rate = decimal_or_return!(simulation_swap_exchange_rate_to_string(maybes.clone(),"swap_simulation,terraswap,Anchor,ANC,none,uusd",false,10).await);
 
     _pending_rewards = _pending_rewards.checked_mul(exchange_rate).unwrap();
 
@@ -856,7 +864,7 @@ pub async fn anchor_claim_and_stake_transaction_gas_fees_ratio_to_string(maybes:
     match anchor_protocol_tx_fee.checked_div(_pending_rewards) {
         None => {
             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
-        },
+        }
         Some(e) => {
             return maybe_struct!((Some( format!("{}%",e.round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero).to_string())),Some(Utc::now().timestamp())));
         }
@@ -870,13 +878,13 @@ pub async fn borrower_rewards_in_ust_to_string(maybes: HashMap<String, Arc<Mutex
             _pending_rewards = Decimal::from_str(response_result.as_borrow_info().unwrap().result.pending_rewards.to_string().as_str()).unwrap();
             let micro = Decimal::from_str("1000000").unwrap();
             _pending_rewards = _pending_rewards.checked_div(micro).unwrap();
-        },
+        }
         Maybe { data: Err(_), .. } => {
             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
         }
     }
 
-    let exchange_rate = decimal_or_return!(simulation_swap_exchange_rate_to_string(maybes.clone(),"simulation_cw20 terraswap anchorprotocol ANC terraswapAncUstPair",false,10).await);
+    let exchange_rate = decimal_or_return!(simulation_swap_exchange_rate_to_string(maybes.clone(),"swap_simulation,terraswap,Anchor,ANC,none,uusd",false,10).await);
 
     return maybe_struct!((Some( _pending_rewards.checked_mul(exchange_rate).unwrap()
                    .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
@@ -890,7 +898,7 @@ pub async fn borrower_deposit_liquidity_to_string(maybes: HashMap<String, Arc<Mu
             _balance = Decimal::from_str(response_result.as_balance().unwrap().result.balance.to_string().as_str()).unwrap();
             let micro = Decimal::from_str("1000000").unwrap();
             _balance = _balance.checked_div(micro).unwrap();
-        },
+        }
         Maybe { data: Err(_), .. } => {
             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
         }
@@ -898,11 +906,11 @@ pub async fn borrower_deposit_liquidity_to_string(maybes: HashMap<String, Arc<Mu
 
     let mut _exchange_rate = Decimal::from_str("0").unwrap();
 
-    match try_get_resolved(&maybes, "epoch_state anchorprotocol mmMarket").await {
+    match try_get_resolved(&maybes, "epoch_state,Anchor,Market").await {
         Maybe { data: Ok(response_result), .. } => {
             let result = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.exchange_rate;
             _exchange_rate = Decimal::from_str(result.to_string().as_str()).unwrap();
-        },
+        }
         Maybe { data: Err(_), .. } => {
             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
         }
@@ -917,7 +925,7 @@ pub async fn borrower_deposit_liquidity_to_string(maybes: HashMap<String, Arc<Mu
             _borrow_limit = Decimal::from_str(response_result.as_borrow_limit().unwrap().result.borrow_limit.to_string().as_str()).unwrap();
             let micro = Decimal::from_str("1000000").unwrap();
             _borrow_limit = _borrow_limit.checked_div(micro).unwrap();
-        },
+        }
         Maybe { data: Err(_), .. } => {
             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
         }
@@ -937,7 +945,7 @@ pub async fn borrower_ltv_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<
             _borrow_limit = Decimal::from_str(response_result.as_borrow_limit().unwrap().result.borrow_limit.to_string().as_str()).unwrap();
             let micro = Decimal::from_str("1000000").unwrap();
             _borrow_limit = _borrow_limit.checked_div(micro).unwrap();
-        },
+        }
         Maybe { data: Err(_), .. } => {
             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
         }
@@ -951,7 +959,7 @@ pub async fn borrower_ltv_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<
             _loan_amount = Decimal::from_str(response_result.as_borrow_info().unwrap().result.loan_amount.to_string().as_str()).unwrap();
             let micro = Decimal::from_str("1000000").unwrap();
             _loan_amount = _loan_amount.checked_div(micro).unwrap();
-        },
+        }
         Maybe { data: Err(_), .. } => {
             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
         }
@@ -963,7 +971,7 @@ pub async fn borrower_ltv_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<
     match _loan_amount.checked_div(_borrow_limit) {
         None => {
             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
-        },
+        }
         Some(e) => {
             return maybe_struct!((Some( format!("{}%",e
                    .checked_mul(Decimal::from_str("100").unwrap()).unwrap()
@@ -982,7 +990,7 @@ pub async fn borrower_ust_deposited_to_string(maybes: HashMap<String, Arc<Mutex<
                 let micro = Decimal::from_str("1000000").unwrap();
                 _balance = _balance.checked_div(micro).unwrap();
             }
-        },
+        }
         Maybe { data: Err(_), .. } => {
             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
         }
@@ -990,17 +998,17 @@ pub async fn borrower_ust_deposited_to_string(maybes: HashMap<String, Arc<Mutex<
 
     let mut _exchange_rate = Decimal::from_str("0").unwrap();
 
-    match try_get_resolved(&maybes, "epoch_state anchorprotocol mmMarket").await {
+    match try_get_resolved(&maybes, "epoch_state,Anchor,Market").await {
         Maybe { data: Ok(response_result), .. } => {
             let result = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.exchange_rate;
             _exchange_rate = Decimal::from_str(result.to_string().as_str()).unwrap();
-        },
+        }
         Maybe { data: Err(_), .. } => {
             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
         }
     }
     return maybe_struct!((Some( _balance.checked_mul(_exchange_rate).unwrap()
-           .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
+           .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::ToZero)
            .to_string()),Some(Utc::now().timestamp())));
 }
 
@@ -1015,20 +1023,20 @@ pub async fn borrow_apr_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<Re
     let mut _a_terra_exchange_rate = cosmwasm_bignumber::Decimal256::zero();
     let mut _a_terra_supply = cosmwasm_bignumber::Uint256::zero();
 
-    match try_get_resolved(&maybes, "state anchorprotocol mmMarket").await {
+    match try_get_resolved(&maybes, "state,Anchor,Market").await {
         Maybe { data: Ok(response_result), .. } => {
             _total_liabilities = response_result.as_state().unwrap().as_mm_market().unwrap().result.total_liabilities;
-        },
+        }
         Maybe { data: Err(_), .. } => {
             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
         }
     }
 
-    match try_get_resolved(&maybes, "epoch_state anchorprotocol mmMarket").await {
+    match try_get_resolved(&maybes, "epoch_state,Anchor,Market").await {
         Maybe { data: Ok(response_result), .. } => {
             _a_terra_exchange_rate = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.exchange_rate;
             _a_terra_supply = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.aterra_supply;
-        },
+        }
         Maybe { data: Err(_), .. } => {
             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
         }
@@ -1047,11 +1055,11 @@ pub async fn borrow_apr_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<Re
     let mut _interest_multiplier = cosmwasm_bignumber::Decimal256::zero();
     let mut _base_rate = cosmwasm_bignumber::Decimal256::zero();
 
-    match try_get_resolved(&maybes, "config anchorprotocol mmInterestModel").await {
+    match try_get_resolved(&maybes, "config,Anchor,Interest Model").await {
         Maybe { data: Ok(response_result), .. } => {
             _base_rate = response_result.as_config().unwrap().as_mm_interest_model().unwrap().result.base_rate;
             _interest_multiplier = response_result.as_config().unwrap().as_mm_interest_model().unwrap().result.interest_multiplier;
-        },
+        }
         Maybe { data: Err(_), .. } => {
             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
         }
@@ -1074,7 +1082,7 @@ pub async fn borrow_apr_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<Re
                 .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
                 .to_string();
             return maybe_struct!((Some( format!("{}%",borrow_apr)),Some(Utc::now().timestamp())));
-        },
+        }
         Maybe { data: Err(_), .. } => {
             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
         }
@@ -1104,7 +1112,7 @@ pub async fn anchor_airdrops_to_string(maybes: HashMap<String, Arc<Mutex<Vec<May
                 .checked_div(micro).unwrap()
                 .round_dp_with_strategy(2, rust_decimal::RoundingStrategy::MidpointAwayFromZero).to_string();
             return maybe_struct!((Some( format!("available to claim: {}, amount already claimed: {}",amount_unclaimed,amount_claimed)),Some(Utc::now().timestamp())));
-        },
+        }
         Maybe { data: Err(err), .. } => {
             return maybe_struct!((Some( format!("{:?}",err)),Some(Utc::now().timestamp())));
         }
@@ -1115,7 +1123,7 @@ pub async fn anything_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<Resp
     match try_get_resolved(&maybes, key).await {
         Maybe { data: Ok(res), .. } => {
             return maybe_struct!((Some( serde_json::to_string_pretty(&res).unwrap_or("--".to_string())),Some(Utc::now().timestamp())));
-        },
+        }
         Maybe { data: Err(err), .. } => {
             return maybe_struct!((Some( format!("{:?}",err)),Some(Utc::now().timestamp())));
         }
@@ -1132,20 +1140,20 @@ pub async fn net_apr_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<Respo
     let mut _a_terra_exchange_rate = cosmwasm_bignumber::Decimal256::zero();
     let mut _a_terra_supply = cosmwasm_bignumber::Uint256::zero();
 
-    match try_get_resolved(&maybes, "state anchorprotocol mmMarket").await {
+    match try_get_resolved(&maybes, "state,Anchor,Market").await {
         Maybe { data: Ok(response_result), .. } => {
             _total_liabilities = response_result.as_state().unwrap().as_mm_market().unwrap().result.total_liabilities;
-        },
+        }
         Maybe { data: Err(_), .. } => {
             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
         }
     }
 
-    match try_get_resolved(&maybes, "epoch_state anchorprotocol mmMarket").await {
+    match try_get_resolved(&maybes, "epoch_state,Anchor,Market").await {
         Maybe { data: Ok(response_result), .. } => {
             _a_terra_exchange_rate = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.exchange_rate;
             _a_terra_supply = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.aterra_supply;
-        },
+        }
         Maybe { data: Err(_), .. } => {
             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
         }
@@ -1164,11 +1172,11 @@ pub async fn net_apr_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<Respo
     let mut _interest_multiplier = cosmwasm_bignumber::Decimal256::zero();
     let mut _base_rate = cosmwasm_bignumber::Decimal256::zero();
 
-    match try_get_resolved(&maybes, "config anchorprotocol mmInterestModel").await {
+    match try_get_resolved(&maybes, "config,Anchor,Interest Model").await {
         Maybe { data: Ok(response_result), .. } => {
             _base_rate = response_result.as_config().unwrap().as_mm_interest_model().unwrap().result.base_rate;
             _interest_multiplier = response_result.as_config().unwrap().as_mm_interest_model().unwrap().result.interest_multiplier;
-        },
+        }
         Maybe { data: Err(_), .. } => {
             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
         }
@@ -1185,7 +1193,7 @@ pub async fn net_apr_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<Respo
     match try_get_resolved(&maybes, "blocks_per_year").await {
         Maybe { data: Ok(response_result), .. } => {
             _blocks_per_year = Decimal::from_str(response_result.as_blocks().unwrap().result.blocks_per_year.to_string().as_str()).unwrap();
-        },
+        }
         Maybe { data: Err(_), .. } => {
             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
         }
@@ -1202,7 +1210,7 @@ pub async fn net_apr_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<Respo
                     .checked_mul(Decimal::from_str("100").unwrap()).unwrap()
                     .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero).to_string()
                     )),Some(Utc::now().timestamp())));
-        },
+        }
         Maybe { data: Err(_), .. } => {
             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
         }
@@ -1218,7 +1226,7 @@ pub async fn borrow_rate_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<R
         Maybe { data: Ok(response_result), .. } => {
             _base_rate = response_result.as_config().unwrap().as_mm_interest_model().unwrap().result.base_rate;
             _interest_multiplier = response_result.as_config().unwrap().as_mm_interest_model().unwrap().result.interest_multiplier;
-        },
+        }
         Maybe { data: Err(_), .. } => {
             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
         }
@@ -1232,7 +1240,7 @@ pub async fn borrow_rate_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<R
     match try_get_resolved(&maybes, key_1).await {
         Maybe { data: Ok(response_result), .. } => {
             _total_liabilities = response_result.as_state().unwrap().as_mm_market().unwrap().result.total_liabilities;
-        },
+        }
         Maybe { data: Err(_), .. } => {
             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
         }
@@ -1242,7 +1250,7 @@ pub async fn borrow_rate_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<R
         Maybe { data: Ok(response_result), .. } => {
             _a_terra_exchange_rate = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.exchange_rate;
             _a_terra_supply = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.aterra_supply;
-        },
+        }
         Maybe { data: Err(_), .. } => {
             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
         }
@@ -1259,20 +1267,20 @@ pub async fn utilization_ratio_to_string(maybes: HashMap<String, Arc<Mutex<Vec<M
     let mut _a_terra_exchange_rate = cosmwasm_bignumber::Decimal256::zero();
     let mut _a_terra_supply = cosmwasm_bignumber::Uint256::zero();
 
-    match try_get_resolved(&maybes, "state anchorprotocol mmMarket").await {
+    match try_get_resolved(&maybes, "state,Anchor,Market").await {
         Maybe { data: Ok(response_result), .. } => {
             _total_liabilities = response_result.as_state().unwrap().as_mm_market().unwrap().result.total_liabilities;
-        },
+        }
         Maybe { data: Err(_), .. } => {
             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
         }
     }
 
-    match try_get_resolved(&maybes, "epoch_state anchorprotocol mmMarket").await {
+    match try_get_resolved(&maybes, "epoch_state,Anchor,Market").await {
         Maybe { data: Ok(response_result), .. } => {
             _a_terra_exchange_rate = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.exchange_rate;
             _a_terra_supply = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.aterra_supply;
-        },
+        }
         Maybe { data: Err(_), .. } => {
             return maybe_struct!((Some( "--".to_string()),Some(Utc::now().timestamp())));
         }

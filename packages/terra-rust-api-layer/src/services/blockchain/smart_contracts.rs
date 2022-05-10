@@ -7,7 +7,7 @@
 pub mod objects;
 
 use objects::*;
-use objects::meta::api::data::terra_contracts::{get_contract, get_mirrorprotocol_assets};
+use objects::meta::api::data::terra_contracts::{contracts, pairs_dex, tokens};
 use objects::meta::api::{
     get_fcd_else_lcd_query,
     query_core_market_swap_rate,
@@ -49,16 +49,19 @@ use moneymarket::overseer::BorrowLimitResponse;
 use anchor_token::gov::StakerResponse;
 use moneymarket::overseer::WhitelistResponse;
 use serde_json::Value;
+use objects::meta::api::data::terra_contracts::AssetWhitelist;
+use std::sync::Arc;
+use secstr::*;
 
 // https://fcd.terra.dev/wasm/contracts/terra146ahqn6d3qgdvmj8cj96hh03dzmeedhsf0kxqm/store?query_msg={%22latest_stage%22:{}}
 
 
-pub async fn airdrop_is_claimed(wallet_acc_address: &str, stage: u64) -> anyhow::Result<ResponseResult> {
-    let contract_addr = get_contract("anchorprotocol", "airdrop");
+pub async fn airdrop_is_claimed(asset_whitelist: Arc<AssetWhitelist>, wallet_acc_address: Arc<SecUtf8>, stage: u64) -> anyhow::Result<ResponseResult> {
+    let contract_addr = contracts(&asset_whitelist, "Anchor", "Airdrop").ok_or(anyhow!("no contract_addr"))?;
 
     let query = AirdropQueryMsg::IsClaimed {
         stage: stage as u8,
-        address: wallet_acc_address.to_string(),
+        address: wallet_acc_address.unsecure().to_string(),
     };
     let query_msg_json = serde_json::to_string(&query)?;
 
@@ -68,13 +71,14 @@ pub async fn airdrop_is_claimed(wallet_acc_address: &str, stage: u64) -> anyhow:
 }
 
 
-// blunaHubState: state, anchorprotocol, bLunaHub
-// anchor_protocol_state: state, anchorprotocol, mmMarket 
+// blunaHubState: state, Anchor, bLuna Hub
+// anchor_protocol_state: state, Anchor, Market
 
-pub async fn state_query_msg(protocol: String, contract: String) -> anyhow::Result<ResponseResult> {
-    let contract_addr = get_contract(&protocol, &contract);
+pub async fn state_query_msg(asset_whitelist: Arc<AssetWhitelist>, protocol: String, contract: String) -> anyhow::Result<ResponseResult> {
+    let contract_addr = contracts(&asset_whitelist, &protocol, &contract).ok_or(anyhow!("no contract_addr"))?;
+
     match contract.as_str() {
-        "mmMarket" => {
+        "Market" => {
             let query = MarketQueryMsg::State { block_height: None };
             let query_msg_json = serde_json::to_string(&query)?;
 
@@ -82,7 +86,7 @@ pub async fn state_query_msg(protocol: String, contract: String) -> anyhow::Resu
             let response: Response<MarketStateResponse> = serde_json::from_str(&res)?;
             return Ok(ResponseResult::State(StateResponse::mmMarket(response)));
         }
-        "bLunaHub" => {
+        "bLuna Hub" => {
             let query = BassetHubQueryMsg::State {};
             let query_msg_json = serde_json::to_string(&query)?;
 
@@ -97,19 +101,19 @@ pub async fn state_query_msg(protocol: String, contract: String) -> anyhow::Resu
 }
 
 // aust_to_ust: epoch_state, anchorprotocol, mmMarket
-pub async fn epoch_state_query_msg(protocol: String, contract: String) -> anyhow::Result<ResponseResult> {
+pub async fn epoch_state_query_msg(asset_whitelist: Arc<AssetWhitelist>, protocol: String, contract: String) -> anyhow::Result<ResponseResult> {
     let query = MarketQueryMsg::EpochState {
         block_height: None,
         distributed_interest: None,
     };
     let query_msg_json = serde_json::to_string(&query)?;
 
-    let contract_addr = get_contract(&protocol, &contract);
+    let contract_addr = contracts(&asset_whitelist, &protocol, &contract).ok_or(anyhow!("no contract_addr"))?;
 
     let res: String = get_fcd_else_lcd_query(&contract_addr, &query_msg_json).await?;
 
     match contract.as_str() {
-        "mmMarket" => {
+        "Market" => {
             let res: Response<MarketEpochStateResponse> = serde_json::from_str(&res)?;
             return Ok(ResponseResult::EpochState(EpochStateResponse::mmMarket(res)));
         }
@@ -119,13 +123,13 @@ pub async fn epoch_state_query_msg(protocol: String, contract: String) -> anyhow
     }
 }
 
-// anchor_protocol_interest_model_config: anchorprotocol, mmInterestModel
-// anchor_protocol_collector_config: anchorprotocol, collector 
-pub async fn config_query_msg(protocol: String, contract: String) -> anyhow::Result<ResponseResult> {
-    let contract_addr = get_contract(&protocol, &contract);
+// anchor_protocol_interest_model_config: Anchor, Interest Model
+// anchor_protocol_collector_config: Anchor, Fee Collector
+pub async fn config_query_msg(asset_whitelist: Arc<AssetWhitelist>, protocol: String, contract: String) -> anyhow::Result<ResponseResult> {
+    let contract_addr = contracts(&asset_whitelist, &protocol, &contract).ok_or(anyhow!("no contract_addr"))?;
 
     match contract.as_str() {
-        "mmInterestModel" => {
+        "Interest Model" => {
             let query = InterestModelQueryMsg::Config {};
             let query_msg_json = serde_json::to_string(&query)?;
 
@@ -133,7 +137,7 @@ pub async fn config_query_msg(protocol: String, contract: String) -> anyhow::Res
             let response: Response<InterestModelConfigResponse> = serde_json::from_str(&res)?;
             return Ok(ResponseResult::Config(ConfigResponse::mmInterestModel(response)));
         }
-        "collector" => {
+        "Fee Collector" => {
             let query = CollectorQueryMsg::Config {};
             let query_msg_json = serde_json::to_string(&query)?;
 
@@ -154,33 +158,91 @@ pub async fn native_token_core_swap(from_native_token: String, to_native_token: 
     Ok(ResponseResult::CoreSwap(res))
 }
 
-// luna_to_bluna: uluna, anchorprotocol,terraswapblunaLunaPair
-// luna_to_ust: uluna, terraswap, uusd_uluna_pair_contract
+
+// deprecated because usdr is not pard of pairs.dex.json
 // sdt_to_uluna: usdr, terraswap, usdr_uluna_pair_contract
-// ust_to_luna: uusd, terraswap, uusd_uluna_pair_contract
-// ust_to_psi: uusd, nexusprotocol, Psi-UST pair
-// ust_to_anc: uusd, anchorprotocol, terraswapAncUstPair
-pub async fn native_token_to_swap_pair(dex: String, protocol: String, native_token: String, pair_contract: String) -> anyhow::Result<ResponseResult> {
-    let contract_addr = get_contract(&protocol, &pair_contract);
+// sdt_to_uluna: usdr, native, usdr (is in contracts, not in pairs_dex)
+
+
+// luna_to_bluna: terraswap, None, uluna, Some(Anchor), bLuna
+// luna_to_ust: terraswap, None, uluna, None, uusd
+// ust_to_luna: terraswap, None, uusd, None, uluna
+// ust_to_psi: terraswap, None, uusd, Some(Nexus), Psi
+// ust_to_anc: terraswap, None, uusd, Some(Anchor), ANC
+
+// bluna_to_luna: terraswap, Some(Anchor), bLuna, None, uluna
+// nluna_to_psi: terraswap, Some(Nexus), nLuna, Some(Nexus), Psi
+// psi_to_nluna:  terraswap, Some(Nexus), Psi, Some(Nexus), nLuna
+// psi_to_ust:  terraswap, Some(Nexus), nLuna, None, uusd
+// anc_to_ust: terraswap, Some(Anchor), ANC, None, uusd
+
+// terraswap, Some(Mirror), mTSLA, None, uusd
+
+pub async fn swap_token(asset_whitelist: Arc<AssetWhitelist>, dex: String, bid_token_protocol: Option<String>, bid_token: String, ask_token_protocol: Option<String>, ask_token: String) -> anyhow::Result<ResponseResult> {
+    let bid_token_addr = match bid_token_protocol.as_ref() {
+        Some(p) => {
+            tokens(&asset_whitelist, &p, &bid_token)
+        }
+        None => {
+            None
+        }
+    };
+    let ask_token_addr = match ask_token_protocol.as_ref() {
+        Some(p) => {
+            tokens(&asset_whitelist, &p, &ask_token)
+        }
+        None => {
+            None
+        }
+    };
+
+    let contract_addr = match pairs_dex(&asset_whitelist, [ask_token_addr.as_ref().unwrap_or(&ask_token).as_str(), bid_token_addr.as_ref().unwrap_or(&bid_token).as_str()], &dex).as_ref() {
+        Some(addr) => {
+            addr.to_string()
+        }
+        None => {
+            return Err(anyhow!("no contract_addr"));
+        }
+    };
 
     let query_msg_json = match dex.as_str() {
         "terraswap" => {
+            let info = match bid_token_addr {
+                None => {
+                    terraswap::asset::AssetInfo::NativeToken {
+                        denom: bid_token,
+                    }
+                }
+                Some(addr) => {
+                    terraswap::asset::AssetInfo::Token {
+                        contract_addr: addr,
+                    }
+                }
+            };
             let query = terraswap::pair::QueryMsg::Simulation {
                 offer_asset: terraswap::asset::Asset {
-                    info: terraswap::asset::AssetInfo::NativeToken {
-                        denom: native_token,
-                    },
+                    info: info,
                     amount: Uint128::from_str("1000000").unwrap(),
                 },
             };
             serde_json::to_string(&query)?
         }
         "astroport" => {
+            let info = match bid_token_addr {
+                None => {
+                    astroport::asset::AssetInfo::NativeToken {
+                        denom: bid_token,
+                    }
+                }
+                Some(addr) => {
+                    astroport::asset::AssetInfo::Token {
+                        contract_addr: cosmwasm_std::Addr::unchecked(addr),
+                    }
+                }
+            };
             let query = astroport::pair::QueryMsg::Simulation {
                 offer_asset: astroport::asset::Asset {
-                    info: astroport::asset::AssetInfo::NativeToken {
-                        denom: native_token,
-                    },
+                    info: info,
                     amount: Uint128::from_str("1000000").unwrap(),
                 },
             };
@@ -207,82 +269,12 @@ pub async fn native_token_to_swap_pair(dex: String, protocol: String, native_tok
     Ok(res)
 }
 
-// bluna_to_luna: anchorprotocol, bLunaToken, terraswapblunaLunaPair
-// nluna_to_psi: nexusprotocol, nLuna token, Psi-nLuna pair
-// psi_to_nluna: nexusprotocol, Psi token, Psi-nLuna pair
-// psi_to_ust: nexusprotocol,  Psi token, Psi-UST pair
-// anc_to_ust: anchorprotocol, ANC, terraswapAncUstPair 
-pub async fn cw20_to_swap_pair(dex: String, protocol: String, token_contract: String, pair_contract: String) -> anyhow::Result<ResponseResult> {
-    let contract_addr = get_contract(&protocol, &pair_contract);
-
-    let query_msg_json = match dex.as_str() {
-        "terraswap" => {
-            let query = terraswap::pair::QueryMsg::Simulation {
-                offer_asset: terraswap::asset::Asset {
-                    info: terraswap::asset::AssetInfo::Token {
-                        contract_addr: get_contract(&protocol, &token_contract),
-                    },
-                    amount: Uint128::from_str("1000000").unwrap(),
-                }
-            };
-            serde_json::to_string(&query)?
-        }
-        "astroport" => {
-            let query = astroport::pair::QueryMsg::Simulation {
-                offer_asset: astroport::asset::Asset {
-                    info: astroport::asset::AssetInfo::Token {
-                        contract_addr: cosmwasm_std::Addr::unchecked(get_contract(&protocol, &token_contract)),
-                    },
-                    amount: Uint128::from_str("1000000").unwrap(),
-                }
-            };
-            serde_json::to_string(&query)?
-        }
-        _ => {
-            return Err(anyhow!("Error: Unknown DEX!"));
-        }
-    };
-    let res: String = get_fcd_else_lcd_query(&contract_addr, &query_msg_json).await?;
-    let res = match dex.as_str() {
-        "terraswap" => {
-            let res: Response<terraswap::pair::SimulationResponse> = serde_json::from_str(&res)?;
-            ResponseResult::Simulation(Response { height: res.height, result: SimulationResponse::terraswap(res.result) })
-        }
-        "astroport" => {
-            let res: Response<astroport::pair::SimulationResponse> = serde_json::from_str(&res)?;
-            ResponseResult::Simulation(Response { height: res.height, result: SimulationResponse::astroport(res.result) })
-        }
-        _ => {
-            return Err(anyhow!("Error: Unknown DEX!"));
-        }
-    };
-    Ok(res)
-}
-
-pub async fn masset_to_ust(masset: String) -> anyhow::Result<ResponseResult> {
-    let contract_addr = get_mirrorprotocol_assets(&masset, "pair");
-
-    let query = terraswap::pair::QueryMsg::Simulation {
-        offer_asset: terraswap::asset::Asset {
-            info: terraswap::asset::AssetInfo::Token {
-                contract_addr: get_mirrorprotocol_assets(&masset, "token"),
-            },
-            amount: Uint128::from_str("1000000").unwrap(),
-        }
-    };
-    let query_msg_json = serde_json::to_string(&query)?;
-
-    let res: String = get_fcd_else_lcd_query(&contract_addr, &query_msg_json).await?;
-    let res: Response<terraswap::pair::SimulationResponse> = serde_json::from_str(&res)?;
-    Ok(ResponseResult::Simulation(Response { height: res.height, result: SimulationResponse::terraswap(res.result) }))
-}
-
-pub async fn masset_oracle_price(masset: String) -> anyhow::Result<ResponseResult> {
+pub async fn masset_oracle_price(asset_whitelist: Arc<AssetWhitelist>, masset: String) -> anyhow::Result<ResponseResult> {
     // https://docs.mirror.finance/contracts/oracle#price
-    let contract_addr = get_contract("mirrorprotocol", "oracle");
+    let contract_addr = contracts(&asset_whitelist, "Mirror", "Oracle").ok_or(anyhow!("no contract_addr"))?;
 
     let query = MirrorOracleQueryMsg::Price {
-        base_asset: get_mirrorprotocol_assets(&masset, "token"),
+        base_asset: tokens(&asset_whitelist, "Mirror", &masset).ok_or(anyhow!("no token_addr"))?,
         quote_asset: "uusd".to_string(),
     };
     let query_msg_json = serde_json::to_string(&query)?;
@@ -293,11 +285,11 @@ pub async fn masset_oracle_price(masset: String) -> anyhow::Result<ResponseResul
     Ok(ResponseResult::Price(res))
 }
 
-pub async fn anchor_protocol_borrower_limit(wallet_acc_address: String) -> anyhow::Result<ResponseResult> {
+pub async fn anchor_protocol_borrower_limit(asset_whitelist: Arc<AssetWhitelist>, wallet_acc_address: Arc<SecUtf8>) -> anyhow::Result<ResponseResult> {
     // https://docs.anchorprotocol.com/smart-contracts/money-market/overseer#borrowlimitresponse
-    let contract_addr = get_contract("anchorprotocol", "mmOverseer");
+    let contract_addr = contracts(&asset_whitelist, "Anchor", "Overseer").ok_or(anyhow!("no contract_addr"))?;
     let query = OverseerQueryMsg::BorrowLimit {
-        borrower: wallet_acc_address.to_string(),
+        borrower: wallet_acc_address.unsecure().to_string(),
         block_time: None,
     };
     let query_msg_json = serde_json::to_string(&query)?;
@@ -307,17 +299,17 @@ pub async fn anchor_protocol_borrower_limit(wallet_acc_address: String) -> anyho
     Ok(ResponseResult::BorrowLimit(res))
 }
 
-pub async fn anchor_protocol_borrower_info(wallet_acc_address: String) -> anyhow::Result<ResponseResult> {
+pub async fn anchor_protocol_borrower_info(asset_whitelist: Arc<AssetWhitelist>, wallet_acc_address: Arc<SecUtf8>) -> anyhow::Result<ResponseResult> {
     // https://docs.anchorprotocol.com/smart-contracts/money-market/market#borrowerinforesponse
     /*
      * Gets information for the specified borrower. 
      * Returns an interest-and-reward-accrued value if block_height field is filled. 
      * Returns the stored (no interest / reward accrued) state if not filled. **This seems not to be the case anymore**
      * */
-    let contract_addr = get_contract("anchorprotocol", "mmMarket");
+    let contract_addr = contracts(&asset_whitelist, "Anchor", "Market").ok_or(anyhow!("no contract_addr"))?;
 
     let query = MarketQueryMsg::BorrowerInfo {
-        borrower: wallet_acc_address.to_string(),
+        borrower: wallet_acc_address.unsecure().to_string(),
         block_height: Some(1),
     };
     let query_msg_json = serde_json::to_string(&query)?;
@@ -327,11 +319,11 @@ pub async fn anchor_protocol_borrower_info(wallet_acc_address: String) -> anyhow
     Ok(ResponseResult::BorrowInfo(res))
 }
 
-pub async fn anchor_protocol_anc_balance(wallet_acc_address: String) -> anyhow::Result<ResponseResult> {
-    let contract_addr = get_contract("anchorprotocol", "ANC");
+pub async fn anchor_protocol_anc_balance(asset_whitelist: Arc<AssetWhitelist>, wallet_acc_address: Arc<SecUtf8>) -> anyhow::Result<ResponseResult> {
+    let contract_addr = tokens(&asset_whitelist, "Anchor", "ANC").ok_or(anyhow!("no contract_addr"))?;
 
     let query = Cw20QueryMsg::Balance {
-        address: wallet_acc_address.to_string()
+        address: wallet_acc_address.unsecure().to_string()
     };
     let query_msg_json = serde_json::to_string(&query)?;
 
@@ -341,11 +333,11 @@ pub async fn anchor_protocol_anc_balance(wallet_acc_address: String) -> anyhow::
     Ok(ResponseResult::Balance(res))
 }
 
-pub async fn anchor_protocol_balance(wallet_acc_address: String) -> anyhow::Result<ResponseResult> {
-    let contract_addr = get_contract("anchorprotocol", "aTerra");
+pub async fn anchor_protocol_balance(asset_whitelist: Arc<AssetWhitelist>, wallet_acc_address: Arc<SecUtf8>) -> anyhow::Result<ResponseResult> {
+    let contract_addr = tokens(&asset_whitelist, "Anchor", "aUST").ok_or(anyhow!("no contract_addr"))?;
 
     let query = Cw20QueryMsg::Balance {
-        address: wallet_acc_address.to_string()
+        address: wallet_acc_address.unsecure().to_string()
     };
     let query_msg_json = serde_json::to_string(&query)?;
 
@@ -354,18 +346,18 @@ pub async fn anchor_protocol_balance(wallet_acc_address: String) -> anyhow::Resu
     Ok(ResponseResult::Balance(res))
 }
 
-pub async fn terra_balances(wallet_acc_address: String) -> anyhow::Result<ResponseResult> {
-    let res: String = query_core_bank_balances(wallet_acc_address.as_str()).await?;
+pub async fn terra_balances(wallet_acc_address: Arc<SecUtf8>) -> anyhow::Result<ResponseResult> {
+    let res: String = query_core_bank_balances(wallet_acc_address.unsecure()).await?;
     let res: Response<Vec<Coin>> = serde_json::from_str(&res)?;
     Ok(ResponseResult::Balances(res))
 }
 
-pub async fn anchor_protocol_staker(wallet_acc_address: String) -> anyhow::Result<ResponseResult> {
+pub async fn anchor_protocol_staker(asset_whitelist: Arc<AssetWhitelist>, wallet_acc_address: Arc<SecUtf8>) -> anyhow::Result<ResponseResult> {
     // https://docs.anchorprotocol.com/smart-contracts/anchor-token/gov#staker 
-    let contract_addr = get_contract("anchorprotocol", "gov");
+    let contract_addr = contracts(&asset_whitelist, "Anchor", "Governance").ok_or(anyhow!("no contract_addr"))?;
 
     let query = GovQueryMsg::Staker {
-        address: wallet_acc_address.to_string(),
+        address: wallet_acc_address.unsecure().to_string(),
     };
     let query_msg_json = serde_json::to_string(&query)?;
 
@@ -374,8 +366,8 @@ pub async fn anchor_protocol_staker(wallet_acc_address: String) -> anyhow::Resul
     Ok(ResponseResult::Staker(res))
 }
 
-pub async fn anchor_protocol_whitelist() -> anyhow::Result<ResponseResult> {
-    let contract_addr = get_contract("anchorprotocol", "mmOverseer");
+pub async fn anchor_protocol_whitelist(asset_whitelist: Arc<AssetWhitelist>) -> anyhow::Result<ResponseResult> {
+    let contract_addr = contracts(&asset_whitelist, "Anchor", "Overseer").ok_or(anyhow!("no contract_addr"))?;
 
     let query = OverseerQueryMsg::Whitelist {
         collateral_token: None,
@@ -389,8 +381,8 @@ pub async fn anchor_protocol_whitelist() -> anyhow::Result<ResponseResult> {
     Ok(ResponseResult::AnchorWhitelistResponse(res))
 }
 
-pub async fn get_pair(dex: String, asset_infos: [Value; 2]) -> anyhow::Result<ResponseResult> {
-    let contract_addr = get_contract(&dex, "factory");
+pub async fn get_pair(asset_whitelist: Arc<AssetWhitelist>, dex: String, asset_infos: [Value; 2]) -> anyhow::Result<ResponseResult> {
+    let contract_addr = contracts(&asset_whitelist, &dex, "TokenFactory").ok_or(anyhow!("no contract_addr"))?;
     let query_msg_json = match dex.as_str() {
         "terraswap" => {
             let asset_infos: [terraswap::asset::AssetInfo; 2] = [serde_json::from_value(asset_infos[0].clone())?, serde_json::from_value(asset_infos[1].clone())?];
@@ -415,8 +407,8 @@ pub async fn get_pair(dex: String, asset_infos: [Value; 2]) -> anyhow::Result<Re
     Ok(ResponseResult::Pair(res))
 }
 
-pub async fn get_pairs(dex: String, start_after: Option<[Value; 2]>, limit: Option<u32>) -> anyhow::Result<ResponseResult> {
-    let contract_addr = get_contract(&dex, "factory");
+pub async fn get_pairs(asset_whitelist: Arc<AssetWhitelist>, dex: String, start_after: Option<[Value; 2]>, limit: Option<u32>) -> anyhow::Result<ResponseResult> {
+    let contract_addr = contracts(&asset_whitelist, &dex, "TokenFactory").ok_or(anyhow!("no contract_addr"))?;
     let query_msg_json = match dex.as_str() {
         "terraswap" => {
             let start_after: Option<[terraswap::asset::AssetInfo; 2]> = match start_after {

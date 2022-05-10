@@ -26,7 +26,7 @@ pub async fn display_arbitrage_info(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe
         group: Some("[Arbitrage][Terraswap]".to_string()),
     };
 
-    let t2: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(simulation_swap_return_amount_to_string(maybes.clone(), "simulation terraswap anchorprotocol uluna terraswapblunaLunaPair", false, 4));
+    let t2: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(simulation_swap_return_amount_to_string(maybes.clone(), "swap_simulation,terraswap,none,uluna,Anchor,bLuna", false, 4));
     view.push((t1, t2));
 
     let t1 = Entry {

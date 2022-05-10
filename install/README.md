@@ -3,8 +3,7 @@
   <p>🤖</p>
   <h1>TRB - Terra Rust Bot™</h1>  
   </div>
- 
- 
+
 ## Install
 
 > Tested on Linux.
@@ -39,7 +38,6 @@
 
 **Build terra-rust-bot using the installer script**
 
-
 *You can choose between three different build options:*
 
 * `dev` fast build
@@ -54,6 +52,8 @@
 
 * `nohup ./install.sh dev local all &` (builds `all` packages, to - for example - disable the signal messenger
   integration use `default` instead. Use `minimal` to only build the terra-rust-bot.)
-  
+
+* Note: `nohup` stands for no hangup and will prevent the build process from being killed when your ssh connection gets
+  closed. The `&` at the end makes it a background task.
 * Note: check the file `nohup.out` for errors. (`cat nohup.out`)
 * Note: after a successful build you can remove everything except `terra-rust-bot/install/build`

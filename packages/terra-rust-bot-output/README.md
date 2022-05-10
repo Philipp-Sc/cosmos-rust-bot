@@ -8,7 +8,7 @@
   </div>
 <br/>
 
-### [Install](#install) · [Usage](#usage)
+### [Install](#install) · [Usage](#usage) · [Errors](#errors)
 
 This package can be used to view the latest informaction directly from the terra-rust-bot.
 
@@ -69,3 +69,28 @@ TIMESTAMPS WHEN ENTRIES WERE WRITTEN TO STATE
 DEBUG (SHOWS ABSOLUTLY EVERYTHING)
     \debug
 ```
+
+## Errors
+
+This section explains possible errors that might pop up.
+
+**Minor**
+
+- Msg:
+  `account sequence mismatch, expected 644, got 643: incorrect account sequence: invalid request`
+
+- Description: To sign transactions the account number and sequence is needed. If the account sequence (# of
+  transactions) is outdated the request fails. The bot will retry asap.
+
+- Cause: This error might occur when the bot sends multiple transactions at about the same time. It is a sign of
+  congestion.
+
+**Major**
+
+- Msg:
+  ` Overflow: Cannot Sub with 5608138 and 5639945: execute wasm contract failed: invalid request`
+
+- Description: The wrong amount of tokens specified, exceeding the maximum available value.
+
+- Cause: This error can be a result of a calculation/rounding error. If this error persists please open a bug report.
+

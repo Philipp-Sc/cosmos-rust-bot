@@ -6,7 +6,7 @@ use_litcrypt!();
 use terra_rust_api_layer::services::blockchain::smart_contracts::objects::meta::api::{get_from_account};
 
 use terra_rust_bot_essentials::output::*;
-use terra_rust_bot_essentials::shared::{load_user_settings, get_input, Entry};
+use terra_rust_bot_essentials::shared::{load_user_settings, get_input, Entry, load_asset_whitelist};
 
 mod state;
 
@@ -47,7 +47,7 @@ use core::future::Future;
 use notify::{Watcher, RecursiveMode, watcher};
 use std::sync::mpsc::channel;
 use terra_rust_api_layer::services::blockchain::smart_contracts::objects::ResponseResult;
-
+use terra_rust_api_layer::services::blockchain::smart_contracts::objects::meta::api::data::terra_contracts::{AssetWhitelist};
 
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
@@ -59,10 +59,10 @@ async fn main() -> anyhow::Result<()> {
     let mut state_refresh_timestamp = 0i64;
     // stores all requirements either as task or the resolved value.
     let mut join_set: JoinSet<()> = JoinSet::new();
-    //let mut maybes: &'static HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>> = &HashMap::new();
     let mut maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>> = HashMap::new();
 
     let mut user_settings: UserSettings = load_user_settings("./terra-rust-bot.json");
+    let asset_whitelist: Arc<AssetWhitelist> = Arc::new(serde_json::from_value::<AssetWhitelist>(load_asset_whitelist("./assets/cw20/")).unwrap());
 
     let (wallet_seed_phrase, wallet_acc_address) = get_wallet_details(&user_settings).await;
 
@@ -93,7 +93,7 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
 
-            let mut entries: Vec<Entry> = requirements_next(&mut join_set, &mut maybes, &user_settings, &wallet_acc_address).await;
+            let mut entries: Vec<Entry> = requirements_next(&mut join_set, &mut maybes, &user_settings, &wallet_acc_address, &asset_whitelist).await;
 
             let copy_of_maybes = maybes.clone();
 
@@ -112,24 +112,28 @@ async fn main() -> anyhow::Result<()> {
             if user_settings.anchor_protocol_auto_stake {
                 // starts the agent specific function as task.
                 // (only if previous task of the same key has finished)
-                let task: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(anchor_borrow_claim_and_stake_rewards(copy_of_maybes.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(), user_settings.test));
+                let asset_list = asset_whitelist.clone();
+                let task: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(anchor_borrow_claim_and_stake_rewards(asset_list, copy_of_maybes.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(), user_settings.test));
                 try_run_function(&mut join_set, &copy_of_maybes, task, "anchor_auto_stake", user_settings.test).await;
                 // if resolved the task will be transformed into a maybe result at the end of the lazy_* method.
                 maybe_futures.append(&mut lazy_anchor_account_auto_stake_rewards(&copy_of_maybes, user_settings.test).await);
                 // also tries to calculate all state updates for terra-rust-bot-state.json.
             }
             if user_settings.anchor_protocol_auto_farm {
-                let task: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(anchor_borrow_claim_and_farm_rewards(copy_of_maybes.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(), user_settings.test));
+                let asset_list = asset_whitelist.clone();
+                let task: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(anchor_borrow_claim_and_farm_rewards(asset_list, copy_of_maybes.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(), user_settings.test));
                 try_run_function(&mut join_set, &copy_of_maybes, task, "anchor_auto_farm", user_settings.test).await;
                 maybe_futures.append(&mut lazy_anchor_account_auto_farm_rewards(&copy_of_maybes, user_settings.test).await);
             }
             if user_settings.anchor_protocol_auto_repay {
-                let task: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(anchor_redeem_and_repay_stable(copy_of_maybes.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(), user_settings.test));
+                let asset_list = asset_whitelist.clone();
+                let task: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(anchor_redeem_and_repay_stable(asset_list, copy_of_maybes.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(), user_settings.test));
                 try_run_function(&mut join_set, &copy_of_maybes, task, "anchor_auto_repay", user_settings.test).await;
                 maybe_futures.append(&mut lazy_anchor_account_auto_repay(&copy_of_maybes, user_settings.test).await);
             }
             if user_settings.anchor_protocol_auto_borrow {
-                let task: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(anchor_borrow_and_deposit_stable(copy_of_maybes.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(), user_settings.test));
+                let asset_list = asset_whitelist.clone();
+                let task: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(anchor_borrow_and_deposit_stable(asset_list, copy_of_maybes.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(), user_settings.test));
                 try_run_function(&mut join_set, &copy_of_maybes, task, "anchor_auto_borrow", user_settings.test).await;
                 maybe_futures.append(&mut lazy_anchor_account_auto_borrow(&copy_of_maybes, user_settings.test).await);
             }

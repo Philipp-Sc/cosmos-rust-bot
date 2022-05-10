@@ -273,7 +273,7 @@ pub async fn max_ltv_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<Respo
 }
 
 pub async fn interest_multiplier_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, digits_rounded_to: u32) -> Maybe<String> {
-    let (response_result, timestamp) = try_get_data_by_key!(&maybes,"config anchorprotocol mmInterestModel");
+    let (response_result, timestamp) = try_get_data_by_key!(&maybes,"config,Anchor,Interest Model");
     let value = response_result.as_config().unwrap().as_mm_interest_model().unwrap().result.interest_multiplier.to_string();
     let data = try_convert_and_round!(&value,"is_human_readable",false,digits_rounded_to);
     maybe_struct!((Some(data),Some(timestamp)))
@@ -287,14 +287,14 @@ pub async fn blocks_per_year_to_string(maybes: HashMap<String, Arc<Mutex<Vec<May
 }
 
 pub async fn base_rate_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, digits_rounded_to: u32) -> Maybe<String> {
-    let (response_result, timestamp) = try_get_data_by_key!(&maybes,"config anchorprotocol mmInterestModel");
+    let (response_result, timestamp) = try_get_data_by_key!(&maybes,"config,Anchor,Interest Model");
     let value = response_result.as_config().unwrap().as_mm_interest_model().unwrap().result.base_rate.to_string();
     let data = try_convert_and_round!(&value,"is_human_readable",false,digits_rounded_to);
     maybe_struct!((Some(data),Some(timestamp)))
 }
 
 pub async fn a_terra_supply_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, digits_rounded_to: u32) -> Maybe<String> {
-    let (response_result, timestamp) = try_get_data_by_key!(&maybes,"epoch_state anchorprotocol mmMarket");
+    let (response_result, timestamp) = try_get_data_by_key!(&maybes,"epoch_state,Anchor,Market");
     let res = &response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result;
     let value = (res.aterra_supply / res.exchange_rate).to_string();
     let data = try_convert_and_round!(&value,"is_micro",false,digits_rounded_to).parse::<u128>().unwrap().to_formatted_string(&Locale::en);
@@ -302,21 +302,21 @@ pub async fn a_terra_supply_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Mayb
 }
 
 pub async fn a_terra_exchange_rate_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, digits_rounded_to: u32) -> Maybe<String> {
-    let (response_result, timestamp) = try_get_data_by_key!(&maybes,"epoch_state anchorprotocol mmMarket");
+    let (response_result, timestamp) = try_get_data_by_key!(&maybes,"epoch_state,Anchor,Market");
     let value = response_result.as_epoch_state().unwrap().as_mm_market().unwrap().result.exchange_rate.to_string();
     let data = try_convert_and_round!(&value,"is_human_readable",false,digits_rounded_to);
     maybe_struct!((Some(data),Some(timestamp)))
 }
 
 pub async fn b_luna_exchange_rate_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, digits_rounded_to: u32) -> Maybe<String> {
-    let (response_result, timestamp) = try_get_data_by_key!(&maybes,"state anchorprotocol bLunaHub");
+    let (response_result, timestamp) = try_get_data_by_key!(&maybes,"state,Anchor,bLuna Hub");
     let value = response_result.as_state().unwrap().as_b_luna_hub().unwrap().result.bluna_exchange_rate.to_string();
     let data = try_convert_and_round!(&value,"is_human_readable",false,digits_rounded_to);
     maybe_struct!((Some(data),Some(timestamp)))
 }
 
 pub async fn total_liabilities_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, digits_rounded_to: u32) -> Maybe<String> {
-    let (response_result, timestamp) = try_get_data_by_key!(&maybes,"state anchorprotocol mmMarket");
+    let (response_result, timestamp) = try_get_data_by_key!(&maybes,"state,Anchor,Market");
     let value = response_result.as_state().unwrap().as_mm_market().unwrap().result.total_liabilities.to_string();
     let data = try_convert_and_round!(&value,"is_micro",false,digits_rounded_to).parse::<u128>().unwrap().to_formatted_string(&Locale::en);
     maybe_struct!((Some(data),Some(timestamp)))

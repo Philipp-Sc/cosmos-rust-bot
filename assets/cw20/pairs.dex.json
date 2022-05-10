@@ -1,5 +1,13 @@
 {
   "mainnet": {
+    "terra1zvn8z6y8u2ndwvsjhtpsjsghk6pa6ugwzxp6vx": {
+      "dex": "terraswap",
+      "type": "xyk",
+      "assets": [
+        "terra10f2mt82kjnkxqj2gepgwl637u2w4ue2z5nhz5j",
+        "terra12897djskt9rge8dtmm86w654g7kzckkd698608"
+      ]
+    },
     "terra18dq84qfpz267xuu0k47066svuaez9hr4xvwlex": {
       "dex": "astroport",
       "type": "xyk",
