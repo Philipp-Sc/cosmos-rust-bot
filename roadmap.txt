@@ -1,3 +1,7 @@
+// improve \logs to show last n logs..
+// improve \auto {repay,borrow,..} so that the last transaction is shown.
+// fix bug that happens with small aUST balances.
+
 // roadmap
 
 // show all mirror token/ pairs
