@@ -1,3 +1,9 @@
+> :info: Terra-rust-bot was stress tested during the UST crash, the bot successfully prevented liquidations as it was set up to do.
+
+> :warning: The last tested version is at commit `12eee1b7b7d525962700c3a4bf1c861f34e651cd`.
+
+> :info: Due to the unexpected halt of the blockchain, terra-rust-bot is shifting its focus temporarily until Terra is reconstituted. See bellow.
+
 <div align="center">
 
   <p>🤖</p>
@@ -32,6 +38,21 @@
 > :warning: No security audit has been performed. (*Disclaimer: This may steal your money. Do your own research. Take a look at the code.*)
 
 ### [Install](#install) · [Config](#config) · [Usage](#usage) · [Summary](#summary)
+
+### < 2022/5/13 - Update >
+
+Terra-rust-bot will continue to keep the commits rolling and be ready to serve when Terra is reborn from its ashes, the
+bot will now focus on the following:
+
+1. Integrate Osmosis
+2. Possibly integrate the Juno Network
+
+New functionalities will be whatever is useful to increase and protect your wallet.
+
+This includes protection against Black Swan events, by exiting positions and transferring tokens to a safe haven. Let's
+keep building!
+
+### </>
 
 **TRB** can be used to connect with a terra wallet to keep potential loans safe *(Auto Repay)*, maximise their
 utility *(Auto Borrow)* and more *(Auto Stake, Auto Farm,..)*. This repository includes a Signal Messenger integration
