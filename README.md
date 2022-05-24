@@ -44,7 +44,7 @@
 - [ ] In-Memory ConfigStore
 
 **Terra**
-- [ ] Terra 2.0: use gRPC instead of LCD/FCD (cosmos-rust)[https://github.com/cosmos/cosmos-rust/] 
+- [ ] Terra 2.0: use gRPC instead of LCD/FCD [cosmos-rust](https://github.com/cosmos/cosmos-rust/)
 - [ ] Impermanent Loss Protection
 
 **Osmosis**
