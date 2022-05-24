@@ -10,37 +10,52 @@
 <div align="center">
 
   <p>🤖</p>
-  <h1>TRB - Terra Rust Bot™</h1> 
+  <h1>CRB - Cosmos Rust Bot™</h1> 
   <p>If you can't beat them join them!</p> 
     <img src="https://img.shields.io/github/languages/top/Philipp-Sc/terra-rust-bot"> 
     <img src="https://img.shields.io/github/repo-size/Philipp-Sc/terra-rust-bot"> 
     <img src="https://img.shields.io/github/commit-activity/m/Philipp-Sc/terra-rust-bot"> 
     <img src="https://img.shields.io/github/license/Philipp-Sc/terra-rust-bot">
     <img src="https://img.shields.io/twitter/follow/PSchlutermann?style=social"> 
-
   </div>
-
 <br/>
 <div align="center">
-
-
   <img src="https://github.com/Philipp-Sc/media/raw/main/terra-rust-bot/terra-rust-bot-output/gallery/terminal_output_auto_stake.png" height="250">
   <img src="https://github.com/Philipp-Sc/media/raw/main/terra-rust-bot/terra-rust-bot-output/gallery/terminal_output_market.png" height="250">
 
   <img src="https://github.com/Philipp-Sc/media/raw/main/terra-rust-bot/terra-rust-signal-bot/gallery/signal_bot_auto_stake.png" height="250">
   <img src="https://github.com/Philipp-Sc/media/raw/main/terra-rust-bot/terra-rust-signal-bot/gallery/signal_bot_help.png" height="250">
   <img src="https://github.com/Philipp-Sc/media/raw/main/terra-rust-bot/terra-rust-signal-bot/gallery/signal_messenger.png" height="250">
-
 </div>
 
 
 
 > :warning: The bot needs your **seed phrase** to create and sign transactions.  
-> :arrow_right_hook: You can use Terra-rust-bot without a seed phrase in view mode. Test this first.
+> :arrow_right_hook: You can use Cosmos-rust-bot without a seed phrase in view mode. Test this first.
 
 > :warning: No security audit has been performed. (*Disclaimer: This may steal your money. Do your own research. Take a look at the code.*)
 
 ### [Install](#install) · [Config](#config) · [Usage](#usage) · [Summary](#summary)
+
+
+## New Roadmap:
+
+**Signal**
+- [ ] In-Memory ConfigStore
+
+**Terra**
+- [ ] Terra 2.0: use gRPC instead of LCD/FCD (cosmos-rust)[https://github.com/cosmos/cosmos-rust/] 
+- [ ] Impermanent Loss Protection
+
+**Osmosis**
+- [ ] Market Dashboard: (assets,pools,prices)
+- [ ] DCA  
+
+**Cosmos**
+- [ ] Market Dashboard: List prices (Terraswap, Astroport, Osmosiszone)
+- [ ] Arbitrage: Notifications, Automation
+- [ ] Take Profits & Diversify Cross-chain (Terra) <-> (Osmosis)
+
 
 ### < 2022/5/13 - Update >
 
