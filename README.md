@@ -37,6 +37,7 @@
 
 ### [Install](#install) · [Config](#config) · [Usage](#usage) · [Summary](#summary)
 
+### < 2022/5/25 - Update >
 
 ## New Roadmap:
 
@@ -44,7 +45,7 @@
 - [ ] In-Memory ConfigStore
 
 **Terra**
-- [ ] Terra 2.0: use gRPC instead of LCD/FCD [cosmos-rust](https://github.com/cosmos/cosmos-rust/)
+- [ ] Terra 2.0: use gRPC instead of LCD/FCD (CosmWasm v.1.0.0) using [cosmos-rust](https://github.com/cosmos/cosmos-rust/).
 - [ ] Impermanent Loss Protection
 
 **Osmosis**
@@ -55,6 +56,7 @@
 - [ ] Market Dashboard: List prices (Terraswap, Astroport, Osmosiszone)
 - [ ] Arbitrage: Notifications, Automation
 - [ ] Take Profits & Diversify Cross-chain (Terra) <-> (Osmosis)
+- [ ] Add (Signal & Terminal) commands to quickly/conveniently broadcast (complex) transactions.
 
 
 ### < 2022/5/13 - Update >
@@ -164,8 +166,7 @@ Feature list:
 * `test:` if `true` no transactions will be executed, useful for testing or view only, will simulate or estimate
   transaction fees.
 * `terra_wallet_address:` convenience feature: default `null`, if set for example
-  to `"terra1q0n5e43mmz8ddra8554xkxsvelnz4evwukxkht"` terra-rust-bot will not ask you for your wallet address. (can **
-  not** be updated once terra-rust-bot is started)
+  to `"terra1q0n5e43mmz8ddra8554xkxsvelnz4evwukxkht"` terra-rust-bot will not ask you for your wallet address. (can **not** be updated once terra-rust-bot is started)
 
 
 * `anchor_protocol_auto_repay:` if `true` saves you from being liquidated triggered by the *trigger_percentage*.
