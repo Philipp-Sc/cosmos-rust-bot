@@ -47,14 +47,14 @@
 **Terra 2.0**
 - [ ] Market Dashboard: List prices (Terraswap, Astroport, Loop) 
 - [ ] Impermanent Loss Protection (Astroport, Spectrum)
-- [ ] DCA (assets,pools)
+- [ ] DCA, Limit Orders (assets,pools)
 - [ ] Arbitrage: Notifications, Automation (including Terra pools on Osmosiszone)
 - [ ] Automation: Strategy: Take Profits & Diversify (reducing single point of failure risk)
 
 **Osmosis**
 - [ ] Osmosiszone Dashboard: (assets,pools,prices)
 - [ ] Impermanent Loss Protection (Osmosiszone) 
-- [ ] DCA (assets,pools)
+- [ ] DCA, Limit Orders (assets,pools)
 - [ ] Automation: Strategy: Take Profits & Diversify (reducing single point of failure risk)
 
 **Interface**
