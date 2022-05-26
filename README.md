@@ -58,7 +58,7 @@
 - [ ] Automation: Strategy: Take Profits & Diversify (reducing single point of failure risk)
 
 **Interface**
-- [ ] Add commands to quickly/conveniently broadcast transactions via Terminal/Signal Messenger (e.g buy/sell/send etc.)
+- [ ] Add commands to quickly/conveniently broadcast transactions via Terminal/Signal Messenger
 
 ## About
 
