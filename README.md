@@ -42,23 +42,39 @@
 - [ ] CosmWasm v.1.0.0: Use gRPC instead of LCD/FCD using [cosmos-rust](https://github.com/cosmos/cosmos-rust/).
 - [ ] Signal: In-Memory ConfigStore  
 
-**Cosmos Ecosystem** 
+**Cosmos Ecosystem**: 
 
-**Terra 2.0**
-- [ ] Market Dashboard: List prices (Terraswap, Astroport, Loop) 
-- [ ] Impermanent Loss Protection (Astroport, Spectrum)
-- [ ] DCA, Limit Orders (assets,pools)
-- [ ] Arbitrage: Notifications, Automation (including Terra pools on Osmosiszone)
-- [ ] Automation: Strategy: Take Profits & Diversify (reducing single point of failure risk)
+**Analysis**
+- [ ] Terra Dashboard: List Tokens, Prices & Pools (Terraswap, Astroport) 
+- [ ] Osmosis Dashboard: List Tokens, Prices & Pools (Osmosiszone)
 
-**Osmosis**
-- [ ] Osmosiszone Dashboard: (assets,pools,prices)
-- [ ] Impermanent Loss Protection (Osmosiszone) 
-- [ ] DCA, Limit Orders (assets,pools)
-- [ ] Automation: Strategy: Take Profits & Diversify (reducing single point of failure risk)
+**Notifications**
+- [ ] Arbitrage Opportunities: Notifications, Automation (including Terra pools on Osmosiszone)
+- [ ] Governance Notifications (new proposal, hit quorum, passed, rejected, executed, ..) 
+- - [ ] To Consider: off-chain forum activity.
+
+**Automated Strategies**
+
+- [ ] Arbitrage: Automation (including Terra pools on Osmosiszone)
+- [ ] Impermanent Loss Protection (Osmosiszone, Astroport, Spectrum) 
+- [ ] DCA
+  - - [ ] Martingale Feature (double or otherwise modify buys depending on price and tx history)
+- [ ] Limit Orders 
+  - - [ ] TP and SL
+- [ ] Take Profits & Diversify (reducing single point of failure risk)
+
 
 **Interface**
-- [ ] Add commands to quickly/conveniently broadcast transactions via Terminal/Signal Messenger
+
+Add commands to quickly broadcast transactions via Terminal/Signal Messenger
+- - [ ] Show **Analysis**
+- - [ ] Enable / Disable **Notifications**
+- - [ ] Enable / Disable **Automated Strategies**
+- - [ ] Dust Converter (convert small balances into a token of choice)
+- - [ ] Abort Mission (sell selected investments and trade in for stablecoin)
+- - [ ] Migrate Wallet (safety feature: immediately move tokens/coins to a new wallet)
+
+
 
 ## About
 
