@@ -26,7 +26,7 @@ pub async fn data_is_outdated(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<Respon
             }
             return false;
         }
-        Maybe { data: Err(_), timestamp } => {
+        Maybe { data: Err(_), .. } => {
             return false;
         }
     }

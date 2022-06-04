@@ -6,26 +6,27 @@ repository = "https://github.com/Philipp-Sc/terra-rust-bot"
 version = "0.4.0"
 edition = "2021"
 
-[[bin]] 
+[[bin]]
 name = "terra-rust-bot"
 
-[dependencies] 
-terra-rust-api-layer = { path = "./packages/terra-rust-api-layer"}
-terra-rust-bot-essentials = { path = "./packages/terra-rust-bot-essentials"}
+[dependencies]
+terra-rust-api-layer = { path = "./packages/terra-rust-api-layer" }
+terra-rust-bot-essentials = { path = "./packages/terra-rust-bot-essentials" }
 tokio = { version = "1.18", features = ["full"] }
-anyhow="1.0"  
-serde = { version = "1.0", features = ["derive"] } 
+anyhow = "1.0"
+serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-rust_decimal="1.12.2"  
-chrono = "0.4"    
-secstr = "0.4.0" 
-colored = "2" 
-num_cpus = "1.13.1"   
-rust_decimal_macros="1.12.2"    
-enum-as-inner = "0.3.3" 
+rust_decimal = "1.12.2"
+chrono = "0.4"
+secstr = "0.4.0"
+colored = "2"
+num_cpus = "1.13.1"
+rust_decimal_macros = "1.12.2"
+enum-as-inner = "0.3.3"
 cosmwasm-bignumber = "2.2.0"
-cosmwasm-std = "0.16"
-num-format = "0.4.0" 
+cosmwasm-std-deprecated = { package = "cosmwasm-std", version = "=0.16.7" }
+cosmwasm-std-latest = { package = "cosmwasm-std", version = "^1.0.0" }
+num-format = "0.4.0"
 regex = "1.5.5"
 litcrypt = "0.3"
 crossbeam-channel = "0.4.0"

@@ -1,13 +1,13 @@
-pub mod meta; 
+pub mod meta;
 
 use serde::Deserialize;
-use serde::Serialize; 
-use cosmwasm_std::{Uint128,Decimal}; 
-use enum_as_inner::EnumAsInner;   
+use serde::Serialize;
+use cosmwasm_std_deprecated::{Uint128, Decimal};
+use enum_as_inner::EnumAsInner;
 
 
 use anchor_token::airdrop::IsClaimedResponse;
- 
+
 //use moneymarket::market::ConfigResponse as MarketConfigResponse;
 use moneymarket::market::EpochStateResponse as MarketEpochStateResponse;
 use moneymarket::market::StateResponse as MarketStateResponse;
@@ -20,12 +20,12 @@ use moneymarket::interest_model::ConfigResponse as InterestModelConfigResponse;
 
 
 use cw20::BalanceResponse;
-use anchor_token::gov:: StakerResponse;
+use anchor_token::gov::StakerResponse;
 
 use moneymarket::overseer::WhitelistResponse;
 use mirror_protocol::oracle::PriceResponse;
 
-#[derive(Debug, Clone, Serialize, Deserialize, EnumAsInner)]  
+#[derive(Debug, Clone, Serialize, Deserialize, EnumAsInner)]
 pub enum ResponseResult {
     Text(String),
     State(StateResponse),
@@ -41,7 +41,7 @@ pub enum ResponseResult {
     BorrowInfo(Response<BorrowerInfoResponse>),
     Balance(Response<BalanceResponse>),
     Balances(Response<Vec<Coin>>),
-    Staker(Response<StakerResponse>), 
+    Staker(Response<StakerResponse>),
     DistributionApy(DistributionApyResponse),
     GovReward(GovRewardResponse),
     LPReward(LPRewardResponse),
@@ -54,7 +54,7 @@ pub enum ResponseResult {
     TaxCaps(Response<Vec<TaxCap>>),
     AirdropResponse(AnchorAirdrops),
     IsClaimedResponse(Response<IsClaimedResponse>),
-    AnchorWhitelistResponse(Response<WhitelistResponse>)
+    AnchorWhitelistResponse(Response<WhitelistResponse>),
 }
 
 
@@ -65,24 +65,24 @@ pub struct Coin {
     pub amount: String,
 }
 
-#[derive(Serialize, Deserialize,Clone, Debug,PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct APY {
     pub apy: rust_decimal::Decimal,
-    pub result: String
+    pub result: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct BlocksPerYearResponse {
     pub blocks_per_year: f64,
     pub blocks_per_millis: f64,
-    pub latest_block: String, 
-    pub historic_block: String,  
+    pub latest_block: String,
+    pub historic_block: String,
 }
 
-#[derive(Serialize, Deserialize,Clone, Debug,PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Response<T> {
     pub height: String,
-    pub result: T
+    pub result: T,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, EnumAsInner)]
@@ -109,33 +109,33 @@ pub enum PairResponse {
     astroport(astroport::asset::PairInfo),
 }
 
- 
-#[derive(Debug, Clone, Serialize, Deserialize, EnumAsInner)]  
+
+#[derive(Debug, Clone, Serialize, Deserialize, EnumAsInner)]
 pub enum StateResponse {
     #[allow(non_camel_case_types)]
     bLunaHub(Response<BassetHubStateResponse>),
     #[allow(non_camel_case_types)]
-    mmMarket(Response<MarketStateResponse>), 
+    mmMarket(Response<MarketStateResponse>),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, EnumAsInner)] 
-pub enum EpochStateResponse { 
+#[derive(Debug, Clone, Serialize, Deserialize, EnumAsInner)]
+pub enum EpochStateResponse {
     #[allow(non_camel_case_types)]
     mmMarket(Response<MarketEpochStateResponse>),
 }
- 
-#[derive(Debug, Clone, Serialize, Deserialize, EnumAsInner)] 
-pub enum ConfigResponse { 
+
+#[derive(Debug, Clone, Serialize, Deserialize, EnumAsInner)]
+pub enum ConfigResponse {
     #[allow(non_camel_case_types)]
     mmInterestModel(Response<InterestModelConfigResponse>),
     Collector(Response<CollectorConfigResponse>),
 }
- 
 
-#[derive(Debug, Clone, Serialize, Deserialize)] 
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CoreSwapResponse {
     pub amount: Uint128,
-    pub denom: String, 
+    pub denom: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -145,7 +145,7 @@ pub struct DistributionApyResponse {
     pub timestamp: u64,
     pub anc_emission_rate: Decimal,
     pub total_liabilities: Decimal,
-    pub distribution_apy: Decimal, 
+    pub distribution_apy: Decimal,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -161,7 +161,7 @@ pub struct LPRewardResponse {
     pub anc_price: Decimal,
     pub height: u64,
     pub timestamp: u64,
-    pub apy: Decimal, 
+    pub apy: Decimal,
     pub total_pool: Decimal,
 }
 
@@ -219,25 +219,27 @@ pub struct Attribute {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct DepositStableLog { 
+pub struct DepositStableLog {
     pub height: u64,
-    pub timestamp: i64, //chrono::datetime::DateTime<chrono::offset::utc::Utc> .timestamp()
+    pub timestamp: i64,
+    //chrono::datetime::DateTime<chrono::offset::utc::Utc> .timestamp()
     pub mint_amount: rust_decimal::Decimal,
     pub deposit_amount: rust_decimal::Decimal,
-    pub exchange_rate: rust_decimal::Decimal, 
+    pub exchange_rate: rust_decimal::Decimal,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct TXLog { 
+pub struct TXLog {
     pub height: u64,
-    pub timestamp: i64, //chrono::datetime::DateTime<chrono::offset::utc::Utc> .timestamp()
+    pub timestamp: i64,
+    //chrono::datetime::DateTime<chrono::offset::utc::Utc> .timestamp()
     pub gas_wanted: rust_decimal::Decimal,
     pub gas_used: rust_decimal::Decimal,
     pub fee_denom: String,
     pub fee_amount: rust_decimal::Decimal,
     pub amount: rust_decimal::Decimal,
-    pub raw_log: String, 
-} 
+    pub raw_log: String,
+}
 
 pub type AnchorAirdrops = Vec<AnchorAirdrop>;
 

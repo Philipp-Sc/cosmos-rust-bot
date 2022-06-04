@@ -4,6 +4,7 @@ extern crate litcrypt;
 use_litcrypt!();
 
 use terra_rust_api_layer::services::blockchain::smart_contracts::objects::meta::api::{get_from_account};
+use terra_rust_api_layer::services::blockchain::smart_contracts::objects::meta::api::cosmos_rpc::{msg_send, get_pool_count, get_pools_info, get_pool_info};
 
 use terra_rust_bot_essentials::output::*;
 use terra_rust_bot_essentials::shared::{load_user_settings, get_input, Entry, load_asset_whitelist};
@@ -54,6 +55,11 @@ use std::hash::{Hash, Hasher};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    //println!("{:?}", get_pool_count().await);
+    //println!("{:?}", get_pools_info().await);
+    //println!("{:?}", get_pool_info(510u64).await);
+    println!("{:?}", msg_send().await);
+    loop {}
     let state: Arc<RwLock<HashMap<i64, Entry>>> = Arc::new(RwLock::new(HashMap::new()));
 
     let mut state_refresh_timestamp = 0i64;

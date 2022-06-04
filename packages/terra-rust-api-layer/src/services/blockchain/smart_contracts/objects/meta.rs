@@ -25,9 +25,9 @@ use anyhow::anyhow;
 
 use rust_decimal::prelude::ToPrimitive;
 use cosmwasm_bignumber::{Uint256};
-use cosmwasm_std::{to_binary, Uint128};
+use cosmwasm_std_deprecated::{to_binary, Uint128};
 
-//use cosmwasm_std::Binary;
+//use cosmwasm_std_deprecated::Binary;
 // Binary::from_base64(&base64::encode(msg))?
 
 use cw20::Cw20ExecuteMsg;
@@ -159,8 +159,8 @@ fn astroport_swap_msg(asset_whitelist: &Arc<AssetWhitelist>, wallet_acc_address:
     let coins: [Coin; 0] = []; // no coins needed
 
     let msg = astroport::pair::Cw20HookMsg::Swap {
-        belief_price: Some(cosmwasm_std::Decimal::from_str(belief_price.round_dp_with_strategy(18, rust_decimal::RoundingStrategy::ToZero).to_string().as_str())?),
-        max_spread: Some(cosmwasm_std::Decimal::from_str(max_spread.to_string().as_str())?),
+        belief_price: Some(cosmwasm_std_deprecated::Decimal::from_str(belief_price.round_dp_with_strategy(18, rust_decimal::RoundingStrategy::ToZero).to_string().as_str())?),
+        max_spread: Some(cosmwasm_std_deprecated::Decimal::from_str(max_spread.to_string().as_str())?),
         to: None,
     };
 
@@ -198,27 +198,30 @@ fn anchor_provide_to_spec_vault_msg(asset_whitelist: &Arc<AssetWhitelist>, walle
 
     let coins: [Coin; 1] = [Coin::create("uusd", ust_to_keep)];
 
-    let execute_msg = spectrum_protocol::staker::ExecuteMsg::bond {
+
+    let execute_msg = ExecuteMsg::ClaimRewards { to: None };
+    // TODO: latest spectrum_protocol version does not compile
+    /*spectrum_protocol::staker::ExecuteMsg::bond {
         contract: contract_addr_lp_2,
         assets: [
             Asset {
                 info: AssetInfo::Token {
                     contract_addr: contract_addr_anc,
                 },
-                amount: Uint128::from(anc_to_keep.to_u128().ok_or(anyhow!("incorrect ust_to_keep format"))?),
+                amount: cosmwasm_std_deprecated::Uint128::from(anc_to_keep.to_u128().ok_or(anyhow!("incorrect ust_to_keep format"))?),
             },
             Asset {
                 info: AssetInfo::NativeToken {
                     denom: "uusd".to_string(),
                 },
-                amount: Uint128::from(ust_to_keep.to_u128().ok_or(anyhow!("incorrect ust_to_keep format"))?),
+                amount: cosmwasm_std_deprecated::Uint128::from(ust_to_keep.to_u128().ok_or(anyhow!("incorrect ust_to_keep format"))?),
             },
         ],
-        slippage_tolerance: cosmwasm_std::Decimal::from_str("0.01").unwrap(),
-        compound_rate: Some(cosmwasm_std::Decimal::percent(100u64)),
+        slippage_tolerance: cosmwasm_std_deprecated::Decimal::from_str("0.01").unwrap(),
+        compound_rate: Some(cosmwasm_std_deprecated::Decimal::percent(100u64)),
         staker_addr: None,
         asset_token: None,
-    };
+    };*/
 
     let execute_msg_json = serde_json::to_string(&execute_msg)?;
     let send = MsgExecuteContract::create_from_json(&wallet_acc_address, &contract_addr_lp_1, &execute_msg_json, &coins)?;

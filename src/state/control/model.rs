@@ -24,7 +24,7 @@ use terra_rust_api_layer::services::blockchain::{
     get_block_txs_deposit_stable_apy,
     get_block_txs_fee_data};
 
-use terra_rust_api_layer::services::blockchain::smart_contracts::{state_query_msg, epoch_state_query_msg, config_query_msg, native_token_core_swap, anchor_protocol_borrower_limit, anchor_protocol_borrower_info, anchor_protocol_balance, anchor_protocol_staker, anchor_protocol_anc_balance, terra_balances, anchor_protocol_whitelist, swap_token};
+use terra_rust_api_layer::services::blockchain::smart_contracts::{state_query_msg, epoch_state_query_msg, config_query_msg, native_token_core_swap, anchor_protocol_borrower_limit, anchor_protocol_borrower_info, anchor_protocol_balance, anchor_protocol_staker, anchor_protocol_anc_balance, terra_balances, anchor_protocol_whitelist, simulate_swap};
 
 use std::collections::HashMap;
 
@@ -543,8 +543,8 @@ async fn requirements(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, A
             }
         } else if length == 6 {
             match vec[0] {
-                "swap_simulation" => {
-                    f = Some(Box::pin(swap_token(asset_whitelist,
+                "simulate_swap" => {
+                    f = Some(Box::pin(simulate_swap(asset_whitelist,
                                                  vec[1].to_owned(),
                                                  match vec[2] {
                                                      "none" => { None }

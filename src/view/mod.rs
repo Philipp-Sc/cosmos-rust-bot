@@ -350,7 +350,7 @@ pub async fn calculate_farm_plan(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<Res
     let gas_fees_uusd = decimal_or_return!(gas_price_to_string(maybes.clone(),10).await);
     let gas_adjustment_preference = decimal_or_return!(meta_data_key_to_string(maybes.clone(),"gas_adjustment_preference",false,10).await);
 
-    let exchange_rate = decimal_or_return!(simulation_swap_exchange_rate_to_string(maybes.clone(),"swap_simulation,terraswap,Anchor,ANC,none,uusd",false,10).await);
+    let exchange_rate = decimal_or_return!(simulation_swap_exchange_rate_to_string(maybes.clone(),"simulate_swap,terraswap,Anchor,ANC,none,uusd",false,10).await);
 
     let fee_to_claim_anc_rewards_uusd_in_anc = decimal_or_return!(estimate_anchor_protocol_tx_fee(maybes.clone(), "anchor_protocol_txs_claim_rewards","avg_gas_used".to_owned(),true,0).await)
         .checked_mul(gas_fees_uusd).unwrap()
@@ -375,7 +375,7 @@ pub async fn calculate_farm_plan(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<Res
     // if pair_anc is used to swap that amount of anc
     // then the ust returned is lower than the remaining ANC value
 
-    let exchange_return = decimal_or_return!(simulation_swap_return_amount_to_string(maybes.clone(),"swap_simulation,terraswap,Anchor,ANC,none,uusd",false,10).await);
+    let exchange_return = decimal_or_return!(simulation_swap_return_amount_to_string(maybes.clone(),"simulate_swap,terraswap,Anchor,ANC,none,uusd",false,10).await);
     let return_ust_amount = pair_anc_excluding_exchange_fees.checked_div(exchange_return).unwrap();
     let return_amount_in_anc = return_ust_amount.checked_mul(exchange_rate).unwrap();
 
@@ -821,7 +821,7 @@ pub async fn apy_on_collateral_by(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<Re
 }
 
 pub async fn anc_staked_balance_in_ust_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, digits_rounded_to: u32) -> Maybe<String> {
-    let exchange_rate = decimal_or_return!(simulation_swap_return_amount_to_string(maybes.clone(),"swap_simulation,terraswap,Anchor,ANC,none,uusd",false,10).await);
+    let exchange_rate = decimal_or_return!(simulation_swap_return_amount_to_string(maybes.clone(),"simulate_swap,terraswap,Anchor,ANC,none,uusd",false,10).await);
 
 
     match try_get_resolved(&maybes, "staker").await {
@@ -854,7 +854,7 @@ pub async fn anchor_claim_and_stake_transaction_gas_fees_ratio_to_string(maybes:
     }
 
 
-    let exchange_rate = decimal_or_return!(simulation_swap_exchange_rate_to_string(maybes.clone(),"swap_simulation,terraswap,Anchor,ANC,none,uusd",false,10).await);
+    let exchange_rate = decimal_or_return!(simulation_swap_exchange_rate_to_string(maybes.clone(),"simulate_swap,terraswap,Anchor,ANC,none,uusd",false,10).await);
 
     _pending_rewards = _pending_rewards.checked_mul(exchange_rate).unwrap();
 
@@ -884,7 +884,7 @@ pub async fn borrower_rewards_in_ust_to_string(maybes: HashMap<String, Arc<Mutex
         }
     }
 
-    let exchange_rate = decimal_or_return!(simulation_swap_exchange_rate_to_string(maybes.clone(),"swap_simulation,terraswap,Anchor,ANC,none,uusd",false,10).await);
+    let exchange_rate = decimal_or_return!(simulation_swap_exchange_rate_to_string(maybes.clone(),"simulate_swap,terraswap,Anchor,ANC,none,uusd",false,10).await);
 
     return maybe_struct!((Some( _pending_rewards.checked_mul(exchange_rate).unwrap()
                    .round_dp_with_strategy(digits_rounded_to, rust_decimal::RoundingStrategy::MidpointAwayFromZero)
@@ -1203,7 +1203,7 @@ pub async fn net_apr_to_string(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<Respo
 
     match try_get_resolved(&maybes, "api/v2/distribution-apy").await {
         Maybe { data: Ok(response_result), .. } => {
-            let distribution_apr: cosmwasm_std::Decimal = response_result.as_distribution_apy().unwrap().distribution_apy;
+            let distribution_apr: cosmwasm_std_deprecated::Decimal = response_result.as_distribution_apy().unwrap().distribution_apy;
             return maybe_struct!((Some( format!("{}%",
                     Decimal::from_str(distribution_apr.to_string().as_str()).unwrap()
                     .checked_add(borrow_apr.checked_mul(Decimal::from_str("-1").unwrap()).unwrap()).unwrap()

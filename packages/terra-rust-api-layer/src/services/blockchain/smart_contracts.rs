@@ -31,7 +31,7 @@ use mirror_protocol::oracle::PriceResponse;
 use cw20::Cw20QueryMsg;
 use cw20::BalanceResponse;
 
-use cosmwasm_std::{Uint128};
+use cosmwasm_std_deprecated::{Uint128};
 use std::str::FromStr;
 
 use moneymarket::market::StateResponse as MarketStateResponse;
@@ -56,6 +56,67 @@ use secstr::*;
 // https://fcd.terra.dev/wasm/contracts/terra146ahqn6d3qgdvmj8cj96hh03dzmeedhsf0kxqm/store?query_msg={%22latest_stage%22:{}}
 
 
+// get token swap info
+
+// https://lcd-osmosis.blockapsis.com/swagger/
+
+// https://docs.osmosis.zone/developing/modules/spec-gamm.html#overview
+// https://lcd-osmosis.keplr.app/osmosis/gamm/v1beta1/pools/560
+
+// https://github.com/confio/osmosis-bindings/blob/main/packages/bindings/src/query.rs
+
+// {}/wasm/contracts/{}/store?query_msg={} for osmosis? where
+
+// /osmosis/gamm/v1beta1/{poolId}/estimate/swap_exact_amount_in
+/*
+pub async fn simulate_swap_ibcs(asset_whitelist: Arc<AssetWhitelist>, dex: String, bid_token_protocol: Option<String>, bid_token: String, ask_token_protocol: Option<String>, ask_token: String) -> anyhow::Result<ResponseResult> {
+    osmo_bindings::Os::
+    osmo_bindings::OsmosisQuery::estimate_swap("cosmos10885ryvnfvu7hjt8lqvge77uderycqcuu5qtd9", 501, "atom", "osmo", osmo_bindings::SwapAmount::In(cosmwasm_std_latest::Uint128::new(501505)));
+    /*
+    let coin_a = cosmwasm_std_latest::coin(6_000_000u128, "osmo");
+    let coin_b = cosmwasm_std_latest::coin(1_500_000u128, "atom");
+
+    /*let pool_id = 43;
+    let pool = osmo_bindings::Pool::new(coin_a.clone(), coin_b.clone());
+
+    // set up with one pool
+
+BasicAppBuilder::<OsmosisMsg, OsmosisQuery>::new_custom()
+                .with_custom(OsmosisModule {})
+                .build(|_router, _, _storage| {
+                    // router.custom.set_owner(storage, &owner).unwrap();
+                }),
+
+    let mut app = OsmosisApp::new();
+    app.init_modules(|router, _, storage| {
+        router.custom.set_pool(storage, pool_id, &pool).unwrap();
+    });
+    */
+    // estimate the price (501505 * 0.997 = 500_000) after fees gone
+    let query = osmo_bindings::OsmosisQuery::estimate_swap(
+        cosmwasm_std_latest::testing::MOCK_CONTRACT_ADDR,
+        500,
+        &coin_b.denom,
+        &coin_a.denom,
+        osmo_bindings::SwapAmount::In(cosmwasm_std_latest::Uint128::new(501505)),
+    );
+    //let osmo_bindings::SwapResponse { amount } = app.wrap().query(&query.into()).unwrap();
+    // 6M * 1.5M = 2M * 4.5M -> output = 1.5M
+    let expected = osmo_bindings::SwapAmount::Out(cosmwasm_std_latest::Uint128::new(1_500_000));
+
+    // now try the reverse query. we know what we need to pay to get 1.5M out
+    let query = osmo_bindings::OsmosisQuery::estimate_swap(
+        cosmwasm_std_latest::testing::MOCK_CONTRACT_ADDR,
+        500,
+        &coin_b.denom,
+        &coin_a.denom,
+        osmo_bindings::SwapAmount::Out(cosmwasm_std_latest::Uint128::new(1500000)),
+    );
+    //let osmo_bindings::SwapResponse { amount } = app.wrap().query(&query.into()).unwrap();
+    let expected = osmo_bindings::SwapAmount::In(cosmwasm_std_latest::Uint128::new(501505));*/
+    Err(anyhow!("no contract_addr"))
+}
+*/
 pub async fn airdrop_is_claimed(asset_whitelist: Arc<AssetWhitelist>, wallet_acc_address: Arc<SecUtf8>, stage: u64) -> anyhow::Result<ResponseResult> {
     let contract_addr = contracts(&asset_whitelist, "Anchor", "Airdrop").ok_or(anyhow!("no contract_addr"))?;
 
@@ -178,7 +239,7 @@ pub async fn native_token_core_swap(from_native_token: String, to_native_token: 
 
 // terraswap, Some(Mirror), mTSLA, None, uusd
 
-pub async fn swap_token(asset_whitelist: Arc<AssetWhitelist>, dex: String, bid_token_protocol: Option<String>, bid_token: String, ask_token_protocol: Option<String>, ask_token: String) -> anyhow::Result<ResponseResult> {
+pub async fn simulate_swap(asset_whitelist: Arc<AssetWhitelist>, dex: String, bid_token_protocol: Option<String>, bid_token: String, ask_token_protocol: Option<String>, ask_token: String) -> anyhow::Result<ResponseResult> {
     let bid_token_addr = match bid_token_protocol.as_ref() {
         Some(p) => {
             tokens(&asset_whitelist, &p, &bid_token)
@@ -222,7 +283,7 @@ pub async fn swap_token(asset_whitelist: Arc<AssetWhitelist>, dex: String, bid_t
             let query = terraswap::pair::QueryMsg::Simulation {
                 offer_asset: terraswap::asset::Asset {
                     info: info,
-                    amount: Uint128::from_str("1000000").unwrap(),
+                    amount: cosmwasm_std_latest::Uint128::from_str("1000000").unwrap(),
                 },
             };
             serde_json::to_string(&query)?
@@ -236,7 +297,7 @@ pub async fn swap_token(asset_whitelist: Arc<AssetWhitelist>, dex: String, bid_t
                 }
                 Some(addr) => {
                     astroport::asset::AssetInfo::Token {
-                        contract_addr: cosmwasm_std::Addr::unchecked(addr),
+                        contract_addr: cosmwasm_std_deprecated::Addr::unchecked(addr),
                     }
                 }
             };
