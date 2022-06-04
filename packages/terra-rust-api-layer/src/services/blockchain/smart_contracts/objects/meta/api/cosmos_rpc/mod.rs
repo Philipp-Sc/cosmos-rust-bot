@@ -3,8 +3,6 @@ use tonic::transport::channel::Channel;
 use std::time::Duration;
 use cosmos_sdk_proto::cosmos::base::query::v1beta1::PageRequest;
 
-// https://github.com/cosmos/cosmos-rust/blob/5bff4b85e607cec922ff123d5c315745d0f6982a/cosmos-sdk-proto/src/prost/wasmd/cosmwasm.wasm.v1.rs
-
 use cosmos_sdk_proto::cosmos::tx::v1beta1::service_client::ServiceClient;
 use cosmos_sdk_proto::cosmos::tx::v1beta1::SimulateRequest;
 use cosmos_sdk_proto::cosmos::tx::v1beta1::{Tx, TxBody};
@@ -21,49 +19,35 @@ use cosmrs::tx::{MsgProto, Msg};
 use cosmrs::tx::AccountNumber;
 use prost_types::Any;
 
-
 use osmosis_proto::custom_cosmrs::{MsgProto as OsmosisMsgProto, Msg as OsmosisMsg};
-
 
 use cosmos_sdk_proto::cosmwasm::wasm::v1::MsgExecuteContract;
 use osmosis_proto::osmosis::gamm::v1beta1::query_client::QueryClient as OsmosisQueryClient;
 use osmosis_proto::osmosis::gamm::v1beta1::{QueryNumPoolsRequest, QueryNumPoolsResponse, QueryPoolsRequest, QueryPoolsResponse, Pool, QueryPoolRequest, QueryPoolResponse};
 
-
-// this is what I use from terra-rust-bot
-
-// src/tx.rs contains sample code
-
-// figure https://github.com/PFC-Validator/terra-rust/blob/main/terra-rust-api/src/keys/private.rs out for the auth.
-
 use cosmos_sdk_proto::cosmos::auth::v1beta1::query_client::QueryClient as AuthQueryClient;
 use cosmos_sdk_proto::cosmos::auth::v1beta1::{BaseAccount, QueryAccountRequest, QueryAccountResponse};
 use cosmos_sdk_proto::cosmos::vesting::v1beta1::{PeriodicVestingAccount};
 
-
 use cosmrs::tx::Body;
-
 
 use moneymarket::market::ExecuteMsg;
 
 use osmo_bindings::OsmosisQuery::PoolState;
 
+/*
 /// Chain ID to use for tests
 //const CHAIN_ID: &str = "pisco-1";
 const CHAIN_ID: &str = "phoenix-1";
-
 /// Expected account number
 const ACCOUNT_NUMBER: AccountNumber = 1;
-
 /// Bech32 prefix for an account
 const ACCOUNT_PREFIX: &str = "terra";
-
 /// Denom name
 const DENOM: &str = "uluna";
-
 /// Example memo
 const MEMO: &str = "test memo";
-
+*/
 
 pub async fn get_osmosis_channel() -> anyhow::Result<Channel> {
     let channel = Channel::from_static("http://46.38.251.100:9090") // Felix | Interbloc
@@ -84,7 +68,6 @@ pub async fn get_osmosis_channel() -> anyhow::Result<Channel> {
 
 pub async fn get_terra_channel() -> anyhow::Result<Channel> {
     //let channel = Channel::from_static("http://v-terra-hel-1.zyons.com:29090")
-    //let channel = Channel::from_static("http://n-fsn-7.zyons.com:26657")
     let channel = Channel::from_static("http://n-fsn-7.zyons.com:29090")
         .timeout(Duration::from_secs(5))
         .rate_limit(5, Duration::from_secs(1))
@@ -152,14 +135,13 @@ pub async fn msg_send() -> anyhow::Result<()> {
     let periodic_vesting_account: PeriodicVestingAccount = MsgProto::from_any(&res.account.as_ref().unwrap()).unwrap();
     println!("{:?}", periodic_vesting_account);
 
-    //BaseAccount::
     Ok(())
 }
-/*
+
+/* // Example for MsgExecuteContract
 pub async fn msg_send() -> anyhow::Result<()> {
 
     let channel = get_terra_channel().await?;
-
 
     let contract_addr_mm_market = "terra15dwd5mj8v59wpj0wvt233mf5efdff808c5tkal".to_string();
 
@@ -199,9 +181,7 @@ pub async fn msg_send() -> anyhow::Result<()> {
 
 
 
-
-
-/*
+/* // Example to use tendermint_rpc
 use cosmrs::{
     query,
     bank::MsgSend,
@@ -216,14 +196,13 @@ use cosmrs::rpc::{Client, query_client};
 
 use terra_cosmwasm::{TerraQuerier, SwapResponse, TaxRateResponse, TaxCapResponse, ExchangeRatesResponse};
 
-/// Chain ID to use for tests
-const CHAIN_ID: &str = "columbus-5";
-
 /// RPC port
 const RPC_PORT: u16 = 26657;
 
 pub async fn msg_send() {
     let rpc_address = format!("http://v-terra-hel-1.zyons.com:{}", RPC_PORT);
+    //let rpc_address = format!("http://n-fsn-7.zyons.com:{}", RPC_PORT);
+
     let rpc_client = rpc::HttpClient::new(rpc_address.as_str()).unwrap();
     println!("rpc_client loaded");
     println!("{:?}", rpc_client.latest_block().await);
