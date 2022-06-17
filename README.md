@@ -3,7 +3,7 @@
 
 > :information_source: The bot was stress tested during the UST crash, it successfully prevented liquidations as it was set up to do.
 
-> :information_source: As a result of the crash, this bot is shifting its focus to Cosmos. Terra related functionalities will be restored the days following the Terra 2.0 rebirth. 
+> :information_source: As a result of the crash, this bot is shifting its focus to Cosmos. Terra related functionalities will be restored once the relevant protocols are reconstituted on Terra 2.0.
 
 <div align="center">
 
@@ -56,6 +56,7 @@
 **Automated Strategies**
 
 - [ ] Arbitrage: Automation (including Terra pools on Osmosiszone)
+- [ ] Osmosis Auto Compound: (Osmosiszone pools)
 - [ ] Impermanent Loss Protection (Osmosiszone, Astroport, Spectrum) 
 - [ ] DCA
   - - [ ] Martingale Feature (double or otherwise modify buys depending on price and tx history)
