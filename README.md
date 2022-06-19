@@ -119,6 +119,10 @@ You do not need to donate to me, but I will be very happy if you can.
 
 Thanks a lot.
 
+## Dependencies
+
+- [cosmos-rust-interface](https://github.com/Philipp-Sc/cosmos-rust-interface)
+
 ## Similar projects
 
 - https://github.com/ALPAC-4/auto_repay
