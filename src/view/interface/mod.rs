@@ -15,7 +15,7 @@ use std::sync::Arc;
 use tokio::sync::{Mutex};
 
 use chrono::Utc;
-use terra_rust_api_layer::services::blockchain::smart_contracts::objects::{ResponseResult, SimulationResponse};
+use cosmos_rust_interface::services::blockchain::smart_contracts::objects::{ResponseResult, SimulationResponse};
 
 pub mod interface_macro {
     macro_rules! maybe_struct {

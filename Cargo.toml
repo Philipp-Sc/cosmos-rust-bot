@@ -10,7 +10,9 @@ edition = "2021"
 name = "terra-rust-bot"
 
 [dependencies]
-terra-rust-api-layer = { path = "./packages/terra-rust-api-layer" }
+
+cosmos-rust-interface = { path = "../cosmos-rust-interface" }
+#cosmos-rust-interface = { git = "https://github.com/Philipp-Sc/cosmos-rust-interface" }
 terra-rust-bot-essentials = { path = "./packages/terra-rust-bot-essentials" }
 tokio = { version = "1.18", features = ["full"] }
 anyhow = "1.0"

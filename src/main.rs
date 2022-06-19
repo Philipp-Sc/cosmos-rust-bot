@@ -3,8 +3,9 @@ extern crate litcrypt;
 //https://github.com/anvie/litcrypt.rs
 use_litcrypt!();
 
-use terra_rust_api_layer::services::blockchain::smart_contracts::objects::meta::api::{get_from_account};
-use terra_rust_api_layer::services::blockchain::smart_contracts::objects::meta::api::cosmos_rpc::{msg_send, get_pool_count, get_pools_info, get_pool_info};
+use cosmos_rust_interface::services::blockchain::smart_contracts::objects::meta::api::{get_from_account};
+use cosmos_rust_interface::services::blockchain::smart_contracts::objects::meta::api::cosmos_rpc::{msg_send, public_key_from_account, public_key_from_seed_phrase};
+use cosmos_rust_interface::services::blockchain::smart_contracts::objects::meta::api::cosmos_rpc::query::*;
 
 use terra_rust_bot_essentials::output::*;
 use terra_rust_bot_essentials::shared::{load_user_settings, get_input, Entry, load_asset_whitelist};
@@ -47,8 +48,8 @@ use core::future::Future;
 
 use notify::{Watcher, RecursiveMode, watcher};
 use std::sync::mpsc::channel;
-use terra_rust_api_layer::services::blockchain::smart_contracts::objects::ResponseResult;
-use terra_rust_api_layer::services::blockchain::smart_contracts::objects::meta::api::data::terra_contracts::{AssetWhitelist};
+use cosmos_rust_interface::services::blockchain::smart_contracts::objects::ResponseResult;
+use cosmos_rust_interface::services::blockchain::smart_contracts::objects::meta::api::data::terra_contracts::{AssetWhitelist};
 
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
@@ -58,7 +59,17 @@ async fn main() -> anyhow::Result<()> {
     //println!("{:?}", get_pool_count().await);
     //println!("{:?}", get_pools_info().await);
     //println!("{:?}", get_pool_info(510u64).await);
-    println!("{:?}", msg_send().await);
+    let account = query_account("terra18m6x653kj67jfsn9f9st97esp8l556swh3ty0d".to_string()).await?;
+    println!("{:?}", &account);
+    let pub_key = public_key_from_account(&account);
+    println!("{:?}", &pub_key);
+    let pub_key = public_key_from_seed_phrase("notice oak worry limit wrap speak medal online prefer cluster roof addict wrist behave treat actual wasp year salad speed social layer crew genius".to_string());
+    println!("{:?}", &pub_key);
+
+    let res = get_contract_info("terra1ccxwgew8aup6fysd7eafjzjz6hw89n40h273sgu3pl4lxrajnk5st2hvfh".to_string()).await?;
+    println!("{:?}", &res);
+
+    //println!("{:?}", msg_send().await);
     loop {}
     let state: Arc<RwLock<HashMap<i64, Entry>>> = Arc::new(RwLock::new(HashMap::new()));
 

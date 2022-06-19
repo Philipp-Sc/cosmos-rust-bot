@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{Mutex};
 use chrono::Utc;
-use terra_rust_api_layer::services::blockchain::smart_contracts::objects::ResponseResult;
+use cosmos_rust_interface::services::blockchain::smart_contracts::objects::ResponseResult;
 
 
 pub async fn display_all_errors(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>) -> Vec<Entry> {

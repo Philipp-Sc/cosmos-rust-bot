@@ -24,8 +24,8 @@ use chrono::{Utc};
 
 
 use std::sync::Arc;
-use terra_rust_api_layer::services::blockchain::smart_contracts::objects::ResponseResult;
-use terra_rust_api_layer::utils::*;
+use cosmos_rust_interface::services::blockchain::smart_contracts::objects::ResponseResult;
+use cosmos_rust_interface::utils::*;
 use tokio::sync::Mutex;
 
 

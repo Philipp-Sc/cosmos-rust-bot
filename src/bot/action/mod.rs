@@ -10,7 +10,7 @@ use secstr::*;
 
 use rust_decimal::Decimal;
 use core::str::FromStr;
-use terra_rust_api_layer::services::blockchain::smart_contracts::objects::meta::{
+use cosmos_rust_interface::services::blockchain::smart_contracts::objects::meta::{
     anchor_borrow_and_deposit_stable_tx,
     anchor_redeem_and_repay_stable_tx,
     anchor_repay_stable_tx,
@@ -40,8 +40,8 @@ use std::sync::Arc;
 use tokio::sync::{Mutex};
 
 use chrono::Utc;
-use terra_rust_api_layer::services::blockchain::smart_contracts::objects::meta::api::data::terra_contracts::AssetWhitelist;
-use terra_rust_api_layer::services::blockchain::smart_contracts::objects::ResponseResult;
+use cosmos_rust_interface::services::blockchain::smart_contracts::objects::meta::api::data::terra_contracts::AssetWhitelist;
+use cosmos_rust_interface::services::blockchain::smart_contracts::objects::ResponseResult;
 
 
 use crate::state::control::model::wallet::{decrypt_text_with_secret};

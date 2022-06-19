@@ -12,7 +12,7 @@ use terra_rust_bot_essentials::shared::{get_input, State,Entry};
 use rust_decimal::Decimal;
 use std::str::FromStr;
 
-use terra_rust_api_layer::utils::estimate_optimal_next_claim_and_stake_tx;
+use cosmos_rust_interface::utils::estimate_optimal_next_claim_and_stake_tx;
 
 
 pub fn terra_rust_bot_methods() {

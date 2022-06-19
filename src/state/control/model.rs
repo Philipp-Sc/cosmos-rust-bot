@@ -12,19 +12,19 @@ use requirements::{UserSettings, my_requirement_list};
 use secstr::*;
 
 
-use terra_rust_api_layer::services::blockchain::smart_contracts::objects::{ResponseResult};
-use terra_rust_api_layer::services::blockchain::smart_contracts::objects::meta::api::{fetch_gas_price, get_gas_price};
+use cosmos_rust_interface::services::blockchain::smart_contracts::objects::{ResponseResult};
+use cosmos_rust_interface::services::blockchain::smart_contracts::objects::meta::api::{fetch_gas_price, get_gas_price};
 
-use terra_rust_api_layer::services::{query_api_distribution_apy, query_api_gov_reward, query_anchor_airdrops, query_api_anc_ust_lp_reward, query_api_spec_anc_ust_lp_reward /*query_terra_money_assets_cw20_tokens*/};
+use cosmos_rust_interface::services::{query_api_distribution_apy, query_api_gov_reward, query_anchor_airdrops, query_api_anc_ust_lp_reward, query_api_spec_anc_ust_lp_reward /*query_terra_money_assets_cw20_tokens*/};
 
-use terra_rust_api_layer::services::blockchain::{
+use cosmos_rust_interface::services::blockchain::{
     get_tax_rate,
     get_tax_caps,
     blocks_per_year_query,
     get_block_txs_deposit_stable_apy,
     get_block_txs_fee_data};
 
-use terra_rust_api_layer::services::blockchain::smart_contracts::{state_query_msg, epoch_state_query_msg, config_query_msg, native_token_core_swap, anchor_protocol_borrower_limit, anchor_protocol_borrower_info, anchor_protocol_balance, anchor_protocol_staker, anchor_protocol_anc_balance, terra_balances, anchor_protocol_whitelist, simulate_swap};
+use cosmos_rust_interface::services::blockchain::smart_contracts::{state_query_msg, epoch_state_query_msg, config_query_msg, native_token_core_swap, anchor_protocol_borrower_limit, anchor_protocol_borrower_info, anchor_protocol_balance, anchor_protocol_staker, anchor_protocol_anc_balance, terra_balances, anchor_protocol_whitelist, simulate_swap};
 
 use std::collections::HashMap;
 
@@ -43,7 +43,7 @@ use chrono::{Utc};
 
 use core::pin::Pin;
 use core::future::Future;
-use terra_rust_api_layer::services::blockchain::smart_contracts::objects::meta::api::data::terra_contracts::AssetWhitelist;
+use cosmos_rust_interface::services::blockchain::smart_contracts::objects::meta::api::data::terra_contracts::AssetWhitelist;
 
 
 use terra_rust_bot_essentials::shared::Maybe as MaybeImported;

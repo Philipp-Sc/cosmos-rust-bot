@@ -22,7 +22,7 @@ structopt = "0.3"
 comfy-table = "5.0.1"
 rust_decimal="1.12.2"
 terra-rust-bot-essentials = { path = "../terra-rust-bot-essentials"}
-terra-rust-api-layer = { path = "../terra-rust-api-layer"}
+cosmos-rust-interface = { path = "../cosmos-rust-interface"}
 
 
 

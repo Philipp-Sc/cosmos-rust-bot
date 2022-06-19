@@ -66,7 +66,7 @@ cp -r $MYPATH/assets/cw20 ./$build_dir/assets/;
 WD=$(pwd)
 
 cargo update;
-cd $MYPATH/packages/terra-rust-api-layer;cargo update;
+cd $MYPATH/packages/cosmos-rust-interface;cargo update;
 cd ../terra-rust-bot-essentials;cargo update;
 cd ../terra-rust-bot-output;cargo update;
 cd ../terra-rust-signal-bot;cargo update;
