@@ -117,6 +117,7 @@ Feature list:
 You do not need to donate to me, but I will be very happy if you can.
 
 - `terra1q0n5e43mmz8ddra8554xkxsvelnz4evwukxkht`
+- `osmo10885ryvnfvu7hjt8lqvge77uderycqcu50nmmh`
 
 Thanks a lot.
 
