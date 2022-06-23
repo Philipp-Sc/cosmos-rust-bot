@@ -12,6 +12,8 @@ pub fn requirement_list() -> Vec<(Vec<&'static str>, i32, Vec<&'static str>)> {
 
     // (key, target_refresh_time, dependency_tag)
     vec![
+        (vec!["governance_proposals_terra"], fast, vec!["governance_proposals_terra"]),
+        (vec!["governance_proposals_osmosis"], fast, vec!["governance_proposals_osmosis"]),
         /* <from settings> */
         (vec!["trigger_percentage"], fast, vec!["anchor_account", "anchor_auto_repay"]),
         (vec!["target_percentage"], fast, vec!["anchor_auto_repay", "anchor_auto_borrow"]),
@@ -119,6 +121,14 @@ fn settings_to_key_list(user_settings: &UserSettings) -> Vec<&str> {
     }
     if user_settings.anchor_account_info {
         args.push("anchor_account");
+    }
+    match user_settings.governance_blockchains.as_ref() {
+        None => {}
+        Some(blockchains) => {
+            for b in blockchains {
+                args.push(&("governance_proposals_".to_owned() + b));
+            }
+        }
     }
     args
 }

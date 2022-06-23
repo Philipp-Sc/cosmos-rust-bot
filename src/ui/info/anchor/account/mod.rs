@@ -14,7 +14,7 @@ use cosmos_rust_interface::services::blockchain::smart_contracts::objects::Respo
 use tokio::sync::{Mutex};
 
 
-pub async fn display_anchor_account(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>) -> Vec<(Entry, Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>>)> {
+pub async fn anchor_account(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>) -> Vec<(Entry, Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>>)> {
     let mut view: Vec<(Entry, Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>>)> = Vec::new();
 
 
@@ -155,7 +155,7 @@ pub async fn display_anchor_account(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe
     //anchor_view.push((format!("{}{}","\n   [Borrow]".truecolor(75,219,75),"    fee to claim & stake:    ".to_string(),*offset));
     /*
      let available_liquidity_from_ust_deposit = borrower_deposit_liquidity_to_string(maybes.clone(),2).await;
-     display_add(format!("   [Earn]    deposit liquidity:    {}",available_liquidity_from_ust_deposit), 23 as usize,2 as usize);
+     add(format!("   [Earn]    deposit liquidity:    {}",available_liquidity_from_ust_deposit), 23 as usize,2 as usize);
     */
     let t1 = Entry {
         timestamp: 0i64,
@@ -200,59 +200,59 @@ pub async fn display_anchor_account(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe
 
     /*
 
-    anchor_view.push((format!("    {}",display_add("   _    _    Net APY    Borrow APY    Distribution APY    Earn APY    Auto Staking APY (not included in Net APY)".purple().to_string(), 23 as usize,2 as usize)),*offset));
+    anchor_view.push((format!("    {}",add("   _    _    Net APY    Borrow APY    Distribution APY    Earn APY    Auto Staking APY (not included in Net APY)".purple().to_string(), 23 as usize,2 as usize)),*offset));
     *offset += 1;
    
-    anchor_view.push((display_add("   [Anchor]    loan_amount:    --".purple().to_string(), 23 as usize,0 as usize),*offset));
+    anchor_view.push((add("   [Anchor]    loan_amount:    --".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(apy_on_collateral_by(maybes.clone(),"loan_amount","net_apr",2));
     let f = Box::pin(add_format_to_result("   [Anchor]    loan_amount:    ".to_string(),"".to_string(),f));
     let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset,f;
     view.push((t1,t2));
 
-    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
+    anchor_view.push((add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(apy_on_collateral_by(maybes.clone(),"loan_amount","borrow_apr",2));
     let f = Box::pin(add_format_to_result("    -".to_string(),"".to_string(),f));
     let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset,f;
     view.push((t1,t2));
 
-    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
+    anchor_view.push((add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(apy_on_collateral_by(maybes.clone(),"loan_amount","distribution_apr",2));
     let f = Box::pin(add_format_to_result("    +".to_string(),"".to_string(),f));
     let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset,f;
     view.push((t1,t2));
 
-    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
+    anchor_view.push((add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(apy_on_collateral_by(maybes.clone(),"loan_amount","earn_apr",2));
     let f = Box::pin(add_format_to_result("    +".to_string(),"".to_string(),f));
     let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset,f;
     view.push((t1,t2));
 
-    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
+    anchor_view.push((add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(maybes.clone(),"staking","loan_amount","apr",2));
     let f = Box::pin(add_format_to_result("    +".to_string(),"".to_string(),f));
     let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset,f;
     view.push((t1,t2));
 
-    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
+    anchor_view.push((add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(maybes.clone(),"staking","loan_amount","total_returns",2));
     let f = Box::pin(add_format_to_result(" (=".to_string()," UST)".to_string(),f));
     let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset,f;
     view.push((t1,t2));
 
-    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
+    anchor_view.push((add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(maybes.clone(),"staking","loan_amount","date_next",2));
     let f = Box::pin(add_format_to_result(" Next Auto Stake: ".to_string(),"".to_string(),f));
     let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset,f;
     view.push((t1,t2));
 
-    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,1 as usize),*offset));
+    anchor_view.push((add("--".purple().to_string(), 23 as usize,1 as usize),*offset));
     let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(maybes.clone(),"staking","loan_amount","duration_next",2));
     let f = Box::pin(add_format_to_result(" (every ".to_string(),")".to_string(),f));
     let f = Box::pin(add_table_formatting(f, 23 as usize,1 as usize));
@@ -260,14 +260,14 @@ pub async fn display_anchor_account(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe
     view.push((t1,t2));
 
 
-    anchor_view.push((display_add("   [Anchor]    target_ltv:    --".purple().to_string(), 23 as usize,0 as usize),*offset));
+    anchor_view.push((add("   [Anchor]    target_ltv:    --".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(apy_on_collateral_by(maybes.clone(),"target_ltv","net_apr",2));
     let f = Box::pin(add_format_to_result("   [Anchor]    target_ltv:    ".to_string(),"".to_string(),f));
     let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset,f;
     view.push((t1,t2));
 
-    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
+    anchor_view.push((add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(apy_on_collateral_by(maybes.clone(),"target_ltv","borrow_apr",2));
     let f = Box::pin(add_format_to_result("    -".to_string(),"".to_string(),f));
     let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
@@ -275,21 +275,21 @@ pub async fn display_anchor_account(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe
     view.push((t1,t2));
 
 
-    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
+    anchor_view.push((add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(apy_on_collateral_by(maybes.clone(),"target_ltv","distribution_apr",2));
     let f = Box::pin(add_format_to_result("    +".to_string(),"".to_string(),f));
     let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset,f;
     view.push((t1,t2));
 
-    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
+    anchor_view.push((add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(apy_on_collateral_by(maybes.clone(),"target_ltv","earn_apr",2));
     let f = Box::pin(add_format_to_result("    +".to_string(),"".to_string(),f));
     let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset,f;
     view.push((t1,t2));
 
-    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
+    anchor_view.push((add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(maybes.clone(),"staking","target_ltv","apr",2));
     let f = Box::pin(add_format_to_result("    +".to_string(),"".to_string(),f));
     let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
@@ -297,21 +297,21 @@ pub async fn display_anchor_account(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe
     view.push((t1,t2));
 
 
-    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
+    anchor_view.push((add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(maybes.clone(),"staking","target_ltv","total_returns",2));
     let f = Box::pin(add_format_to_result(" (=".to_string()," UST)".to_string(),f));
     let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset,f;
     view.push((t1,t2));
 
-    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
+    anchor_view.push((add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(maybes.clone(),"staking","target_ltv","date_next",2));
     let f = Box::pin(add_format_to_result(" Next Auto Stake: ".to_string(),"".to_string(),f));
     let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset,f;
     view.push((t1,t2));
 
-    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,1 as usize),*offset));
+    anchor_view.push((add("--".purple().to_string(), 23 as usize,1 as usize),*offset));
     let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(maybes.clone(),"staking","target_ltv","duration_next",2));
     let f = Box::pin(add_format_to_result(" (every ".to_string(),")".to_string(),f));
     let f = Box::pin(add_table_formatting(f, 23 as usize,1 as usize));
@@ -319,14 +319,14 @@ pub async fn display_anchor_account(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe
     view.push((t1,t2));
 
 
-    anchor_view.push((display_add("   [Anchor]    deposit_amount:    --".purple().to_string(), 23 as usize,0 as usize),*offset));
+    anchor_view.push((add("   [Anchor]    deposit_amount:    --".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(apy_on_collateral_by(maybes.clone(),"deposit_amount","net_apr",2));
     let f = Box::pin(add_format_to_result("   [Anchor]    deposit_amount:    ".to_string(),"".to_string(),f));
     let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset,f;
     view.push((t1,t2));
 
-    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
+    anchor_view.push((add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(apy_on_collateral_by(maybes.clone(),"deposit_amount","borrow_apr",2));
     let f = Box::pin(add_format_to_result("    -".to_string(),"".to_string(),f));
     let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
@@ -334,21 +334,21 @@ pub async fn display_anchor_account(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe
     view.push((t1,t2));
 
 
-    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
+    anchor_view.push((add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(apy_on_collateral_by(maybes.clone(),"deposit_amount","distribution_apr",2));
     let f = Box::pin(add_format_to_result("    +".to_string(),"".to_string(),f));
     let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset,f;
     view.push((t1,t2));
 
-    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
+    anchor_view.push((add("--".purple().to_string(), 23 as usize,0 as usize),*offset));
     let f = Box::pin(apy_on_collateral_by(maybes.clone(),"deposit_amount","earn_apr",2));
     let f = Box::pin(add_format_to_result("    +".to_string(),"".to_string(),f));
     let f = Box::pin(add_table_formatting(f, 23 as usize,0 as usize));
     let t: (usize,Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>) = (*offset,f;
     view.push((t1,t2));
 
-    anchor_view.push((display_add("--".purple().to_string(), 23 as usize,1 as usize),*offset));
+    anchor_view.push((add("--".purple().to_string(), 23 as usize,1 as usize),*offset));
     let f = Box::pin(estimate_anchor_protocol_next_claim_and_stake_tx(maybes.clone(),"staking","loan_amount","apr",2));
     let f = Box::pin(add_format_to_result("    +".to_string(),"".to_string(),f));
     let f = Box::pin(add_table_formatting(f, 23 as usize,1 as usize));

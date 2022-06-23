@@ -12,7 +12,7 @@ use cosmos_rust_interface::services::blockchain::smart_contracts::objects::Respo
 use tokio::sync::{Mutex};
 
 
-pub async fn display_all_logs(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>) -> Vec<Entry> {
+pub async fn all_logs(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>) -> Vec<Entry> {
     let mut view: Vec<Entry> = Vec::new();
 
     let vec = vec![

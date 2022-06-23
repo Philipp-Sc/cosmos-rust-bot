@@ -24,6 +24,8 @@ impl<T: Clone> Clone for Maybe<T> {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct UserSettings {
+    pub governance_blockchains: Option<Vec<String>>,
+    pub governance_proposals_notifications: Option<Vec<String>>,
     pub pause_requested: bool,
     pub hot_reload: bool,
     pub remove: bool,
@@ -48,6 +50,8 @@ pub struct UserSettings {
 impl Default for UserSettings {
     fn default() -> UserSettings {
         UserSettings {
+            governance_blockchains: Some(vec!["terra".to_string(), "osmosis".to_string()]),
+            governance_proposals_notifications: Some(vec!["StatusNil".to_string(), "StatusDepositPeriod".to_string(), "StatusVotingPeriod".to_string(), "StatusPassed".to_string(), "StatusRejected".to_string(), "StatusFailed".to_string()]),
             pause_requested: false,
             hot_reload: false,
             remove: false,
@@ -57,14 +61,14 @@ impl Default for UserSettings {
             anchor_protocol_auto_borrow: false,
             anchor_protocol_auto_stake: false,
             anchor_protocol_auto_farm: false,
-            terra_market_info: true,
-            anchor_general_info: true,
+            terra_market_info: false,
+            anchor_general_info: false,
             anchor_account_info: false,
             trigger_percentage: Decimal::from_str("0.9").unwrap(),
             target_percentage: Decimal::from_str("0.72").unwrap(),
             borrow_percentage: Decimal::from_str("0.5").unwrap(),
             max_tx_fee: Decimal::from_str("5").unwrap(),
-            gas_adjustment_preference: Decimal::from_str("1.2").unwrap(),
+            gas_adjustment_preference: Decimal::from_str("1.3").unwrap(),
             min_ust_balance: Decimal::from_str("10").unwrap(),
             ust_balance_preference: Decimal::from_str("20").unwrap(),
         }

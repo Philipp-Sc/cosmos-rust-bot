@@ -4,8 +4,8 @@ extern crate litcrypt;
 use_litcrypt!();
 
 use cosmos_rust_interface::services::blockchain::smart_contracts::objects::meta::api::{get_from_account};
-use cosmos_rust_interface::services::blockchain::smart_contracts::objects::meta::api::cosmos_rpc::{msg_send, public_key_from_account, public_key_from_seed_phrase};
-use cosmos_rust_interface::services::blockchain::smart_contracts::objects::meta::api::cosmos_rpc::query::*;
+use cosmos_rust_interface::services::blockchain::smart_contracts::objects::meta::api::core::cosmos::{msg_send, public_key_from_account, public_key_from_seed_phrase};
+use cosmos_rust_interface::services::blockchain::smart_contracts::objects::meta::api::core::cosmos::query::*;
 
 use terra_rust_bot_essentials::output::*;
 use terra_rust_bot_essentials::shared::{load_user_settings, get_input, Entry, load_asset_whitelist};
@@ -56,21 +56,6 @@ use std::hash::{Hash, Hasher};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    //println!("{:?}", get_pool_count().await);
-    //println!("{:?}", get_pools_info().await);
-    //println!("{:?}", get_pool_info(510u64).await);
-    let account = query_account("terra18m6x653kj67jfsn9f9st97esp8l556swh3ty0d".to_string()).await?;
-    println!("{:?}", &account);
-    let pub_key = public_key_from_account(&account);
-    println!("{:?}", &pub_key);
-    let pub_key = public_key_from_seed_phrase("notice oak worry limit wrap speak medal online prefer cluster roof addict wrist behave treat actual wasp year salad speed social layer crew genius".to_string());
-    println!("{:?}", &pub_key);
-
-    let res = get_contract_info("terra1ccxwgew8aup6fysd7eafjzjz6hw89n40h273sgu3pl4lxrajnk5st2hvfh".to_string()).await?;
-    println!("{:?}", &res);
-
-    //println!("{:?}", msg_send().await);
-    loop {}
     let state: Arc<RwLock<HashMap<i64, Entry>>> = Arc::new(RwLock::new(HashMap::new()));
 
     let mut state_refresh_timestamp = 0i64;
@@ -79,6 +64,8 @@ async fn main() -> anyhow::Result<()> {
     let mut maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>> = HashMap::new();
 
     let mut user_settings: UserSettings = load_user_settings("./terra-rust-bot.json");
+    //println!("{}", serde_json::to_string_pretty(&user_settings)?);
+    //loop {}
     let asset_whitelist: Arc<AssetWhitelist> = Arc::new(serde_json::from_value::<AssetWhitelist>(load_asset_whitelist("./assets/cw20/")).unwrap());
 
     let (wallet_seed_phrase, wallet_acc_address) = get_wallet_details(&user_settings).await;
@@ -116,14 +103,19 @@ async fn main() -> anyhow::Result<()> {
 
             let mut maybe_futures: Vec<(Entry, Pin<Box<dyn Future<Output=Maybe<String>> + Send>>)> = Vec::new();
 
+            if user_settings.governance_proposals_notifications.is_some() && user_settings.governance_blockchains.is_some() {
+                println!("there is something to do, but nothing implemented");
+                // governance_info
+            }
+
             if user_settings.terra_market_info {
-                maybe_futures.append(&mut display_market_info(&copy_of_maybes).await);
+                maybe_futures.append(&mut market_info(&copy_of_maybes).await);
             }
             if user_settings.anchor_general_info {
-                maybe_futures.append(&mut display_anchor_info(&copy_of_maybes).await);
+                maybe_futures.append(&mut anchor_info(&copy_of_maybes).await);
             }
             if user_settings.anchor_account_info {
-                maybe_futures.append(&mut display_anchor_account(&copy_of_maybes).await);
+                maybe_futures.append(&mut anchor_account(&copy_of_maybes).await);
             }
 
             if user_settings.anchor_protocol_auto_stake {
@@ -159,8 +151,8 @@ async fn main() -> anyhow::Result<()> {
 
             try_calculate_promises(&state, maybe_futures).await;
 
-            let mut logs: Vec<Entry> = display_all_logs(&copy_of_maybes).await;
-            let mut errors: Vec<Entry> = display_all_errors(&copy_of_maybes).await;
+            let mut logs: Vec<Entry> = all_logs(&copy_of_maybes).await;
+            let mut errors: Vec<Entry> = all_errors(&copy_of_maybes).await;
             entries.append(&mut logs);
             entries.append(&mut errors);
 

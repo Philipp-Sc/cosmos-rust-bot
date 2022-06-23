@@ -12,7 +12,7 @@ use chrono::Utc;
 use cosmos_rust_interface::services::blockchain::smart_contracts::objects::ResponseResult;
 
 
-pub async fn display_all_errors(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>) -> Vec<Entry> {
+pub async fn all_errors(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>) -> Vec<Entry> {
     let mut view: Vec<Entry> = Vec::new();
 
     for key in maybes.keys() {

@@ -26,6 +26,7 @@ use cosmos_rust_interface::services::blockchain::{
 
 use cosmos_rust_interface::services::blockchain::smart_contracts::{state_query_msg, epoch_state_query_msg, config_query_msg, native_token_core_swap, anchor_protocol_borrower_limit, anchor_protocol_borrower_info, anchor_protocol_balance, anchor_protocol_staker, anchor_protocol_anc_balance, terra_balances, anchor_protocol_whitelist, simulate_swap};
 
+use cosmos_rust_interface::services::blockchain::smart_contracts::objects::meta::api::custom::get_proposals;
 use std::collections::HashMap;
 
 use anyhow::anyhow;
@@ -405,6 +406,12 @@ async fn requirements(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, A
 
         if length == 1 {
             match vec[0] {
+                "governance_proposals_terra" => {
+                    f = Some(Box::pin(get_proposals("terra")));
+                }
+                "governance_proposals_osmosis" => {
+                    f = Some(Box::pin(get_proposals("osmosis")));
+                }
                 /*"terra_money_assets_cw20_tokens" => {
                     f = Some(Box::pin(query_terra_money_assets_cw20_tokens()));
                 }*/
@@ -545,17 +552,17 @@ async fn requirements(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, A
             match vec[0] {
                 "simulate_swap" => {
                     f = Some(Box::pin(simulate_swap(asset_whitelist,
-                                                 vec[1].to_owned(),
-                                                 match vec[2] {
-                                                     "none" => { None }
-                                                     protocol => { Some(protocol.to_string()) }
-                                                 },
-                                                 vec[3].to_owned(),
-                                                 match vec[4] {
-                                                     "none" => { None }
-                                                     protocol => { Some(protocol.to_string()) }
-                                                 },
-                                                 vec[5].to_owned())));
+                                                    vec[1].to_owned(),
+                                                    match vec[2] {
+                                                        "none" => { None }
+                                                        protocol => { Some(protocol.to_string()) }
+                                                    },
+                                                    vec[3].to_owned(),
+                                                    match vec[4] {
+                                                        "none" => { None }
+                                                        protocol => { Some(protocol.to_string()) }
+                                                    },
+                                                    vec[5].to_owned())));
                 }
                 &_ => {}
             }
