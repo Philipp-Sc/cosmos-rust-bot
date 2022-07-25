@@ -1,15 +1,89 @@
+use std::collections::HashMap;
+use serde_json::json;
 use terra_rust_bot_essentials::shared::UserSettings as UserSettingsImported;
+use crate::state::control::model::requirements::RequirementType::GovernanceProposals;
 
 pub type UserSettings = UserSettingsImported;
 
-pub fn requirement_list() -> Vec<(Vec<&'static str>, i32, Vec<&'static str>)> {
+pub enum RequirementType {
+    GovernanceProposals,
+    None,
+}
+
+pub struct Feature {
+    name: String,
+    dependencies: Vec<Requirement>,
+}
+
+pub struct Requirement {
+    pub kind: RequirementType,
+    pub name: String,
+    // UNIQUE
+    pub args: serde_json::Value,
+    pub refresh_rate_in_seconds: i32,
+}
+
+pub fn feature_list() -> Vec<Feature> {
 
     // note: around every 6s a new block is generated.
     let fast: i32 = 10;      // 10s for short lived information
     let medium: i32 = 60;    // 1m  for short lived information
     let slow: i32 = 60 * 10;   // 10m for relative constant information.
 
+    let mut feature_list: Vec<Feature> = Vec::new();
 
+    feature_list.push(Feature {
+        name: "governance_proposals_osmosis".to_string(),
+        dependencies: vec![
+            Requirement {
+                kind: GovernanceProposals,
+                name: "governance_proposals_on_osmosis".to_string(),
+                args: json!({"blockchain": "osmosis"}), // add governance_proposals_notifications (state of the proposals) here as optional args
+                refresh_rate_in_seconds: fast,
+            }],
+    });
+    feature_list.push(Feature {
+        name: "governance_proposals_terra".to_string(),
+        dependencies: vec![
+            Requirement {
+                kind: GovernanceProposals,
+                name: "governance_proposals_on_terra".to_string(),
+                args: json!({"blockchain": "terra"}),
+                refresh_rate_in_seconds: fast,
+            }
+            /*
+            Requirement {
+                name: "gas_fees".to_string(),
+                args: Default::default(),
+                refresh_rate_in_seconds: medium,
+            },
+            Requirement {
+                name: "core_swap".to_string(),
+                args: json!(r#"{from: "uusd", to: "usdr"}"#),
+                refresh_rate_in_seconds: fast,
+            },
+            Requirement {
+                name: "core_swap".to_string(),
+                args: json!(r#"{from: "usdr", to: "uluna"}"#),
+                refresh_rate_in_seconds: fast,
+            },
+            Requirement {
+                name: "core_swap".to_string(),
+                args: json!(r#"{from: "uluna", to: "uusd"}"#),
+                refresh_rate_in_seconds: fast,
+            },
+            Requirement {
+                name: "simulate_swap".to_string(),
+                args: json!(r#"{dex: "terraswap", protocol_from: "none", from: "uluna", protocol_to: "Anchor", to: "bLuna"}"#),
+                refresh_rate_in_seconds: fast,
+            },
+            */
+        ],
+    });
+
+    feature_list
+
+    /*
     // (key, target_refresh_time, dependency_tag)
     vec![
         (vec!["governance_proposals_terra"], fast, vec!["governance_proposals_terra"]),
@@ -80,53 +154,53 @@ pub fn requirement_list() -> Vec<(Vec<&'static str>, i32, Vec<&'static str>)> {
         (vec!["txs_provide_to_spec_anc_ust_vault"], slow, vec!["anchor_auto_farm"]),
 //        ("api/v2/ust-lp-reward"], slow, vec!["anchor_auto_farm"]), 
         (vec!["api/data?type=lpVault"], slow, vec!["anchor_auto_farm"]),
-    ]
+    ]*/
 }
 
-pub fn my_requirement_list(user_settings: &UserSettings) -> Vec<(String, i32, Vec<&'static str>)> {
+pub fn my_feature_list(user_settings: &UserSettings) -> Vec<Feature> {
     let args = settings_to_key_list(user_settings);
-    let req = requirement_list();
-    let mut req_new = Vec::new();
-    for i in 0..req.len() {
-        for x in &args {
-            if req[i].2.contains(x)
-            {
-                req_new.push((req[i].0.join(","), req[i].1, req[i].2.clone()));
-                break;
-            }
-        }
-    }
-    req_new
+    let mut features = feature_list();
+    features = features.into_iter().filter(|x| args.contains(&x.name)).collect();
+    features
 }
 
-fn settings_to_key_list(user_settings: &UserSettings) -> Vec<&str> {
-    let mut args: Vec<&str> = Vec::new();
+pub fn my_requirement_list(user_settings: &UserSettings) -> Vec<Requirement> {
+    let mut features = my_feature_list(user_settings);
+    let mut req: Vec<Requirement> = Vec::new();
+    for mut f in features {
+        req.append(&mut f.dependencies);
+    }
+    req
+}
+
+fn settings_to_key_list(user_settings: &UserSettings) -> Vec<String> {
+    let mut args: Vec<String> = Vec::new();
     if user_settings.anchor_protocol_auto_stake {
-        args.push("anchor_auto_stake");
+        args.push("anchor_auto_stake".to_string());
     }
     if user_settings.anchor_protocol_auto_farm {
-        args.push("anchor_auto_farm");
+        args.push("anchor_auto_farm".to_string());
     }
     if user_settings.anchor_protocol_auto_repay {
-        args.push("anchor_auto_repay");
+        args.push("anchor_auto_repay".to_string());
     }
     if user_settings.anchor_protocol_auto_borrow {
-        args.push("anchor_auto_borrow");
+        args.push("anchor_auto_borrow".to_string());
     }
     if user_settings.terra_market_info {
-        args.push("market");
+        args.push("market".to_string());
     }
     if user_settings.anchor_general_info {
-        args.push("anchor");
+        args.push("anchor".to_string());
     }
     if user_settings.anchor_account_info {
-        args.push("anchor_account");
+        args.push("anchor_account".to_string());
     }
     match user_settings.governance_blockchains.as_ref() {
         None => {}
         Some(blockchains) => {
             for b in blockchains {
-                args.push(&("governance_proposals_".to_owned() + b));
+                args.push("governance_proposals_".to_string() + b);
             }
         }
     }

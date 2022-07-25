@@ -8,7 +8,7 @@
 pub mod wallet;
 pub mod requirements;
 
-use requirements::{UserSettings, my_requirement_list};
+use requirements::{UserSettings, Feature, Requirement, my_requirement_list};
 use secstr::*;
 
 
@@ -49,6 +49,7 @@ use cosmos_rust_interface::services::blockchain::smart_contracts::objects::meta:
 
 use terra_rust_bot_essentials::shared::Maybe as MaybeImported;
 use terra_rust_bot_essentials::shared::Entry;
+use crate::state::control::model::requirements::RequirementType;
 
 pub type Maybe<T> = MaybeImported<T>;
 
@@ -208,8 +209,8 @@ pub async fn requirements_next(join_set: &mut JoinSet<()>, maybes: &mut HashMap<
         task_list.push((k.to_string(), state.to_string(), time));
     }
     for i in 0..req.len() {
-        if task_list.iter().filter(|x| x.0 == req[i].0.to_string()).count() == 0 {
-            task_list.push((req[i].0.to_string(), "unknown".to_string(), 0i64));
+        if task_list.iter().filter(|x| x.0 == req[i].name).count() == 0 {
+            task_list.push(((&req[i].name).to_string(), "unknown".to_string(), 0i64));
         }
     }
 
@@ -218,11 +219,11 @@ pub async fn requirements_next(join_set: &mut JoinSet<()>, maybes: &mut HashMap<
         if task_list[i].1 == "reserved".to_string() {} else if task_list[i].1 == "unknown".to_string() {
             update = true;
         } else if task_list[i].1 == "failed".to_string() {
-            if req.iter().filter(|x| x.0.to_string() == task_list[i].0).count() == 1 {
+            if req.iter().filter(|x| x.name == task_list[i].0).count() == 1 {
                 update = true;
             }
         } else if task_list[i].1 == "resolved" {
-            let period: Vec<i64> = req.iter().filter(|x| x.0.to_string() == task_list[i].0).map(|x| x.1 as i64).collect();
+            let period: Vec<i64> = req.iter().filter(|x| x.name == task_list[i].0).map(|x| x.refresh_rate_in_seconds as i64).collect();
             if period.len() == 1 {
                 if (now - task_list[i].2) > period[0] {
                     update = true;
@@ -346,14 +347,16 @@ pub async fn requirements_next(join_set: &mut JoinSet<()>, maybes: &mut HashMap<
         timestamp: now,
         key: "all".to_string(),
         prefix: None,
-        value: format!("{:?}", req.iter().map(|x| x.0.to_string()).collect::<Vec<String>>()),
+        value: format!("{:?}", req.iter().map(|x| x.name.clone()).collect::<Vec<String>>()),
         suffix: None,
         index: Some(10),
         group: Some("[Task][List]".to_string()),
     };
     entries.push(entry);
 
-    requirements(join_set, maybes, &user_settings, &wallet_acc_address, req_to_update, asset_whitelist).await;
+    let update_these_requirements: Vec<Requirement> = req.into_iter().filter(|x| req_to_update.contains(&x.name)).collect();
+
+    requirements(join_set, maybes, &user_settings, &wallet_acc_address, update_these_requirements, asset_whitelist).await;
     entries
 }
 
@@ -384,16 +387,13 @@ pub async fn requirements_setup(maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe
 * retrieve the value when it is needed: "data.get_mut(String).unwrap().await"
 * use try_join!, join! or select! macros to optimise retrieval of multiple values.
 */
-async fn requirements(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, user_settings: &UserSettings, wallet_acc_address: &Arc<SecUtf8>, req: Vec<String>, asset_whitelist: &Arc<AssetWhitelist>) {
-    for cmd in req {
-        let vec: Vec<&str> = cmd.split(",").collect();
-        let length = vec.len();
-
-        let contains_key = maybes.contains_key(&cmd);
+async fn requirements(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, user_settings: &UserSettings, wallet_acc_address: &Arc<SecUtf8>, update_these_requirements: Vec<Requirement>, asset_whitelist: &Arc<AssetWhitelist>) {
+    for req in update_these_requirements {
+        let contains_key = maybes.contains_key(&req.name);
         if !contains_key {
-            maybes.insert(cmd.to_string(), Arc::new(Mutex::new(vec![Maybe { data: Err(anyhow::anyhow!("Error: Not yet resolved!")), timestamp: Utc::now().timestamp() }])));
+            maybes.insert(req.name.clone(), Arc::new(Mutex::new(vec![Maybe { data: Err(anyhow::anyhow!("Error: Not yet resolved!")), timestamp: Utc::now().timestamp() }])));
         }
-        let pointer = maybes.get(cmd.as_str()).unwrap().clone();
+        let pointer = maybes.get(&req.name).unwrap().clone();
 
         if contains_key {
             add_item(&pointer, Maybe { data: Err(anyhow::anyhow!("Error: Not yet resolved!")), timestamp: Utc::now().timestamp() }).await;
@@ -403,6 +403,15 @@ async fn requirements(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, A
 
         let asset_whitelist = asset_whitelist.clone();
         let wallet_acc_address = wallet_acc_address.clone();
+
+        match req.kind {
+            RequirementType::GovernanceProposals => {
+                f = Some(Box::pin(get_proposals(req.args["blockchain"].as_str().unwrap().to_string())));
+            }
+            _ => {}
+        }
+
+        /*
 
         if length == 1 {
             match vec[0] {
@@ -567,6 +576,8 @@ async fn requirements(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, A
                 &_ => {}
             }
         }
+
+        */
 
         if let Some(m) = f {
             join_set.spawn(async move {
