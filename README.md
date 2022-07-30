@@ -6,8 +6,8 @@
 > :information_source: As a result of the crash, this bot is shifting its focus to Cosmos. Terra related functionalities will be restored the days following the Terra 2.0 rebirth. 
 
 <div align="center">
-
-  <p>🤖</p>
+ 
+  <img src="https://github.com/Philipp-Sc/media/blob/main/terra-rust-bot/cosmos-rust-bot-icon.png" height="100">
   <h1>CRB - Cosmos Rust Bot™</h1> 
   <p>If you can't beat them join them!</p> 
     <img src="https://img.shields.io/github/languages/top/Philipp-Sc/terra-rust-bot"> 
