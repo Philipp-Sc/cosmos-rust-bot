@@ -11,22 +11,6 @@ pub mod requirements;
 use requirements::{UserSettings, Feature, Requirement, my_requirement_list};
 use secstr::*;
 
-
-use cosmos_rust_interface::services::blockchain::smart_contracts::objects::{ResponseResult};
-use cosmos_rust_interface::services::blockchain::smart_contracts::objects::meta::api::{fetch_gas_price, get_gas_price};
-
-use cosmos_rust_interface::services::{query_api_distribution_apy, query_api_gov_reward, query_anchor_airdrops, query_api_anc_ust_lp_reward, query_api_spec_anc_ust_lp_reward /*query_terra_money_assets_cw20_tokens*/};
-
-use cosmos_rust_interface::services::blockchain::{
-    get_tax_rate,
-    get_tax_caps,
-    blocks_per_year_query,
-    get_block_txs_deposit_stable_apy,
-    get_block_txs_fee_data};
-
-use cosmos_rust_interface::services::blockchain::smart_contracts::{state_query_msg, epoch_state_query_msg, config_query_msg, native_token_core_swap, anchor_protocol_borrower_limit, anchor_protocol_borrower_info, anchor_protocol_balance, anchor_protocol_staker, anchor_protocol_anc_balance, terra_balances, anchor_protocol_whitelist, simulate_swap};
-
-use cosmos_rust_interface::services::blockchain::smart_contracts::objects::meta::api::custom::get_proposals;
 use std::collections::HashMap;
 
 use anyhow::anyhow;
@@ -44,12 +28,15 @@ use chrono::{Utc};
 
 use core::pin::Pin;
 use core::future::Future;
-use cosmos_rust_interface::services::blockchain::smart_contracts::objects::meta::api::data::terra_contracts::AssetWhitelist;
-
 
 use terra_rust_bot_essentials::shared::Maybe as MaybeImported;
 use terra_rust_bot_essentials::shared::Entry;
 use crate::state::control::model::requirements::RequirementType;
+
+use cosmos_rust_interface::ResponseResult;
+use cosmos_rust_interface::blockchain::cosmos::gov::get_proposals;
+use cosmos_rust_package::api::core::cosmos::channels::SupportedBlockchain;
+use cosmos_rust_package::api::custom::query::gov::ProposalStatus;
 
 pub type Maybe<T> = MaybeImported<T>;
 
@@ -173,7 +160,7 @@ pub async fn await_function(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<Response
     }
 }
 
-pub async fn requirements_next(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, user_settings: &UserSettings, wallet_acc_address: &Arc<SecUtf8>, asset_whitelist: &Arc<AssetWhitelist>) -> Vec<Entry> {
+pub async fn requirements_next(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, user_settings: &UserSettings, wallet_acc_address: &Arc<SecUtf8>) -> Vec<Entry> {
     for _ in 0..join_set.len() {
         let result = timeout(Duration::from_millis(0), join_set.join_one()).await;
         match result {
@@ -356,7 +343,7 @@ pub async fn requirements_next(join_set: &mut JoinSet<()>, maybes: &mut HashMap<
 
     let update_these_requirements: Vec<Requirement> = req.into_iter().filter(|x| req_to_update.contains(&x.name)).collect();
 
-    requirements(join_set, maybes, &user_settings, &wallet_acc_address, update_these_requirements, asset_whitelist).await;
+    requirements(join_set, maybes, &user_settings, &wallet_acc_address, update_these_requirements).await;
     entries
 }
 
@@ -387,7 +374,7 @@ pub async fn requirements_setup(maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe
 * retrieve the value when it is needed: "data.get_mut(String).unwrap().await"
 * use try_join!, join! or select! macros to optimise retrieval of multiple values.
 */
-async fn requirements(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, user_settings: &UserSettings, wallet_acc_address: &Arc<SecUtf8>, update_these_requirements: Vec<Requirement>, asset_whitelist: &Arc<AssetWhitelist>) {
+async fn requirements(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, user_settings: &UserSettings, wallet_acc_address: &Arc<SecUtf8>, update_these_requirements: Vec<Requirement>) {
     for req in update_these_requirements {
         let contains_key = maybes.contains_key(&req.name);
         if !contains_key {
@@ -401,12 +388,13 @@ async fn requirements(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, A
 
         let mut f: Option<Pin<Box<dyn Future<Output=anyhow::Result<ResponseResult>> + Send + 'static>>> = None;
 
-        let asset_whitelist = asset_whitelist.clone();
         let wallet_acc_address = wallet_acc_address.clone();
 
         match req.kind {
             RequirementType::GovernanceProposals => {
-                f = Some(Box::pin(get_proposals(req.args["blockchain"].as_str().unwrap().to_string())));
+                let status = ProposalStatus::new(req.args["proposal_status"].as_str().unwrap());
+                let blockchain = SupportedBlockchain::new(req.args["blockchain"].as_str().unwrap());
+                f = Some(Box::pin(get_proposals(blockchain, status)));
             }
             _ => {}
         }

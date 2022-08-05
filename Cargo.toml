@@ -12,6 +12,7 @@ name = "terra-rust-bot"
 [dependencies]
 
 cosmos-rust-interface = { path = "../cosmos-rust-interface" }
+cosmos-rust-package = { path = "../cosmos-rust-package" }
 #cosmos-rust-interface = { git = "https://github.com/Philipp-Sc/cosmos-rust-interface" }
 terra-rust-bot-essentials = { path = "./packages/terra-rust-bot-essentials" }
 tokio = { version = "1.18", features = ["full"] }
@@ -25,9 +26,9 @@ colored = "2"
 num_cpus = "1.13.1"
 rust_decimal_macros = "1.12.2"
 enum-as-inner = "0.3.3"
-cosmwasm-bignumber = "2.2.0"
-cosmwasm-std-deprecated = { package = "cosmwasm-std", version = "=0.16.7" }
-cosmwasm-std-latest = { package = "cosmwasm-std", version = "^1.0.0" }
+#cosmwasm-bignumber = "2.2.0"
+#cosmwasm-std-deprecated = { package = "cosmwasm-std", version = "=0.16.7" }
+#cosmwasm-std-latest = { package = "cosmwasm-std", version = "^1.0.0" }
 num-format = "0.4.0"
 regex = "1.5.5"
 litcrypt = "0.3"

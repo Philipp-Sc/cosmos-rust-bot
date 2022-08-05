@@ -33,22 +33,40 @@ pub fn feature_list() -> Vec<Feature> {
     let mut feature_list: Vec<Feature> = Vec::new();
 
     feature_list.push(Feature {
-        name: "governance_proposals_osmosis".to_string(),
+        name: "osmosis_governance_failed_proposals".to_string(),
         dependencies: vec![
             Requirement {
                 kind: GovernanceProposals,
-                name: "governance_proposals_on_osmosis".to_string(),
-                args: json!({"blockchain": "osmosis"}), // add governance_proposals_notifications (state of the proposals) here as optional args
+                name: "osmosis_governance_failed_proposals".to_string(),
+                args: json!({
+                    "blockchain": "osmosis",
+                    "proposal_status": "failed"
+                }), // add governance_proposals_notifications (state of the proposals) here as optional args
                 refresh_rate_in_seconds: fast,
             }],
     });
     feature_list.push(Feature {
-        name: "governance_proposals_terra".to_string(),
+        name: "osmosis_governance_passed_proposals".to_string(),
         dependencies: vec![
             Requirement {
                 kind: GovernanceProposals,
-                name: "governance_proposals_on_terra".to_string(),
-                args: json!({"blockchain": "terra"}),
+                name: "osmosis_governance_passed_proposals".to_string(),
+                args: json!({
+                    "blockchain": "osmosis",
+                    "proposal_status": "passed"
+                }), // add governance_proposals_notifications (state of the proposals) here as optional args
+                refresh_rate_in_seconds: fast,
+            }],
+    });
+    feature_list.push(Feature {
+        name: "terra_governance_rejected_proposals".to_string(),
+        dependencies: vec![
+            Requirement {
+                kind: GovernanceProposals,
+                name: "terra_governance_rejected_proposals".to_string(),
+                args: json!({
+                    "blockchain": "terra",
+                    "proposal_status": "rejected"}),
                 refresh_rate_in_seconds: fast,
             }
             /*
@@ -200,7 +218,9 @@ fn settings_to_key_list(user_settings: &UserSettings) -> Vec<String> {
         None => {}
         Some(blockchains) => {
             for b in blockchains {
-                args.push("governance_proposals_".to_string() + b);
+                for c in user_settings.governance_proposals_notifications.as_ref().unwrap() {
+                    args.push(format!("{}_governance_{}_proposals", b, c));
+                }
             }
         }
     }

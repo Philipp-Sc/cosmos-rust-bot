@@ -3,12 +3,8 @@ extern crate litcrypt;
 //https://github.com/anvie/litcrypt.rs
 use_litcrypt!();
 
-use cosmos_rust_interface::services::blockchain::smart_contracts::objects::meta::api::{get_from_account};
-use cosmos_rust_interface::services::blockchain::smart_contracts::objects::meta::api::core::cosmos::{msg_send, public_key_from_account, public_key_from_seed_phrase};
-use cosmos_rust_interface::services::blockchain::smart_contracts::objects::meta::api::core::cosmos::query::*;
-
 use terra_rust_bot_essentials::output::*;
-use terra_rust_bot_essentials::shared::{load_user_settings, get_input, Entry, load_asset_whitelist};
+use terra_rust_bot_essentials::shared::{load_user_settings, get_input, Entry};
 
 mod state;
 
@@ -17,22 +13,12 @@ use crate::state::control::model::requirements::{UserSettings};
 use crate::state::control::model::wallet::{encrypt_text_with_secret, decrypt_text_with_secret};
 use crate::state::control::try_run_function;
 
-mod view;
-mod bot;
 
-use bot::action::*;
+mod collect;
 
-mod ui;
-
-use ui::info::auto_repay::*;
-use ui::info::auto_borrow::*;
-use ui::info::auto_stake::*;
-use ui::info::auto_farm::*;
-use ui::info::anchor::general::*;
-use ui::info::anchor::account::*;
-use ui::info::market::general::*;
-use ui::logs::*;
-use ui::errors::*;
+use collect::logs::*;
+use collect::errors::*;
+use collect::debug::*;
 
 use secstr::*;
 use std::collections::HashMap;
@@ -48,11 +34,14 @@ use core::future::Future;
 
 use notify::{Watcher, RecursiveMode, watcher};
 use std::sync::mpsc::channel;
-use cosmos_rust_interface::services::blockchain::smart_contracts::objects::ResponseResult;
-use cosmos_rust_interface::services::blockchain::smart_contracts::objects::meta::api::data::terra_contracts::{AssetWhitelist};
 
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
+use cosmos_rust_interface::blockchain::account_from_seed_phrase;
+
+use cosmos_rust_interface::ResponseResult;
+
+use cosmos_rust_package::api::core::cosmos::channels::SupportedBlockchain;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -66,7 +55,6 @@ async fn main() -> anyhow::Result<()> {
     let mut user_settings: UserSettings = load_user_settings("./terra-rust-bot.json");
     //println!("{}", serde_json::to_string_pretty(&user_settings)?);
     //loop {}
-    let asset_whitelist: Arc<AssetWhitelist> = Arc::new(serde_json::from_value::<AssetWhitelist>(load_asset_whitelist("./assets/cw20/")).unwrap());
 
     let (wallet_seed_phrase, wallet_acc_address) = get_wallet_details(&user_settings).await;
 
@@ -97,7 +85,7 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
 
-            let mut entries: Vec<Entry> = requirements_next(&mut join_set, &mut maybes, &user_settings, &wallet_acc_address, &asset_whitelist).await;
+            let mut entries: Vec<Entry> = requirements_next(&mut join_set, &mut maybes, &user_settings, &wallet_acc_address).await;
 
             let copy_of_maybes = maybes.clone();
 
@@ -108,6 +96,7 @@ async fn main() -> anyhow::Result<()> {
                 // governance_info
             }
 
+            /*
             if user_settings.terra_market_info {
                 maybe_futures.append(&mut market_info(&copy_of_maybes).await);
             }
@@ -146,13 +135,16 @@ async fn main() -> anyhow::Result<()> {
                 try_run_function(&mut join_set, &copy_of_maybes, task, "anchor_auto_borrow", user_settings.test).await;
                 maybe_futures.append(&mut lazy_anchor_account_auto_borrow(&copy_of_maybes, user_settings.test).await);
             }
+            */
 
             state.write().await.clear();
 
-            try_calculate_promises(&state, maybe_futures).await;
+            try_calculate_promises(&state, maybe_futures).await; // currently not in use.
 
+            let mut debug: Vec<Entry> = inspect_results(&copy_of_maybes).await;
             let mut logs: Vec<Entry> = all_logs(&copy_of_maybes).await;
             let mut errors: Vec<Entry> = all_errors(&copy_of_maybes).await;
+            entries.append(&mut debug);
             entries.append(&mut logs);
             entries.append(&mut errors);
 
@@ -191,7 +183,7 @@ async fn get_wallet_details(user_settings: &UserSettings) -> (Arc<SecUtf8>, Arc<
         // ** seed phrase needed **
         wallet_seed_phrase = encrypt_text_with_secret(get_input("Enter your seed phrase (press Enter to skip):").to_string());
         if wallet_acc_address.unsecure().len() != 44 || !user_settings.test {
-            wallet_acc_address = SecUtf8::from(get_from_account(&decrypt_text_with_secret(&wallet_seed_phrase)).unwrap_or("".to_string()));
+            wallet_acc_address = SecUtf8::from(account_from_seed_phrase(decrypt_text_with_secret(&wallet_seed_phrase), SupportedBlockchain::Terra).unwrap_or("".to_string()));
         }
     } else if wallet_acc_address.unsecure().len() == 0 {
         // ** maybe need wallet address **

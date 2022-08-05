@@ -4,12 +4,9 @@
     "osmosis"
   ],
   "governance_proposals_notifications": [
-    "StatusNil",
-    "StatusDepositPeriod",
-    "StatusVotingPeriod",
-    "StatusPassed",
-    "StatusRejected",
-    "StatusFailed"
+    "failed",
+    "passed",
+    "rejected"
   ],
   "pause_requested": false,
   "hot_reload": false,

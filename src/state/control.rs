@@ -7,7 +7,7 @@ use tokio::sync::{Mutex};
 
 use core::pin::Pin;
 use core::future::Future;
-use cosmos_rust_interface::services::blockchain::smart_contracts::objects::ResponseResult;
+use cosmos_rust_interface::ResponseResult;
 
 use model::get_timestamps_of_tasks;
 use model::try_register_function;
