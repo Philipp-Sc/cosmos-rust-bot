@@ -12,12 +12,12 @@ use cosmos_rust_interface::ResponseResult;
 use model::get_timestamps_of_tasks;
 use model::try_register_function;
 use model::Maybe;
-use crate::state::control::model::try_get_resolved;
+use crate::state::control::model::access_maybe;
 use tokio::task::JoinSet;
 
 
 pub async fn data_is_outdated(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, req: &[&str]) -> bool {
-    match try_get_resolved(&maybes, "latest_transaction").await {
+    match access_maybe(&maybes, "latest_transaction").await {
         Maybe { data: Ok(_), timestamp } => {
             let mut timestamps = get_timestamps_of_tasks(&maybes).await.iter().filter(|x| req.contains(&x.0.as_str())).map(|x| x.1).collect::<Vec<i64>>();
             timestamps.sort();

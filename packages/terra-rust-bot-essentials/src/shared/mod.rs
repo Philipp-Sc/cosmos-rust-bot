@@ -7,21 +7,6 @@ use std::io;
 use std::hash::{Hash};
 use serde_json::{Value};
 
-#[derive(Debug)]
-pub struct Maybe<T> {
-    pub data: anyhow::Result<T>,
-    pub timestamp: i64,
-}
-
-impl<T: Clone> Clone for Maybe<T> {
-    fn clone(&self) -> Maybe<T> {
-        match self {
-            Maybe { data: Err(err), timestamp } => Maybe { data: Err(anyhow::anyhow!(err.to_string())), timestamp: *timestamp },
-            Maybe { data: Ok(value), timestamp } => Maybe { data: Ok(value.clone()), timestamp: *timestamp },
-        }
-    }
-}
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct UserSettings {
     pub governance_blockchains: Option<Vec<String>>,
@@ -75,19 +60,6 @@ impl Default for UserSettings {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Clone)]
-pub struct Entry {
-    pub timestamp: i64,
-    pub key: String,
-    pub prefix: Option<String>,
-    pub value: String,
-    pub suffix: Option<String>,
-    pub index: Option<i32>,
-    pub group: Option<String>,
-}
-
-pub type State = Vec<Option<Entry>>;
-
 pub fn get_input(prompt: &str) -> String {
     println!("{}", prompt);
     let mut input = String::new();
@@ -131,27 +103,4 @@ pub fn load_user_settings(path: &str) -> UserSettings {
         println!("{:?}", res);
     }
     user_settings
-}
-
-pub async fn load_state(path: &str) -> Option<State> {
-    let mut state: Option<State> = None;
-    let mut try_counter = 0;
-    while state.is_none() && try_counter < 3 {
-        match fs::read_to_string(path) {
-            Ok(file) => {
-                match serde_json::from_str(&file) {
-                    Ok(res) => { state = Some(res); }
-                    Err(_) => { try_counter = try_counter + 1; }
-                };
-            }
-            Err(_) => {
-                try_counter = try_counter + 1;
-            }
-        }
-    }
-    if let Some(mut s) = state {
-        s.sort_by(|a, b| a.as_ref().unwrap().index.unwrap_or(0i32).cmp(&b.as_ref().unwrap().index.unwrap_or(0i32)));
-        return Some(s);
-    }
-    state
 }

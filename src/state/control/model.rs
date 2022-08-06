@@ -29,8 +29,9 @@ use chrono::{Utc};
 use core::pin::Pin;
 use core::future::Future;
 
-use terra_rust_bot_essentials::shared::Maybe as MaybeImported;
-use terra_rust_bot_essentials::shared::Entry;
+use cosmos_rust_interface::utils::postproc::Maybe as MaybeImported;
+use cosmos_rust_interface::utils::postproc::Entry;
+
 use crate::state::control::model::requirements::RequirementType;
 
 use cosmos_rust_interface::ResponseResult;
@@ -78,7 +79,7 @@ pub async fn get_item(pointer: &Arc<Mutex<Vec<Maybe<ResponseResult>>>>) -> Maybe
  * will not await the future if it is not yet resolved.
  * in that case it returns an error.
  */
-pub async fn try_get_resolved(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, key: &str) -> Maybe<ResponseResult> {
+pub async fn access_maybe(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, key: &str) -> Maybe<ResponseResult> {
     match maybes.get(key.to_string().as_str()) {
         Some(pointer) => {
             get_item(pointer).await
@@ -90,6 +91,25 @@ pub async fn try_get_resolved(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<Respo
             }
         }
     }
+}
+
+pub async fn access_maybes(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>) -> HashMap<String, Maybe<ResponseResult>> {
+    let mut only_maybes: HashMap<String, Maybe<ResponseResult>> = HashMap::new();
+    for (key, val) in maybes.iter() {
+        let value = match maybes.get(key.as_str()) {
+            Some(pointer) => {
+                get_item(pointer).await
+            }
+            None => {
+                Maybe {
+                    data: Err(anyhow!("Error: key does not exist")),
+                    timestamp: Utc::now().timestamp(),
+                }
+            }
+        };
+        only_maybes.insert(key.to_string(), value);
+    }
+    only_maybes
 }
 
 pub async fn get_timestamps_of_tasks(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>) -> Vec<(String, i64)> {
@@ -150,7 +170,7 @@ pub async fn try_register_function(join_set: &mut JoinSet<()>, maybes: &HashMap<
 }
 
 pub async fn await_function(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, key: String) -> Maybe<String> {
-    match try_get_resolved(&maybes, &key).await {
+    match access_maybe(&maybes, &key).await {
         Maybe { data: Ok(succ), timestamp: t } => {
             Maybe { data: Ok(succ.as_text().unwrap().to_string()), timestamp: t }
         }

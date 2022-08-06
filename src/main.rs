@@ -3,22 +3,14 @@ extern crate litcrypt;
 //https://github.com/anvie/litcrypt.rs
 use_litcrypt!();
 
-use terra_rust_bot_essentials::output::*;
-use terra_rust_bot_essentials::shared::{load_user_settings, get_input, Entry};
+use terra_rust_bot_essentials::shared::{load_user_settings, get_input};
 
 mod state;
 
-use crate::state::control::model::{Maybe, requirements_next, requirements_setup};
+use crate::state::control::model::{Maybe, requirements_next, requirements_setup, access_maybes};
 use crate::state::control::model::requirements::{UserSettings};
 use crate::state::control::model::wallet::{encrypt_text_with_secret, decrypt_text_with_secret};
 use crate::state::control::try_run_function;
-
-
-mod collect;
-
-use collect::logs::*;
-use collect::errors::*;
-use collect::debug::*;
 
 use secstr::*;
 use std::collections::HashMap;
@@ -40,6 +32,10 @@ use std::hash::{Hash, Hasher};
 use cosmos_rust_interface::blockchain::account_from_seed_phrase;
 
 use cosmos_rust_interface::ResponseResult;
+use cosmos_rust_interface::utils::postproc::Entry;
+use cosmos_rust_interface::utils::postproc::meta_data::debug::debug;
+use cosmos_rust_interface::utils::postproc::meta_data::errors::errors;
+use cosmos_rust_interface::utils::postproc::meta_data::logs::logs;
 
 use cosmos_rust_package::api::core::cosmos::channels::SupportedBlockchain;
 
@@ -87,7 +83,12 @@ async fn main() -> anyhow::Result<()> {
 
             let mut entries: Vec<Entry> = requirements_next(&mut join_set, &mut maybes, &user_settings, &wallet_acc_address).await;
 
-            let copy_of_maybes = maybes.clone();
+            // ensures the display tasks operates on the same snapshot
+            // since the processing of the ResponseResults is blazing fast, it makes no sense to hope for a value to be refreshed
+            // so potentially reduces function calls
+            // also post processing does not need to deal with Arc<Mutex>
+            let snapshot_of_maybes = access_maybes(&maybes).await;
+
 
             let mut maybe_futures: Vec<(Entry, Pin<Box<dyn Future<Output=Maybe<String>> + Send>>)> = Vec::new();
 
@@ -141,9 +142,9 @@ async fn main() -> anyhow::Result<()> {
 
             try_calculate_promises(&state, maybe_futures).await; // currently not in use.
 
-            let mut debug: Vec<Entry> = inspect_results(&copy_of_maybes).await;
-            let mut logs: Vec<Entry> = all_logs(&copy_of_maybes).await;
-            let mut errors: Vec<Entry> = all_errors(&copy_of_maybes).await;
+            let mut debug: Vec<Entry> = debug(&snapshot_of_maybes);
+            let mut logs: Vec<Entry> = logs(&snapshot_of_maybes);
+            let mut errors: Vec<Entry> = errors(&snapshot_of_maybes);
             entries.append(&mut debug);
             entries.append(&mut logs);
             entries.append(&mut errors);
@@ -211,4 +212,21 @@ fn calculate_hash<T: Hash>(t: &T) -> u64 {
     let mut s = DefaultHasher::new();
     t.hash(&mut s);
     s.finish()
+}
+
+
+async fn insert_to_state(state: &Arc<RwLock<HashMap<i64, Entry>>>, hash: u64, entry: &Entry) {
+    let mut vector = state.write().await;
+    vector.insert(hash as i64 * (-1), entry.clone());
+}
+
+async fn push_to_state<'a>(state: &'a Arc<RwLock<HashMap<i64, Entry>>>, hash: i64, entry: &'a Entry, f: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>>) -> anyhow::Result<()> {
+    let mut e = entry.clone();
+    let result = f.await;
+    e.value = result.data.unwrap_or("--".to_string());
+    e.timestamp = result.timestamp;
+
+    let mut vector = state.write().await;
+    vector.insert(hash, e);
+    Ok(())
 }

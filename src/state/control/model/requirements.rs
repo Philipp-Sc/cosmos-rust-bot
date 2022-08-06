@@ -32,6 +32,9 @@ pub fn feature_list() -> Vec<Feature> {
 
     let mut feature_list: Vec<Feature> = Vec::new();
 
+    // note: in the end only requirements matter, a feature is only a grouping to select the needed requirements.
+    // this means the requirement name must be unique or it is treated as a duplicate.
+
     feature_list.push(Feature {
         name: "osmosis_governance_failed_proposals".to_string(),
         dependencies: vec![
@@ -186,7 +189,7 @@ pub fn my_requirement_list(user_settings: &UserSettings) -> Vec<Requirement> {
     let mut features = my_feature_list(user_settings);
     let mut req: Vec<Requirement> = Vec::new();
     for mut f in features {
-        req.append(&mut f.dependencies);
+        req.append(&mut f.dependencies); // todo! ensure no duplicates are inserted!
     }
     req
 }
