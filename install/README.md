@@ -31,12 +31,12 @@
 
 **Clone the repository**
 
-* `git clone https://github.com/Philipp-Sc/terra-rust-bot.git`
+* `git clone https://github.com/Philipp-Sc/cosmos-rust-bot.git`
 
 
-* `cd ./terra-rust-bot/install`
+* `cd ./cosmos-rust-bot/install`
 
-**Build terra-rust-bot using the installer script**
+**Build cosmos-rust-bot using the installer script**
 
 *You can choose between three different build options:*
 
@@ -47,13 +47,13 @@
 *Additionally you can either build from the local source code or the latest remote code.*
 
 - `local` builds from the already cloned repository
-- `remote` gets the latest source code and builds terra-rust-bot
+- `remote` gets the latest source code and builds cosmos-rust-bot
 
 
 * `nohup ./install.sh dev local all &` (builds `all` packages, to - for example - disable the signal messenger
-  integration use `default` instead. Use `minimal` to only build the terra-rust-bot.)
+  integration use `default` instead. Use `minimal` to only build the cosmos-rust-bot.)
 
 * Note: `nohup` stands for no hangup and will prevent the build process from being killed when your ssh connection gets
   closed. The `&` at the end makes it a background task.
 * Note: check the file `nohup.out` for errors. (`cat nohup.out`)
-* Note: after a successful build you can remove everything except `terra-rust-bot/install/build`
+* Note: after a successful build you can remove everything except `cosmos-rust-bot/install/build`

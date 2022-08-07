@@ -1,5 +1,5 @@
 
-> :warning: The last (tested) version of Terra-rust-bot can be found [here](https://github.com/Philipp-Sc/terra-rust-bot/tree/d9499d182c6e627a5dedfab15f0ee0fdc698b994).
+> :warning: The last (tested) version of cosmos-rust-bot can be found [here](https://github.com/Philipp-Sc/cosmos-rust-bot/tree/d9499d182c6e627a5dedfab15f0ee0fdc698b994).
 
 > :information_source: The bot was stress tested during the UST crash, it successfully prevented liquidations as it was set up to do.
 
@@ -7,23 +7,23 @@
 
 <div align="center">
  
-  <img src="https://github.com/Philipp-Sc/media/blob/main/terra-rust-bot/cosmos-rust-bot-icon.png" height="100">
+  <img src="https://github.com/Philipp-Sc/media/blob/main/cosmos-rust-bot/cosmos-rust-bot-icon.png" height="100">
   <h1>CRB - Cosmos Rust Bot™</h1> 
   <p>If you can't beat them join them!</p> 
-    <img src="https://img.shields.io/github/languages/top/Philipp-Sc/terra-rust-bot"> 
-    <img src="https://img.shields.io/github/repo-size/Philipp-Sc/terra-rust-bot"> 
-    <img src="https://img.shields.io/github/commit-activity/m/Philipp-Sc/terra-rust-bot"> 
-    <img src="https://img.shields.io/github/license/Philipp-Sc/terra-rust-bot">
+    <img src="https://img.shields.io/github/languages/top/Philipp-Sc/cosmos-rust-bot"> 
+    <img src="https://img.shields.io/github/repo-size/Philipp-Sc/cosmos-rust-bot"> 
+    <img src="https://img.shields.io/github/commit-activity/m/Philipp-Sc/cosmos-rust-bot"> 
+    <img src="https://img.shields.io/github/license/Philipp-Sc/cosmos-rust-bot">
     <img src="https://img.shields.io/twitter/follow/PSchlutermann?style=social"> 
   </div>
 <br/>
 <div align="center">
-  <img src="https://github.com/Philipp-Sc/media/raw/main/terra-rust-bot/terra-rust-bot-output/gallery/terminal_output_auto_stake.png" height="250">
-  <img src="https://github.com/Philipp-Sc/media/raw/main/terra-rust-bot/terra-rust-bot-output/gallery/terminal_output_market.png" height="250">
+  <img src="https://github.com/Philipp-Sc/media/raw/main/cosmos-rust-bot/cosmos-rust-bot-output/gallery/terminal_output_auto_stake.png" height="250">
+  <img src="https://github.com/Philipp-Sc/media/raw/main/cosmos-rust-bot/cosmos-rust-bot-output/gallery/terminal_output_market.png" height="250">
 
-  <img src="https://github.com/Philipp-Sc/media/raw/main/terra-rust-bot/terra-rust-signal-bot/gallery/signal_bot_auto_stake.png" height="250">
-  <img src="https://github.com/Philipp-Sc/media/raw/main/terra-rust-bot/terra-rust-signal-bot/gallery/signal_bot_help.png" height="250">
-  <img src="https://github.com/Philipp-Sc/media/raw/main/terra-rust-bot/terra-rust-signal-bot/gallery/signal_messenger.png" height="250">
+  <img src="https://github.com/Philipp-Sc/media/raw/main/cosmos-rust-bot/terra-rust-signal-bot/gallery/signal_bot_auto_stake.png" height="250">
+  <img src="https://github.com/Philipp-Sc/media/raw/main/cosmos-rust-bot/terra-rust-signal-bot/gallery/signal_bot_help.png" height="250">
+  <img src="https://github.com/Philipp-Sc/media/raw/main/cosmos-rust-bot/terra-rust-signal-bot/gallery/signal_messenger.png" height="250">
 </div>
 
 

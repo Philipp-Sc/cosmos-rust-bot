@@ -2,7 +2,7 @@
 // change parameter
 // save
 
-use terra_rust_bot_essentials::shared::{UserSettings,load_user_settings};
+use cosmos_rust_bot_essentials::shared::{UserSettings,load_user_settings};
 use serde_json::Value;
 use serde_json::{to_value,from_value};
 use serde_json::json;

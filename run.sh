@@ -15,22 +15,22 @@ echo -e "${PURPLE}checking if ./my-bot is running already and stopping instance 
 ./stop.sh
 
 
-IS_BOT=$(grep -oP '\"anchor_protocol_auto_repay\":( )*(true|false)' terra-rust-bot.json | grep -oP '(true|false)')
+IS_BOT=$(grep -oP '\"anchor_protocol_auto_repay\":( )*(true|false)' cosmos-rust-bot.json | grep -oP '(true|false)')
 if [ "$IS_BOT" = "false" ]; then
- IS_BOT=$(grep -oP '\"anchor_protocol_auto_borrow\":( )*(true|false)' terra-rust-bot.json | grep -oP '(true|false)')
+ IS_BOT=$(grep -oP '\"anchor_protocol_auto_borrow\":( )*(true|false)' cosmos-rust-bot.json | grep -oP '(true|false)')
 fi
 if [ "$IS_BOT" = "false" ]; then
- IS_BOT=$(grep -oP '\"anchor_protocol_auto_stake\":( )*(true|false)' terra-rust-bot.json | grep -oP '(true|false)')
+ IS_BOT=$(grep -oP '\"anchor_protocol_auto_stake\":( )*(true|false)' cosmos-rust-bot.json | grep -oP '(true|false)')
 fi
 if [ "$IS_BOT" = "false" ]; then
- IS_BOT=$(grep -oP '\"anchor_protocol_auto_farm\":( )*(true|false)' terra-rust-bot.json | grep -oP '(true|false)')
+ IS_BOT=$(grep -oP '\"anchor_protocol_auto_farm\":( )*(true|false)' cosmos-rust-bot.json | grep -oP '(true|false)')
 fi
 
-IS_TEST=$(grep -oP '\"test\":( )*(true|false)' terra-rust-bot.json | grep -oP '(true|false)')
-HAS_WALLET=$(grep -oP '\"terra_wallet_address\":( )*(null|\"terra)' terra-rust-bot.json | grep -oP '(null| "terra)' | grep -oP '(null|terra)')
+IS_TEST=$(grep -oP '\"test\":( )*(true|false)' cosmos-rust-bot.json | grep -oP '(true|false)')
+HAS_WALLET=$(grep -oP '\"terra_wallet_address\":( )*(null|\"terra)' cosmos-rust-bot.json | grep -oP '(null| "terra)' | grep -oP '(null|terra)')
 
 
-NEED_ACCOUNT=$(grep -oP '\"anchor_account_info\":( )*(true|false)' terra-rust-bot.json | grep -oP '(true|false)')
+NEED_ACCOUNT=$(grep -oP '\"anchor_account_info\":( )*(true|false)' cosmos-rust-bot.json | grep -oP '(true|false)')
 
 #echo "IS_BOT:${IS_BOT}"
 #echo "IS_TEST:${IS_TEST}"

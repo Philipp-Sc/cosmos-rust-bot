@@ -13,7 +13,7 @@ case $1 in
   if [ -f ./my-bot.pid ]; then
       echo "process running with PID $(cat ./my-bot.pid)"
   else
-      echo "process not running: failed to start terra-rust-bot!"
+      echo "process not running: failed to start cosmos-rust-bot!"
   fi
   ;;
 
@@ -22,12 +22,12 @@ case $1 in
   ;;
 
   "show")
-  cd ./packages/terra-rust-bot-output;
+  cd ./packages/cosmos-rust-bot-output;
   ./my-bot-output local-display -m "$2"
   ;;
 
   "utils")
-  cd ./packages/terra-rust-bot-output;
+  cd ./packages/cosmos-rust-bot-output;
   ./my-bot-output local-utils
   ;;
 
@@ -49,10 +49,10 @@ case $1 in
   ;;
 
   "help")
-  echo "to enable different features and configure terra-rust-bot: 'nano ./terra-rust-bot.json'"
-  echo "to start terra-rust-bot: './ctlscript.sh start'"
-  echo "to stop terra-rust-bot: './ctlscript.sh stop'"
-  echo "to view the state of terra-rust-bot: './ctlscript.sh show \"\help\"'"
+  echo "to enable different features and configure cosmos-rust-bot: 'nano ./cosmos-rust-bot.json'"
+  echo "to start cosmos-rust-bot: './ctlscript.sh start'"
+  echo "to stop cosmos-rust-bot: './ctlscript.sh stop'"
+  echo "to view the state of cosmos-rust-bot: './ctlscript.sh show \"\help\"'"
   echo "to enable the signal messenger integration link your device: './ctlscript.sh connect-signal-app'"
   echo "to activate the signal bot for notifications: './ctlscript.sh start-signal-bot'"
   echo "to stop the signal bot: './ctlscript.sh stop-signal-bot'"

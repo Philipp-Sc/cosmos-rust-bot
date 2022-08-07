@@ -2,7 +2,7 @@
 
 cd "$(dirname "$0")"
 
-echo "Installing Terra-rust-bot"
+echo "Installing cosmos-rust-bot"
 
 echo -n "Checking dependencies... "
 for name in git openssl cargo
@@ -32,13 +32,13 @@ esac
 
 case $2 in
 	"local")
-	MYPATH="../../terra-rust-bot";
+	MYPATH="../../cosmos-rust-bot";
 	;;
 
 	"remote")
-	MYPATH="terra-rust-bot";
-	rm -rf terra-rust-bot;
-	git clone https://github.com/Philipp-Sc/terra-rust-bot.git
+	MYPATH="cosmos-rust-bot";
+	rm -rf cosmos-rust-bot;
+	git clone https://github.com/Philipp-Sc/cosmos-rust-bot.git
 	;;
 
 	"")
@@ -55,7 +55,7 @@ cd $build_dir;
 mkdir packages;
 mkdir assets;
 cd packages;
-mkdir terra-rust-bot-output;
+mkdir cosmos-rust-bot-output;
 mkdir terra-rust-signal-bot;
 cd ../../;
 
@@ -67,42 +67,42 @@ WD=$(pwd)
 
 cargo update;
 cd $MYPATH/packages/cosmos-rust-interface;cargo update;
-cd ../terra-rust-bot-essentials;cargo update;
-cd ../terra-rust-bot-output;cargo update;
+cd ../cosmos-rust-bot-essentials;cargo update;
+cd ../cosmos-rust-bot-output;cargo update;
 cd ../terra-rust-signal-bot;cargo update;
 cd $WD;
 
 rm -rf $MYPATH/target;
-rm -rf $MYPATH/packages/terra-rust-bot-output/target;
-rm -rf $MYPATH/packages/terra-rust-bot-essentials/target;
+rm -rf $MYPATH/packages/cosmos-rust-bot-output/target;
+rm -rf $MYPATH/packages/cosmos-rust-bot-essentials/target;
 rm -rf $MYPATH/packages/terra-rust-signal-bot/target;
 
 
 case $3 in
 	"all")
-	# includes signal-bot, includes terra-rust-bot-output
+	# includes signal-bot, includes cosmos-rust-bot-output
 	$MYPATH/install.sh $1 $2;
-	$MYPATH/packages/terra-rust-bot-output/install.sh $1 $2;
+	$MYPATH/packages/cosmos-rust-bot-output/install.sh $1 $2;
 	$MYPATH/packages/terra-rust-signal-bot/install.sh $1 $2;
 
-	cp $MYPATH/{my-bot,run.sh,stop.sh,terra-rust-bot.json} ./$build_dir/;
-	cp $MYPATH/packages/terra-rust-bot-output/my-bot-output ./$build_dir/packages/terra-rust-bot-output/;
+	cp $MYPATH/{my-bot,run.sh,stop.sh,cosmos-rust-bot.json} ./$build_dir/;
+	cp $MYPATH/packages/cosmos-rust-bot-output/my-bot-output ./$build_dir/packages/cosmos-rust-bot-output/;
 	cp $MYPATH/packages/terra-rust-signal-bot/{terra-rust-signal-bot,signal-bot.sh,always-run.sh,run.sh,stop.sh} ./$build_dir/packages/terra-rust-signal-bot/;
 	;;
 
 	"default")
-	# excludes signal-bot, includes terra-rust-bot-output
+	# excludes signal-bot, includes cosmos-rust-bot-output
 	$MYPATH/install.sh $1 $2;
-	$MYPATH/packages/terra-rust-bot-output/install.sh $1 $2;
+	$MYPATH/packages/cosmos-rust-bot-output/install.sh $1 $2;
 
-  	cp $MYPATH/{my-bot,run.sh,stop.sh,terra-rust-bot.json} ./$build_dir/;
-  	cp $MYPATH/packages/terra-rust-bot-output/my-bot-output ./$build_dir/packages/terra-rust-bot-output/;
+  	cp $MYPATH/{my-bot,run.sh,stop.sh,cosmos-rust-bot.json} ./$build_dir/;
+  	cp $MYPATH/packages/cosmos-rust-bot-output/my-bot-output ./$build_dir/packages/cosmos-rust-bot-output/;
 	;;
 
 	"minimal")
-	# only terra-rust-bot
+	# only cosmos-rust-bot
 	$MYPATH/install.sh $1 $2;
-	cp $MYPATH/{my-bot,run.sh,stop.sh,terra-rust-bot.json} ./$build_dir/;
+	cp $MYPATH/{my-bot,run.sh,stop.sh,cosmos-rust-bot.json} ./$build_dir/;
 	;;
 
 	"")
@@ -113,5 +113,5 @@ esac
 
 echo "$build_dir finished!"
 ls -lh ./$build_dir
-echo "the next step for you is to configure the settings by editing 'terra-rust-bot.json'."
-echo "run 'cd $build_dir;./ctlscript.sh help' to learn how to use terra-rust-bot."
+echo "the next step for you is to configure the settings by editing 'cosmos-rust-bot.json'."
+echo "run 'cd $build_dir;./ctlscript.sh help' to learn how to use cosmos-rust-bot."

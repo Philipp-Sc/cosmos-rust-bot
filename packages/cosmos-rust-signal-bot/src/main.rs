@@ -1,6 +1,6 @@
-use terra_rust_bot_output::read::*;
-use terra_rust_bot_output::write::*;
-use terra_rust_bot_essentials::shared::{load_state};
+use cosmos_rust_bot_output::read::*;
+use cosmos_rust_bot_output::write::*;
+use cosmos_rust_bot_essentials::shared::{load_state};
 
 use std::{path::PathBuf, time::UNIX_EPOCH};
 
@@ -323,7 +323,7 @@ async fn main() -> anyhow::Result<()> {
                                                                 text = "Unable to load ./../cosmos-rust-bot-output/cosmos-rust-bot-state.json.".to_string();
                                                             },
                                                             Some(state) => {
-                                                                match terra_rust_bot_user_settings(&sender_message) {
+                                                                match cosmos_rust_bot_user_settings(&sender_message) {
                                                                     Some((v1,v2)) => {
                                                                         match update_user_settings("../../cosmos-rust-bot.json",v1,v2).await {
                                                                             Ok(_) => {
@@ -333,7 +333,7 @@ async fn main() -> anyhow::Result<()> {
                                                                         };
                                                                     },
                                                                     None => {
-                                                                        text = terra_rust_bot_state(&sender_message,&state,false).await;
+                                                                        text = cosmos_rust_bot_state(&sender_message,&state,false).await;
                                                                     },
                                                                 };
                                                             }
@@ -368,7 +368,7 @@ async fn main() -> anyhow::Result<()> {
                                     println!("Unable to load ./cosmos-rust-bot.json.");
                                 },
                                 Some(state) => {
-                                    match terra_rust_bot_state_ping_delay(&state,60i64).await {
+                                    match cosmos_rust_bot_state_ping_delay(&state,60i64).await {
                                         Some(x) => {
                                             if !ping_delay {
                                                 send_message_to_self(&manager,format!("[Notification]\n{}",x)).await.ok();
@@ -383,24 +383,24 @@ async fn main() -> anyhow::Result<()> {
                                             // send nothing.
                                         }
                                     }
-                                    match terra_rust_bot_state_get_latest("[Errors]",&state).await
+                                    match cosmos_rust_bot_state_get_latest("[Errors]",&state).await
                                     {
                                         Some(x) => {
                                             if latest_error < x {
                                                 latest_error = x;
-                                                let x = terra_rust_bot_state_default("[Errors]",&state,false).await;
+                                                let x = cosmos_rust_bot_state_default("[Errors]",&state,false).await;
                                                 send_message_to_self(&manager,format!("[Notification]\n{}",x.unwrap_or("Failed fetching new errors.".to_string()))).await.ok();
                                             }
                                         },
                                         None => {
                                         }
                                     }
-                                    match terra_rust_bot_state_get_latest("[Logs]",&state).await
+                                    match cosmos_rust_bot_state_get_latest("[Logs]",&state).await
                                     {
                                         Some(x) => {
                                             if latest_log < x {
                                                 latest_log = x;
-                                                let x = terra_rust_bot_state_default("[Logs]",&state,false).await;
+                                                let x = cosmos_rust_bot_state_default("[Logs]",&state,false).await;
                                                 send_message_to_self(&manager,format!("[Notification]\n{}",x.unwrap_or("Failed fetching new errors.".to_string()))).await.ok();
                                             }
                                         },

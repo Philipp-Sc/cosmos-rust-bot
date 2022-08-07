@@ -1,6 +1,6 @@
-use terra_rust_bot_output::read::*;
-use terra_rust_bot_output::write::*;
-use terra_rust_bot_essentials::shared::{load_state};
+use cosmos_rust_bot_output::read::*;
+use cosmos_rust_bot_output::write::*;
+use cosmos_rust_bot_essentials::shared::{load_state};
 
 use env_logger::Env; 
 use structopt::StructOpt; 
@@ -45,7 +45,7 @@ async fn main() -> anyhow::Result<()> {
                     println!("Unable to load ./cosmos-rust-bot-state.json.");
                 },
                 Some(state) => {
-                    match terra_rust_bot_user_settings(&message) {
+                    match cosmos_rust_bot_user_settings(&message) {
                         Some((v1,v2)) => {
                             match update_user_settings("../../cosmos-rust-bot.json",v1,v2).await {
                                 Ok(_) => {},
@@ -53,7 +53,7 @@ async fn main() -> anyhow::Result<()> {
                             };
                         },
                         None => {
-                            println!("{}", terra_rust_bot_state(&message,&state,true).await);
+                            println!("{}", cosmos_rust_bot_state(&message,&state,true).await);
                         },
                     };
                 }
@@ -61,7 +61,7 @@ async fn main() -> anyhow::Result<()> {
         }
         Subcommand::LocalUtils {} => {
 
-            terra_rust_bot_methods();
+            cosmos_rust_bot_methods();
 
 
         }

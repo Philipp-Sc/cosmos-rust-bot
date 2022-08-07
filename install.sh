@@ -11,19 +11,13 @@ case $1 in
 	"dev")
 	echo "development build"
 	RUSTFLAGS="--cfg tokio_unstable" cargo build
-	mv ./target/debug/terra-rust-bot my-bot
-	;;
-
-	"prod")
-	echo "release build"
-	RUSTFLAGS="--cfg tokio_unstable" cargo build --release
-	mv ./target/release/terra-rust-bot my-bot
+	mv ./target/debug/cosmos-rust-bot my-bot
 	;;
 
 	"native")
 	echo "optimized release build"
 	RUSTFLAGS="--cfg tokio_unstable -C target-cpu=native" cargo build --release
-	mv ./target/release/terra-rust-bot my-bot
+	mv ./target/release/cosmos-rust-bot my-bot
 	;;
 	
 	"")
@@ -34,7 +28,7 @@ esac
 
 echo "install.sh finished"
 
-echo "terra-rust-bot executable available as './my-bot'"
+echo "cosmos-rust-bot executable available as './my-bot'"
 echo $(ls -lh my-bot)
 echo ""
 echo "for convenience use './run.sh' to start the bot and './stop.sh' to stop the bot."

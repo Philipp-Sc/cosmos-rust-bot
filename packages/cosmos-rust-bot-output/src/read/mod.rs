@@ -7,7 +7,7 @@ use colored::control::set_override;
 use comfy_table::Table;
 use comfy_table::presets::*;
 
-use terra_rust_bot_essentials::shared::{get_input, State,Entry};
+use cosmos_rust_bot_essentials::shared::{get_input, State,Entry};
 
 use rust_decimal::Decimal;
 use std::str::FromStr;
@@ -15,7 +15,7 @@ use std::str::FromStr;
 use cosmos_rust_interface::utils::estimate_optimal_next_claim_and_stake_tx;
 
 
-pub fn terra_rust_bot_methods() {
+pub fn cosmos_rust_bot_methods() {
 
     match get_input("Select method:\n1) estimate_optimal_next_claim_and_stake_tx").as_str() {
         "1" => {
@@ -47,7 +47,7 @@ pub fn terra_rust_bot_methods() {
 }
 
 
-pub fn terra_rust_bot_user_settings(message: &str) -> Option<(&str,&str)> {
+pub fn cosmos_rust_bot_user_settings(message: &str) -> Option<(&str,&str)> {
 
     let v: Vec<&str> = message.split(" ").collect();
     match v.len() {
@@ -70,67 +70,67 @@ pub fn terra_rust_bot_user_settings(message: &str) -> Option<(&str,&str)> {
     };
 }
 
-pub async fn terra_rust_bot_state(context: &str, state: &State, is_console: bool) -> String {
+pub async fn cosmos_rust_bot_state(context: &str, state: &State, is_console: bool) -> String {
 
     set_override(is_console);
 
     match context {
 
         "\\market" => {
-            return terra_rust_bot_state_default("[Market]",state,is_console).await.unwrap_or("No data".to_string());
+            return cosmos_rust_bot_state_default("[Market]",state,is_console).await.unwrap_or("No data".to_string());
         },
         "\\anchor info" => {
-            return terra_rust_bot_state_default("[Anchor Protocol Info]",state,is_console).await.unwrap_or("No data".to_string());
+            return cosmos_rust_bot_state_default("[Anchor Protocol Info]",state,is_console).await.unwrap_or("No data".to_string());
         },
         "\\anchor account" => {
-            return terra_rust_bot_state_default("[Anchor Protocol Account]",state,is_console).await.unwrap_or("No data".to_string());
+            return cosmos_rust_bot_state_default("[Anchor Protocol Account]",state,is_console).await.unwrap_or("No data".to_string());
         },
         "\\auto repay" => {
-            return terra_rust_bot_state_default("[Anchor Protocol][Auto Repay]",state,is_console).await.unwrap_or("No data".to_string());
+            return cosmos_rust_bot_state_default("[Anchor Protocol][Auto Repay]",state,is_console).await.unwrap_or("No data".to_string());
         },
         "\\auto borrow" => {
-            return terra_rust_bot_state_default("[Anchor Protocol][Auto Borrow]",state,is_console).await.unwrap_or("No data".to_string());
+            return cosmos_rust_bot_state_default("[Anchor Protocol][Auto Borrow]",state,is_console).await.unwrap_or("No data".to_string());
         },
         "\\auto stake" => {
-            return terra_rust_bot_state_default("[Anchor Protocol][Auto Stake]",state,is_console).await.unwrap_or("No data".to_string());
+            return cosmos_rust_bot_state_default("[Anchor Protocol][Auto Stake]",state,is_console).await.unwrap_or("No data".to_string());
         },
         "\\auto farm" => {
-            return terra_rust_bot_state_default("[Anchor Protocol][Auto Farm]",state,is_console).await.unwrap_or("No data".to_string());
+            return cosmos_rust_bot_state_default("[Anchor Protocol][Auto Farm]",state,is_console).await.unwrap_or("No data".to_string());
         },
         "\\errors" => {
-            return terra_rust_bot_state_default("[Errors]",state,is_console).await.unwrap_or("No data".to_string());
+            return cosmos_rust_bot_state_default("[Errors]",state,is_console).await.unwrap_or("No data".to_string());
         },
         "\\pending" => {
-            return terra_rust_bot_state_default("[Unresolved]",state,is_console).await.unwrap_or("No data".to_string());
+            return cosmos_rust_bot_state_default("[Unresolved]",state,is_console).await.unwrap_or("No data".to_string());
         },
         "\\logs" => {
-            return terra_rust_bot_state_default("[Logs]",state,is_console).await.unwrap_or("No data".to_string());
+            return cosmos_rust_bot_state_default("[Logs]",state,is_console).await.unwrap_or("No data".to_string());
         },
         "\\auto" => {
             return format!("{}\n\n\n{}\n\n\n{}\n\n\n{}",
-                           terra_rust_bot_state_default("[Anchor Protocol][Auto Repay]",state,is_console).await.unwrap_or("No data".to_string()),
-                           terra_rust_bot_state_default("[Anchor Protocol][Auto Borrow]",state,is_console).await.unwrap_or("No data".to_string()),
-                           terra_rust_bot_state_default("[Anchor Protocol][Auto Stake]",state,is_console).await.unwrap_or("No data".to_string()),
-                           terra_rust_bot_state_default("[Anchor Protocol][Auto Farm]",state,is_console).await.unwrap_or("No data".to_string())
+                           cosmos_rust_bot_state_default("[Anchor Protocol][Auto Repay]",state,is_console).await.unwrap_or("No data".to_string()),
+                           cosmos_rust_bot_state_default("[Anchor Protocol][Auto Borrow]",state,is_console).await.unwrap_or("No data".to_string()),
+                           cosmos_rust_bot_state_default("[Anchor Protocol][Auto Stake]",state,is_console).await.unwrap_or("No data".to_string()),
+                           cosmos_rust_bot_state_default("[Anchor Protocol][Auto Farm]",state,is_console).await.unwrap_or("No data".to_string())
             );
         },
         "\\task count" => {
-            return terra_rust_bot_state_default("[Task][Count]",state,is_console).await.unwrap_or("No data".to_string());
+            return cosmos_rust_bot_state_default("[Task][Count]",state,is_console).await.unwrap_or("No data".to_string());
         },
         "\\task list" => {
-            return terra_rust_bot_state_default("[Task][List]",state,false).await.unwrap_or("No data".to_string());
+            return cosmos_rust_bot_state_default("[Task][List]",state,false).await.unwrap_or("No data".to_string());
         },
         "\\help" => {
-            return terra_rust_bot_state_help(is_console);
+            return cosmos_rust_bot_state_help(is_console);
         },
         "\\ping" => {
-            return terra_rust_bot_state_ping(state,is_console).await;
+            return cosmos_rust_bot_state_ping(state,is_console).await;
         },
         "\\state history" => {
-            return terra_rust_bot_state_history(state,is_console).await;
+            return cosmos_rust_bot_state_history(state,is_console).await;
         },
         "\\task history" => {
-            return terra_rust_bot_task_history(state,is_console).await;
+            return cosmos_rust_bot_task_history(state,is_console).await;
         },
         &_ => {
             return "?".to_string();
@@ -140,7 +140,7 @@ pub async fn terra_rust_bot_state(context: &str, state: &State, is_console: bool
 
 }
 
-fn terra_rust_bot_state_help(_is_console: bool) -> String {
+fn cosmos_rust_bot_state_help(_is_console: bool) -> String {
 
     return r#"[Available Commands]
 UPDATE SETTINGS
@@ -182,7 +182,7 @@ TIMESTAMPS WHEN ENTRIES WERE WRITTEN TO STATE
 
 
 
-async fn terra_rust_bot_task_history(state: &State, is_console: bool) -> String {
+async fn cosmos_rust_bot_task_history(state: &State, is_console: bool) -> String {
 
 
     let mut t = Table::new();
@@ -223,7 +223,7 @@ async fn terra_rust_bot_task_history(state: &State, is_console: bool) -> String 
 }
 
 
-async fn terra_rust_bot_state_history(state: &State, is_console: bool) -> String {
+async fn cosmos_rust_bot_state_history(state: &State, is_console: bool) -> String {
 
     let mut t = Table::new();
     t.set_header(&[""]);
@@ -258,7 +258,7 @@ async fn terra_rust_bot_state_history(state: &State, is_console: bool) -> String
     return format!("{}",t);
 }
 
-pub async fn terra_rust_bot_state_ping_delay(state: &State, max_delay: i64) -> Option<String> {
+pub async fn cosmos_rust_bot_state_ping_delay(state: &State, max_delay: i64) -> Option<String> {
 
     let signal_bot = Utc::now().timestamp();
     let mut timestamp = 0i64;
@@ -277,7 +277,7 @@ pub async fn terra_rust_bot_state_ping_delay(state: &State, max_delay: i64) -> O
 }
 
 
-async fn terra_rust_bot_state_ping(state: &State, is_console: bool) -> String {
+async fn cosmos_rust_bot_state_ping(state: &State, is_console: bool) -> String {
 
     let mut t = Table::new();
     t.set_header(&["", ""]);
@@ -306,7 +306,7 @@ async fn terra_rust_bot_state_ping(state: &State, is_console: bool) -> String {
     return format!("{}",t);
 }
 
-pub async fn terra_rust_bot_state_get_latest(identifier: &str, state: &State) -> Option<i64> {
+pub async fn cosmos_rust_bot_state_get_latest(identifier: &str, state: &State) -> Option<i64> {
 
     let empty = "".to_string();
 
@@ -325,7 +325,7 @@ pub async fn terra_rust_bot_state_get_latest(identifier: &str, state: &State) ->
 }
 
 
-pub async fn terra_rust_bot_state_default(identifier: &str, state: &State, is_console: bool) -> Option<String> {
+pub async fn cosmos_rust_bot_state_default(identifier: &str, state: &State, is_console: bool) -> Option<String> {
 
     let mut t = Table::new();
     let mut display = format!("{}",identifier.truecolor(75,219,75));
