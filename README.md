@@ -21,9 +21,9 @@
   <img src="https://github.com/Philipp-Sc/media/raw/main/cosmos-rust-bot/cosmos-rust-bot-output/gallery/terminal_output_auto_stake.png" height="250">
   <img src="https://github.com/Philipp-Sc/media/raw/main/cosmos-rust-bot/cosmos-rust-bot-output/gallery/terminal_output_market.png" height="250">
 
-  <img src="https://github.com/Philipp-Sc/media/raw/main/cosmos-rust-bot/terra-rust-signal-bot/gallery/signal_bot_auto_stake.png" height="250">
-  <img src="https://github.com/Philipp-Sc/media/raw/main/cosmos-rust-bot/terra-rust-signal-bot/gallery/signal_bot_help.png" height="250">
-  <img src="https://github.com/Philipp-Sc/media/raw/main/cosmos-rust-bot/terra-rust-signal-bot/gallery/signal_messenger.png" height="250">
+  <img src="https://github.com/Philipp-Sc/media/raw/main/cosmos-rust-bot/cosmos-rust-signal-bot/gallery/signal_bot_auto_stake.png" height="250">
+  <img src="https://github.com/Philipp-Sc/media/raw/main/cosmos-rust-bot/cosmos-rust-signal-bot/gallery/signal_bot_help.png" height="250">
+  <img src="https://github.com/Philipp-Sc/media/raw/main/cosmos-rust-bot/cosmos-rust-signal-bot/gallery/signal_messenger.png" height="250">
 </div>
 
 
