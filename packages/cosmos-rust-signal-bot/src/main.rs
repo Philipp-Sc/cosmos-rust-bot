@@ -86,7 +86,7 @@ enum Subcommand {
         #[structopt(long, short = "m", help = "Contents of the message to send")]
         message: String,
     },  
-    #[structopt(about = "Terra-rust-bot feature: Reply with status information to incoming messages.")]
+    #[structopt(about = "cosmos-rust-bot feature: Reply with status information to incoming messages.")]
     Activate, 
 }
 
@@ -318,14 +318,14 @@ async fn main() -> anyhow::Result<()> {
                                                     let mut msg_sent = false;
                                                     while !msg_sent {
                                                         let text;
-                                                        match load_state("./../terra-rust-bot-output/terra-rust-bot-state.json").await {
+                                                        match load_state("./../cosmos-rust-bot-output/cosmos-rust-bot-state.json").await {
                                                             None => {
-                                                                text = "Unable to load ./../terra-rust-bot-output/terra-rust-bot-state.json.".to_string();
+                                                                text = "Unable to load ./../cosmos-rust-bot-output/cosmos-rust-bot-state.json.".to_string();
                                                             },
                                                             Some(state) => {
                                                                 match terra_rust_bot_user_settings(&sender_message) {
                                                                     Some((v1,v2)) => {
-                                                                        match update_user_settings("../../terra-rust-bot.json",v1,v2).await {
+                                                                        match update_user_settings("../../cosmos-rust-bot.json",v1,v2).await {
                                                                             Ok(_) => {
                                                                                 text = "Success!".to_string();
                                                                             },
@@ -363,9 +363,9 @@ async fn main() -> anyhow::Result<()> {
                                 println!("Searching for alerts..");
                                 searching = true;
                             }
-                            match load_state("./../terra-rust-bot-output/terra-rust-bot-state.json").await {
+                            match load_state("./../cosmos-rust-bot-output/cosmos-rust-bot-state.json").await {
                                 None => {
-                                    println!("Unable to load ./terra-rust-bot.json.");
+                                    println!("Unable to load ./cosmos-rust-bot.json.");
                                 },
                                 Some(state) => {
                                     match terra_rust_bot_state_ping_delay(&state,60i64).await {
@@ -377,7 +377,7 @@ async fn main() -> anyhow::Result<()> {
                                         },
                                         None => {
                                             if ping_delay {
-                                                send_message_to_self(&manager,"[Notification]\nTerra-rust-bot cought up with the schedule.".to_string()).await.ok();
+                                                send_message_to_self(&manager,"[Notification]\ncosmos-rust-bot cought up with the schedule.".to_string()).await.ok();
                                             }
                                             ping_delay = false;
                                             // send nothing.

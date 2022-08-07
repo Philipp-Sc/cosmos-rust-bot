@@ -1,4 +1,4 @@
-// here load terra-rust-bot.json
+// here load cosmos-rust-bot.json
 // change parameter
 // save
 

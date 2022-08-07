@@ -6,8 +6,8 @@ edition = "2021"
 
 [dependencies]
 presage = { git = "https://github.com/Philipp-Sc/presage.git"}
-terra-rust-bot-essentials = { path = "../terra-rust-bot-essentials"}
-terra-rust-bot-output = { path = "./../terra-rust-bot-output"}   
+cosmos-rust-bot-essentials = { path = "../cosmos-rust-bot-essentials"}
+cosmos-rust-bot-output = { path = "./../cosmos-rust-bot-output"}
 anyhow = "1.0"
 directories = "3.0"
 env_logger = "0.7"

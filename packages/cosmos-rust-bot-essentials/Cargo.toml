@@ -1,5 +1,5 @@
 [package]
-name = "terra-rust-bot-essentials"
+name = "cosmos-rust-bot-essentials"
 authors = ["Philipp Schlütermann <philipp.schluetermann@udo.edu>"] 
 version = "0.4.0"
 edition = "2021"

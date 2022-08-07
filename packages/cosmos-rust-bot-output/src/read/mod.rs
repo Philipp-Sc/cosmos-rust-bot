@@ -271,7 +271,7 @@ pub async fn terra_rust_bot_state_ping_delay(state: &State, max_delay: i64) -> O
     }
     let delay = signal_bot - timestamp;
     if delay >= max_delay {
-        return Some(format!("Terra-rust-bot is {} seconds behind schedule.\nsignal-bot:\n                        {}\nterra-rust-bot:\n                        {}\nTo check yourself use:\n\\ping",delay,NaiveDateTime::from_timestamp(signal_bot,0).format("%d/%m/%y %H:%M:%S").to_string(),NaiveDateTime::from_timestamp(timestamp,0).format("%d/%m/%y %H:%M:%S").to_string()));
+        return Some(format!("cosmos-rust-bot is {} seconds behind schedule.\nsignal-bot:\n                        {}\ncosmos-rust-bot:\n                        {}\nTo check yourself use:\n\\ping",delay,NaiveDateTime::from_timestamp(signal_bot,0).format("%d/%m/%y %H:%M:%S").to_string(),NaiveDateTime::from_timestamp(timestamp,0).format("%d/%m/%y %H:%M:%S").to_string()));
     }
     return None;
 }
@@ -293,10 +293,10 @@ async fn terra_rust_bot_state_ping(state: &State, is_console: bool) -> String {
     }
     let terra = NaiveDateTime::from_timestamp(timestamp,0).format("%d/%m/%y %H:%M:%S").to_string();
     if !is_console {
-        return format!("signal-bot:\n                        {}\nterra-rust-bot:\n                        {}",signal_bot,terra);
+        return format!("signal-bot:\n                        {}\ncosmos-rust-bot:\n                        {}",signal_bot,terra);
     }
     t.add_row(&[&"signal-bot:".truecolor(75,219,75).to_string(),&format!("{}",signal_bot.purple()) ]);
-    t.add_row(&[&"terra-rust-bot:".truecolor(75,219,75).to_string(),&format!("{}",terra.purple()) ]);
+    t.add_row(&[&"cosmos-rust-bot:".truecolor(75,219,75).to_string(),&format!("{}",terra.purple()) ]);
 
     if is_console {
         t.load_preset(UTF8_NO_BORDERS);

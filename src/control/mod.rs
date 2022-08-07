@@ -1,19 +1,15 @@
-pub mod model;
-
-
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{Mutex};
-
+use tokio::task::JoinSet;
 use core::pin::Pin;
 use core::future::Future;
 use cosmos_rust_interface::ResponseResult;
 
-use model::get_timestamps_of_tasks;
-use model::try_register_function;
-use model::Maybe;
-use crate::state::control::model::access_maybe;
-use tokio::task::JoinSet;
+use crate::model::get_timestamps_of_tasks;
+use crate::model::try_register_function;
+use crate::model::Maybe;
+use crate::model::access_maybe;
 
 
 pub async fn data_is_outdated(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, req: &[&str]) -> bool {
@@ -55,5 +51,5 @@ pub async fn try_run_function(join_set: &mut JoinSet<()>, maybes: &HashMap<Strin
 /*
 	register_value(maybes,"anchor_auto_stake_airdrops".to_string(),msg.to_owned()).await;
 		        		register_value(maybes,"latest_transaction".to_string(),msg.to_owned()).await;
-		        	
+
 */

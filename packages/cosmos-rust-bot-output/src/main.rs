@@ -15,12 +15,12 @@ struct Args {
 
 #[derive(StructOpt)]
 enum Subcommand {
-    #[structopt(about = "Terra-rust-bot feature: print information directly to the console.")]
+    #[structopt(about = "cosmos-rust-bot feature: print information directly to the console.")]
     LocalDisplay {
         #[structopt(long, short = "m", help = "message")]
         message: String,
     },
-    #[structopt(about = "Terra-rust-bot feature: run utils methods directly to the console.")]
+    #[structopt(about = "cosmos-rust-bot feature: run utils methods directly to the console.")]
     LocalUtils {
     }
 }
@@ -40,14 +40,14 @@ async fn main() -> anyhow::Result<()> {
 
             println!("{esc}c", esc = 27 as char);
 
-            match load_state("./terra-rust-bot-state.json").await {
+            match load_state("./cosmos-rust-bot-state.json").await {
                 None => {
-                    println!("Unable to load ./terra-rust-bot-state.json.");
+                    println!("Unable to load ./cosmos-rust-bot-state.json.");
                 },
                 Some(state) => {
                     match terra_rust_bot_user_settings(&message) {
                         Some((v1,v2)) => {
-                            match update_user_settings("../../terra-rust-bot.json",v1,v2).await {
+                            match update_user_settings("../../cosmos-rust-bot.json",v1,v2).await {
                                 Ok(_) => {},
                                 Err(e) => {println!("{:?}",e);},
                             };

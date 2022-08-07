@@ -3,14 +3,16 @@ extern crate litcrypt;
 //https://github.com/anvie/litcrypt.rs
 use_litcrypt!();
 
-use terra_rust_bot_essentials::shared::{load_user_settings, get_input};
+use cosmos_rust_bot_essentials::shared::{load_user_settings, get_input};
 
-mod state;
+mod account;
+mod model;
+mod control;
 
-use crate::state::control::model::{Maybe, requirements_next, requirements_setup, access_maybes};
-use crate::state::control::model::requirements::{UserSettings};
-use crate::state::control::model::wallet::{encrypt_text_with_secret, decrypt_text_with_secret};
-use crate::state::control::try_run_function;
+use model::{Maybe, requirements_next, requirements_setup, access_maybes};
+use model::requirements::{UserSettings};
+use account::wallet::{encrypt_text_with_secret, decrypt_text_with_secret};
+use control::try_run_function;
 
 use secstr::*;
 use std::collections::HashMap;
@@ -48,7 +50,7 @@ async fn main() -> anyhow::Result<()> {
     let mut join_set: JoinSet<()> = JoinSet::new();
     let mut maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>> = HashMap::new();
 
-    let mut user_settings: UserSettings = load_user_settings("./terra-rust-bot.json");
+    let mut user_settings: UserSettings = load_user_settings("./cosmos-rust-bot.json");
     //println!("{}", serde_json::to_string_pretty(&user_settings)?);
     //loop {}
 
@@ -63,7 +65,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Add a path to be watched. All files and directories at that path and
     // below will be monitored for changes.
-    watcher.watch("./terra-rust-bot.json", RecursiveMode::Recursive).unwrap();
+    watcher.watch("./cosmos-rust-bot.json", RecursiveMode::Recursive).unwrap();
 
     loop {
         requirements_setup(&mut maybes).await;
@@ -116,7 +118,7 @@ async fn main() -> anyhow::Result<()> {
                 try_run_function(&mut join_set, &copy_of_maybes, task, "anchor_auto_stake", user_settings.test).await;
                 // if resolved the task will be transformed into a maybe result at the end of the lazy_* method.
                 maybe_futures.append(&mut lazy_anchor_account_auto_stake_rewards(&copy_of_maybes, user_settings.test).await);
-                // also tries to calculate all state updates for terra-rust-bot-state.json.
+                // also tries to calculate all state updates for cosmos-rust-bot-state.json.
             }
             if user_settings.anchor_protocol_auto_farm {
                 let asset_list = asset_whitelist.clone();
@@ -163,13 +165,13 @@ async fn main() -> anyhow::Result<()> {
                 let vector = state.read().await;
                 let vec: Vec<Entry> = vector.iter().map(|x| x.1.clone()).collect();
                 let line = format!("{}", serde_json::to_string(&*vec).unwrap());
-                fs::write("./packages/terra-rust-bot-output/terra-rust-bot-state.json", &line).ok();
+                fs::write("./packages/cosmos-rust-bot-output/cosmos-rust-bot-state.json", &line).ok();
                 state_refresh_timestamp = now;
             }
         }
         join_set.shutdown().await;
         if user_settings.hot_reload {
-            user_settings = load_user_settings("./terra-rust-bot.json");
+            user_settings = load_user_settings("./cosmos-rust-bot.json");
         }
     }
 }

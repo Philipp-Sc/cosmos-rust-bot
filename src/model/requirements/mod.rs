@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use serde_json::json;
-use terra_rust_bot_essentials::shared::UserSettings as UserSettingsImported;
-use crate::state::control::model::requirements::RequirementType::GovernanceProposals;
+use cosmos_rust_bot_essentials::shared::UserSettings as UserSettingsImported;
 
 pub type UserSettings = UserSettingsImported;
 
@@ -16,6 +15,7 @@ pub struct Feature {
 }
 
 pub struct Requirement {
+    // rename to TaskSpec // rename to features.rs
     pub kind: RequirementType,
     pub name: String,
     // UNIQUE
@@ -39,7 +39,7 @@ pub fn feature_list() -> Vec<Feature> {
         name: "osmosis_governance_failed_proposals".to_string(),
         dependencies: vec![
             Requirement {
-                kind: GovernanceProposals,
+                kind: RequirementType::GovernanceProposals,
                 name: "osmosis_governance_failed_proposals".to_string(),
                 args: json!({
                     "blockchain": "osmosis",
@@ -52,7 +52,7 @@ pub fn feature_list() -> Vec<Feature> {
         name: "osmosis_governance_passed_proposals".to_string(),
         dependencies: vec![
             Requirement {
-                kind: GovernanceProposals,
+                kind: RequirementType::GovernanceProposals,
                 name: "osmosis_governance_passed_proposals".to_string(),
                 args: json!({
                     "blockchain": "osmosis",
@@ -65,7 +65,7 @@ pub fn feature_list() -> Vec<Feature> {
         name: "terra_governance_rejected_proposals".to_string(),
         dependencies: vec![
             Requirement {
-                kind: GovernanceProposals,
+                kind: RequirementType::GovernanceProposals,
                 name: "terra_governance_rejected_proposals".to_string(),
                 args: json!({
                     "blockchain": "terra",
@@ -170,10 +170,10 @@ pub fn feature_list() -> Vec<Feature> {
         (vec!["anchor_protocol_txs_deposit_stable"], slow, vec!["anchor_auto_borrow"]),
         (vec!["anchor_protocol_txs_borrow_stable"], slow, vec!["anchor_auto_borrow"]),
         (vec!["anchor_protocol_txs_repay_stable"], slow, vec!["anchor_auto_repay"]),
-//        ("anchor_protocol_txs_provide_liquidity"], slow, vec!["anchor_auto_farm"]), 
-//        ("anchor_protocol_txs_staking_lp"], slow, vec!["anchor_auto_farm"]), 
+//        ("anchor_protocol_txs_provide_liquidity"], slow, vec!["anchor_auto_farm"]),
+//        ("anchor_protocol_txs_staking_lp"], slow, vec!["anchor_auto_farm"]),
         (vec!["txs_provide_to_spec_anc_ust_vault"], slow, vec!["anchor_auto_farm"]),
-//        ("api/v2/ust-lp-reward"], slow, vec!["anchor_auto_farm"]), 
+//        ("api/v2/ust-lp-reward"], slow, vec!["anchor_auto_farm"]),
         (vec!["api/data?type=lpVault"], slow, vec!["anchor_auto_farm"]),
     ]*/
 }

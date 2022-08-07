@@ -5,10 +5,9 @@
 // this way joinhandles can save the results themself.
 // https://aeshirey.github.io/code/2020/12/23/arc-mutex-in-rust.html
 
-pub mod wallet;
 pub mod requirements;
 
-use requirements::{UserSettings, Feature, Requirement, my_requirement_list};
+use requirements::{UserSettings, Feature, Requirement, my_requirement_list, RequirementType};
 use secstr::*;
 
 use std::collections::HashMap;
@@ -32,7 +31,6 @@ use core::future::Future;
 use cosmos_rust_interface::utils::postproc::Maybe as MaybeImported;
 use cosmos_rust_interface::utils::postproc::Entry;
 
-use crate::state::control::model::requirements::RequirementType;
 
 use cosmos_rust_interface::ResponseResult;
 use cosmos_rust_interface::blockchain::cosmos::gov::get_proposals;
@@ -598,4 +596,3 @@ async fn requirements(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, A
         }
     }
 }
- 
