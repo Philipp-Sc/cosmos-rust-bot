@@ -1,10 +1,4 @@
 
-> :warning: The last (tested) version of cosmos-rust-bot can be found [here](https://github.com/Philipp-Sc/cosmos-rust-bot/tree/d9499d182c6e627a5dedfab15f0ee0fdc698b994).
-
-> :information_source: The bot was stress tested during the UST crash, it successfully prevented liquidations as it was set up to do.
-
-> :information_source: As a result of the crash, this bot is shifting its focus to Cosmos. Terra related functionalities will be restored the days following the Terra 2.0 rebirth. 
-
 <div align="center">
  
   <img src="https://github.com/Philipp-Sc/media/blob/main/cosmos-rust-bot/cosmos-rust-bot-icon.png" height="100">
@@ -27,11 +21,20 @@
 </div>
 
 
+##
 
 > :warning: The bot needs your **seed phrase** to create and sign transactions.  
 > :arrow_right_hook: You can use Cosmos-rust-bot without a seed phrase in view mode. Test this first.
 
 > :warning: No security audit has been performed. (*Disclaimer: This may steal your money. Do your own research. Take a look at the code.*)
+
+##
+ 
+- Grant Recipient of the <img src="https://uploads-ssl.webflow.com/62aba8dc00fdd48273d4c874/62b327d14f4b5887c5a0c359_osmosis-logomark-white.svg" height="12"> [Osmosis Grants Program](https://grants.osmosis.zone/)
+- Open Source
+
+
+##
 
 ### [Install](#install) · [Config](#config) · [Usage](#usage) · [Summary](#summary)
 
@@ -110,6 +113,7 @@ Feature list:
 - Thanks to the people who helped me along the way on the <a href="https://discord.com/invite/EuKCeGFb93">terra
   discord </a>. :heart:
 - Special thanks to [PFC Validator](https://pfc-validator.github.io/) for being super helpful and providing their rust tooling open source.
+- Many thanks to the <img src="https://uploads-ssl.webflow.com/62aba8dc00fdd48273d4c874/62b327d14f4b5887c5a0c359_osmosis-logomark-white.svg" height="12"> [Osmosis Grants Program](https://grants.osmosis.zone/) for incentivizing this project. :pray:
 
 ## Support!
 
