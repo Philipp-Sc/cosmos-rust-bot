@@ -8,6 +8,12 @@ echo "updated wallet.rs"
 export LITCRYPT_ENCRYPT_KEY=$(openssl rand -hex 256)
 
 case $1 in
+  "test")
+    echo "test "
+  	RUSTFLAGS="--cfg tokio_unstable" cargo test -- --nocapture
+    ;;
+
+
 	"dev")
 	echo "development build"
 	RUSTFLAGS="--cfg tokio_unstable" cargo build

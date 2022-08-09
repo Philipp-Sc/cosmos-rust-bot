@@ -94,7 +94,7 @@ async fn main() -> anyhow::Result<()> {
 
             let mut maybe_futures: Vec<(Entry, Pin<Box<dyn Future<Output=Maybe<String>> + Send>>)> = Vec::new();
 
-            if user_settings.governance_proposals_notifications.is_some() && user_settings.governance_blockchains.is_some() {
+            if user_settings.governance_proposal_notifications {
                 println!("there is something to do, but nothing implemented");
                 // governance_info
             }
@@ -182,7 +182,7 @@ async fn get_wallet_details(user_settings: &UserSettings) -> (Arc<SecUtf8>, Arc<
     let mut wallet_acc_address = SecUtf8::from(user_settings.terra_wallet_address.as_ref().unwrap_or(&"".to_string()));
     //  /^terra1[a-z0-9]{38}$/]
 
-    if user_settings.anchor_protocol_auto_repay || user_settings.anchor_protocol_auto_borrow || user_settings.anchor_protocol_auto_stake || user_settings.anchor_protocol_auto_farm {
+    if false /*user_settings.anchor_protocol_auto_repay || user_settings.anchor_protocol_auto_borrow || user_settings.anchor_protocol_auto_stake || user_settings.anchor_protocol_auto_farm*/ {
         // ** seed phrase needed **
         wallet_seed_phrase = encrypt_text_with_secret(get_input("Enter your seed phrase (press Enter to skip):").to_string());
         if wallet_acc_address.unsecure().len() != 44 || !user_settings.test {
@@ -190,7 +190,7 @@ async fn get_wallet_details(user_settings: &UserSettings) -> (Arc<SecUtf8>, Arc<
         }
     } else if wallet_acc_address.unsecure().len() == 0 {
         // ** maybe need wallet address **
-        if user_settings.anchor_account_info || user_settings.anchor_protocol_auto_repay || user_settings.anchor_protocol_auto_borrow || user_settings.anchor_protocol_auto_stake || user_settings.anchor_protocol_auto_farm {
+        if false /*user_settings.anchor_account_info || user_settings.anchor_protocol_auto_repay || user_settings.anchor_protocol_auto_borrow || user_settings.anchor_protocol_auto_stake || user_settings.anchor_protocol_auto_farm*/ {
             wallet_acc_address = SecUtf8::from(get_input("Enter your wallet address (press Enter to skip):").to_string());
         }
     }

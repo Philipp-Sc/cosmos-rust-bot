@@ -7,7 +7,7 @@
 
 pub mod requirements;
 
-use requirements::{UserSettings, Feature, Requirement, my_requirement_list, RequirementType};
+use requirements::{UserSettings, Feature, TaskSpec, get_requirements, TaskType};
 use secstr::*;
 
 use std::collections::HashMap;
@@ -187,7 +187,7 @@ pub async fn requirements_next(join_set: &mut JoinSet<()>, maybes: &mut HashMap<
         };
     }
 
-    let req = my_requirement_list(&user_settings);
+    let req = get_requirements(&user_settings);
 
     let mut task_list: Vec<(String, String, i64)> = Vec::new();
 
@@ -228,7 +228,7 @@ pub async fn requirements_next(join_set: &mut JoinSet<()>, maybes: &mut HashMap<
                 update = true;
             }
         } else if task_list[i].1 == "resolved" {
-            let period: Vec<i64> = req.iter().filter(|x| x.name == task_list[i].0).map(|x| x.refresh_rate_in_seconds as i64).collect();
+            let period: Vec<i64> = req.iter().filter(|x| x.name == task_list[i].0).map(|x| x.refresh_rate as i64).collect();
             if period.len() == 1 {
                 if (now - task_list[i].2) > period[0] {
                     update = true;
@@ -359,7 +359,7 @@ pub async fn requirements_next(join_set: &mut JoinSet<()>, maybes: &mut HashMap<
     };
     entries.push(entry);
 
-    let update_these_requirements: Vec<Requirement> = req.into_iter().filter(|x| req_to_update.contains(&x.name)).collect();
+    let update_these_requirements: Vec<TaskSpec> = req.into_iter().filter(|x| req_to_update.contains(&x.name)).collect();
 
     requirements(join_set, maybes, &user_settings, &wallet_acc_address, update_these_requirements).await;
     entries
@@ -369,7 +369,7 @@ pub async fn requirements_next(join_set: &mut JoinSet<()>, maybes: &mut HashMap<
  * Preparing entries so that they can be used without the need to mutate the hashmap later on.
  */
 pub async fn requirements_setup(maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>) {
-    let list = vec![
+    let list = vec![/*
         "anchor_auto_stake",
         "anchor_auto_farm",
         "anchor_auto_repay",
@@ -379,7 +379,7 @@ pub async fn requirements_setup(maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe
         "anchor_borrow_and_deposit_stable",
         "anchor_redeem_and_repay_stable",
         "anchor_governance_claim_and_farm",
-        "anchor_governance_claim_and_stake"];
+        "anchor_governance_claim_and_stake"*/];
 
     for key in list {
         maybes.insert(key.to_string(), Arc::new(Mutex::new(vec![Maybe { data: Err(anyhow::anyhow!("Error: Entry reserved!")), timestamp: Utc::now().timestamp() }])));
@@ -392,7 +392,7 @@ pub async fn requirements_setup(maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe
 * retrieve the value when it is needed: "data.get_mut(String).unwrap().await"
 * use try_join!, join! or select! macros to optimise retrieval of multiple values.
 */
-async fn requirements(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, user_settings: &UserSettings, wallet_acc_address: &Arc<SecUtf8>, update_these_requirements: Vec<Requirement>) {
+async fn requirements(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, user_settings: &UserSettings, wallet_acc_address: &Arc<SecUtf8>, update_these_requirements: Vec<TaskSpec>) {
     for req in update_these_requirements {
         let contains_key = maybes.contains_key(&req.name);
         if !contains_key {
@@ -409,7 +409,7 @@ async fn requirements(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, A
         let wallet_acc_address = wallet_acc_address.clone();
 
         match req.kind {
-            RequirementType::GovernanceProposals => {
+            TaskType::GovernanceProposals => {
                 let status = ProposalStatus::new(req.args["proposal_status"].as_str().unwrap());
                 let blockchain = SupportedBlockchain::new(req.args["blockchain"].as_str().unwrap());
                 f = Some(Box::pin(get_proposals(blockchain, status)));
