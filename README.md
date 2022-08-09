@@ -41,9 +41,9 @@
 ## New Roadmap:
 
 **Technical**
-- [ ] Refactor to Cosmos-rust-bot 
-- [ ] CosmWasm v.1.0.0: Use gRPC instead of LCD/FCD using [cosmos-rust](https://github.com/cosmos/cosmos-rust/).
-- [ ] Signal: In-Memory ConfigStore  
+- [x] Refactor to Cosmos-rust-bot 
+- [x] CosmWasm v.1.0.0: Use gRPC instead of LCD/FCD using [cosmos-rust](https://github.com/cosmos/cosmos-rust/).
+- [x] Signal: In-Memory ConfigStore  
 
 **Cosmos Ecosystem**: 
 
