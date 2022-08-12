@@ -165,7 +165,9 @@ async fn main() -> anyhow::Result<()> {
                 // writing display to file.
                 // let new_line = format!("{esc}c", esc = 27 as char);
                 let vector = state.read().await;
-                let vec: Vec<Entry> = vector.iter().map(|x| x.1.clone()).collect();
+                let mut keys = vector.keys().collect::<Vec<&i64>>();
+                keys.sort();
+                let vec: Vec<Entry> = keys.iter().map(|x| vector[x].clone()).collect();
                 let line = format!("{}", serde_json::to_string(&*vec).unwrap());
                 fs::write("./packages/cosmos-rust-bot-output/cosmos-rust-bot-state.json", &line).ok();
                 state_refresh_timestamp = now;

@@ -63,6 +63,22 @@ pub fn feature_list_to_file() -> anyhow::Result<()> {
         requirements: vec![
             TaskSpec {
                 kind: TaskType::GovernanceProposals,
+                name: "osmosis_governance_voting_period_proposals".to_string(),
+                args: json!({
+                    "blockchain": "osmosis",
+                    "proposal_status": "voting_period"
+                }),
+                refresh_rate: fast,
+            }, TaskSpec {
+                kind: TaskType::GovernanceProposals,
+                name: "osmosis_governance_deposit_period_proposals".to_string(),
+                args: json!({
+                    "blockchain": "osmosis",
+                    "proposal_status": "deposit_period"
+                }),
+                refresh_rate: fast,
+            }, TaskSpec {
+                kind: TaskType::GovernanceProposals,
                 name: "osmosis_governance_failed_proposals".to_string(),
                 args: json!({
                     "blockchain": "osmosis",

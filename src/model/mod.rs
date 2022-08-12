@@ -210,11 +210,11 @@ pub fn task_meta_data(task_list: Vec<(String, String, i64)>) -> Vec<Entry> {
         let entry = Entry {
             timestamp: now,
             key: data_list[i].1.to_owned(),
-            value: EntryValue::Json(serde_json::json!({
+            value: EntryValue::Value(serde_json::json!({
                         "data": data_list[i].2.to_owned(),
                         "group": Some(data_list[i].0.to_owned()),
                         "index": Some(i as i32),
-                    }).to_string()),
+                    })),
         };
         entries.push(entry);
     }
