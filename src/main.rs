@@ -9,7 +9,7 @@ mod account;
 mod model;
 mod control;
 
-use model::{Maybe, requirements_next, requirements_setup, access_maybes};
+use model::{Maybe, next_iteration_of_upcoming_tasks, setup_required_keys, access_maybes};
 use model::requirements::{UserSettings};
 use account::wallet::{encrypt_text_with_secret, decrypt_text_with_secret};
 use control::try_run_function;
@@ -34,7 +34,8 @@ use std::hash::{Hash, Hasher};
 use cosmos_rust_interface::blockchain::account_from_seed_phrase;
 
 use cosmos_rust_interface::ResponseResult;
-use cosmos_rust_interface::utils::postproc::Entry;
+use cosmos_rust_interface::utils::postproc::blockchain::cosmos::gov::governance_proposal_notifications;
+use cosmos_rust_interface::utils::postproc::{Entry, EntryValue};
 use cosmos_rust_interface::utils::postproc::meta_data::debug::debug;
 use cosmos_rust_interface::utils::postproc::meta_data::errors::errors;
 use cosmos_rust_interface::utils::postproc::meta_data::logs::logs;
@@ -68,7 +69,7 @@ async fn main() -> anyhow::Result<()> {
     watcher.watch("./cosmos-rust-bot.json", RecursiveMode::Recursive).unwrap();
 
     loop {
-        requirements_setup(&mut maybes).await;
+        setup_required_keys(&mut maybes).await;
 
         while !user_settings.pause_requested {
             if user_settings.hot_reload {
@@ -83,7 +84,9 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
 
-            let mut entries: Vec<Entry> = requirements_next(&mut join_set, &mut maybes, &user_settings, &wallet_acc_address).await;
+            let mut entries: Vec<Entry> = Vec::new();
+            let mut task_list_meta_data: Vec<Entry> = next_iteration_of_upcoming_tasks(&mut join_set, &mut maybes, &user_settings, &wallet_acc_address).await;
+            entries.append(&mut task_list_meta_data);
 
             // ensures the display tasks operates on the same snapshot
             // since the processing of the ResponseResults is blazing fast, it makes no sense to hope for a value to be refreshed
@@ -95,8 +98,7 @@ async fn main() -> anyhow::Result<()> {
             let mut maybe_futures: Vec<(Entry, Pin<Box<dyn Future<Output=Maybe<String>> + Send>>)> = Vec::new();
 
             if user_settings.governance_proposal_notifications {
-                println!("there is something to do, but nothing implemented");
-                // governance_info
+                entries.append(&mut governance_proposal_notifications(&snapshot_of_maybes));
             }
 
             /*
@@ -144,10 +146,10 @@ async fn main() -> anyhow::Result<()> {
 
             try_calculate_promises(&state, maybe_futures).await; // currently not in use.
 
-            let mut debug: Vec<Entry> = debug(&snapshot_of_maybes);
+            //let mut debug: Vec<Entry> = debug(&snapshot_of_maybes);
             let mut logs: Vec<Entry> = logs(&snapshot_of_maybes);
             let mut errors: Vec<Entry> = errors(&snapshot_of_maybes);
-            entries.append(&mut debug);
+            //entries.append(&mut debug);
             entries.append(&mut logs);
             entries.append(&mut errors);
 
@@ -225,7 +227,7 @@ async fn insert_to_state(state: &Arc<RwLock<HashMap<i64, Entry>>>, hash: u64, en
 async fn push_to_state<'a>(state: &'a Arc<RwLock<HashMap<i64, Entry>>>, hash: i64, entry: &'a Entry, f: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>>) -> anyhow::Result<()> {
     let mut e = entry.clone();
     let result = f.await;
-    e.value = result.data.unwrap_or("--".to_string());
+    e.value = EntryValue::Text(result.data.unwrap_or("--".to_string()));
     e.timestamp = result.timestamp;
 
     let mut vector = state.write().await;

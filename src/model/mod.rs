@@ -27,8 +27,9 @@ use chrono::{Utc};
 
 use core::pin::Pin;
 use core::future::Future;
+use std::iter;
 
-use cosmos_rust_interface::utils::postproc::Maybe as MaybeImported;
+use cosmos_rust_interface::utils::postproc::{EntryValue, Maybe as MaybeImported};
 use cosmos_rust_interface::utils::postproc::Entry;
 
 
@@ -178,7 +179,49 @@ pub async fn await_function(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<Response
     }
 }
 
-pub async fn requirements_next(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, user_settings: &UserSettings, wallet_acc_address: &Arc<SecUtf8>) -> Vec<Entry> {
+pub fn task_meta_data(task_list: Vec<(String, String, i64)>) -> Vec<Entry> {
+    let now = Utc::now().timestamp();
+    let mut entries: Vec<Entry> = Vec::new();
+
+    let status_list = vec!["failed".to_string(), "pending".to_string(), "upcoming".to_string(), "resolved".to_string()];
+    let data_list: Vec<(String, String, String)> =
+        task_list.iter().filter(|x| x.1 == "resolved".to_string()).map(|x|
+            (
+                "[Task][History]".to_string(), x.0.to_string(), x.2.to_string()))
+            .chain(status_list.iter().map(|y| {
+                (
+                    "[Task][Count]".to_string(), y.to_owned(), task_list.iter().filter(|x| x.1 == y.to_string()).count().to_string())
+            }))
+            .chain(iter::once(
+                (
+                    "[Task][Count]".to_string(), "all".to_string(), task_list.len().to_string()))
+            )
+            .chain(status_list.iter().map(|y| {
+                (
+                    "[Task][List]".to_string(), y.to_owned(), format!("{:?}", task_list.iter().filter(|x| x.1 == y.to_string()).map(|x| x.0.to_string()).collect::<Vec<String>>()).to_string())
+            }))
+            .chain(iter::once(
+                (
+                    "[Task][List]".to_string(), "all".to_string(), format!("{:?}", task_list.iter().map(|x| x.0.to_string()).collect::<Vec<String>>())))
+            )
+            .collect();
+
+    for i in 0..data_list.len() {
+        let entry = Entry {
+            timestamp: now,
+            key: data_list[i].1.to_owned(),
+            value: EntryValue::Json(serde_json::json!({
+                        "data": data_list[i].2.to_owned(),
+                        "group": Some(data_list[i].0.to_owned()),
+                        "index": Some(i as i32),
+                    }).to_string()),
+        };
+        entries.push(entry);
+    }
+    entries
+}
+
+pub async fn next_iteration_of_upcoming_tasks(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, user_settings: &UserSettings, wallet_acc_address: &Arc<SecUtf8>) -> Vec<Entry> {
     for _ in 0..join_set.len() {
         let result = timeout(Duration::from_millis(0), join_set.join_one()).await;
         match result {
@@ -241,135 +284,18 @@ pub async fn requirements_next(join_set: &mut JoinSet<()>, maybes: &mut HashMap<
     }
     task_list.sort_by_key(|k| k.2);
 
-    let req_to_update: Vec<String> = task_list.iter().filter(|x| x.1 == "upcoming".to_string()).map(|x| x.0.to_string()).collect();
+    let upcoming_task_name_list: Vec<String> = task_list.iter().filter(|x| x.1 == "upcoming".to_string()).map(|x| x.0.to_string()).collect();
+    let upcoming_task_spec_list: Vec<TaskSpec> = req.into_iter().filter(|x| upcoming_task_name_list.contains(&x.name)).collect();
 
-    let mut entries: Vec<Entry> = Vec::new();
-    for x in 0..task_list.len() {
-        if task_list[x].1 == "resolved".to_string() {
-            let entry = Entry {
-                timestamp: now,
-                key: task_list[x].0.to_string(),
-                prefix: None,
-                value: task_list[x].2.to_string(),
-                suffix: None,
-                index: Some(x as i32),
-                group: Some("[Task][History]".to_string()),
-            };
-            entries.push(entry);
-        }
-    }
-    let entry = Entry {
-        timestamp: now,
-        key: "failed".to_string(),
-        prefix: None,
-        value: task_list.iter().filter(|x| x.1 == "failed".to_string()).count().to_string(),
-        suffix: None,
-        index: Some(1),
-        group: Some("[Task][Count]".to_string()),
-    };
-    entries.push(entry);
-    let entry = Entry {
-        timestamp: now,
-        key: "pending".to_string(),
-        prefix: None,
-        value: task_list.iter().filter(|x| x.1 == "pending".to_string()).count().to_string(),
-        suffix: None,
-        index: Some(2),
-        group: Some("[Task][Count]".to_string()),
-    };
-    entries.push(entry);
-    let entry = Entry {
-        timestamp: now,
-        key: "upcoming".to_string(),
-        prefix: None,
-        value: task_list.iter().filter(|x| x.1 == "upcoming".to_string()).count().to_string(),
-        suffix: None,
-        index: Some(3),
-        group: Some("[Task][Count]".to_string()),
-    };
-    entries.push(entry);
-    let entry = Entry {
-        timestamp: now,
-        key: "resolved".to_string(),
-        prefix: None,
-        value: task_list.iter().filter(|x| x.1 == "resolved".to_string()).count().to_string(),
-        suffix: None,
-        index: Some(4),
-        group: Some("[Task][Count]".to_string()),
-    };
-    entries.push(entry);
-    let entry = Entry {
-        timestamp: now,
-        key: "all".to_string(),
-        prefix: None,
-        value: req.len().to_string(),
-        suffix: None,
-        index: Some(5),
-        group: Some("[Task][Count]".to_string()),
-    };
-    entries.push(entry);
-    let entry = Entry {
-        timestamp: now,
-        key: "failed".to_string(),
-        prefix: None,
-        value: format!("{:?}", task_list.iter().filter(|x| x.1 == "failed".to_string()).map(|x| x.0.to_string()).collect::<Vec<String>>()),
-        suffix: None,
-        index: Some(6),
-        group: Some("[Task][List]".to_string()),
-    };
-    entries.push(entry);
-    let entry = Entry {
-        timestamp: now,
-        key: "pending".to_string(),
-        prefix: None,
-        value: format!("{:?}", task_list.iter().filter(|x| x.1 == "pending".to_string()).map(|x| x.0.to_string()).collect::<Vec<String>>()),
-        suffix: None,
-        index: Some(7),
-        group: Some("[Task][List]".to_string()),
-    };
-    entries.push(entry);
-    let entry = Entry {
-        timestamp: now,
-        key: "upcoming".to_string(),
-        prefix: None,
-        value: format!("{:?}", req_to_update),
-        suffix: None,
-        index: Some(8),
-        group: Some("[Task][List]".to_string()),
-    };
-    entries.push(entry);
-    let entry = Entry {
-        timestamp: now,
-        key: "resolved".to_string(),
-        prefix: None,
-        value: format!("{:?}", task_list.iter().filter(|x| x.1 == "resolved".to_string()).map(|x| x.0.to_string()).collect::<Vec<String>>()),
-        suffix: None,
-        index: Some(9),
-        group: Some("[Task][List]".to_string()),
-    };
-    entries.push(entry);
-    let entry = Entry {
-        timestamp: now,
-        key: "all".to_string(),
-        prefix: None,
-        value: format!("{:?}", req.iter().map(|x| x.name.clone()).collect::<Vec<String>>()),
-        suffix: None,
-        index: Some(10),
-        group: Some("[Task][List]".to_string()),
-    };
-    entries.push(entry);
-
-    let update_these_requirements: Vec<TaskSpec> = req.into_iter().filter(|x| req_to_update.contains(&x.name)).collect();
-
-    requirements(join_set, maybes, &user_settings, &wallet_acc_address, update_these_requirements).await;
-    entries
+    spawn_tasks(join_set, maybes, &user_settings, &wallet_acc_address, upcoming_task_spec_list).await;
+    task_meta_data(task_list)
 }
 
 /*
  * Preparing entries so that they can be used without the need to mutate the hashmap later on.
  */
-pub async fn requirements_setup(maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>) {
-    let list = vec![/*
+pub async fn setup_required_keys(maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>) {
+    let list: Vec<&str> = vec![];/*
         "anchor_auto_stake",
         "anchor_auto_farm",
         "anchor_auto_repay",
@@ -379,7 +305,7 @@ pub async fn requirements_setup(maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe
         "anchor_borrow_and_deposit_stable",
         "anchor_redeem_and_repay_stable",
         "anchor_governance_claim_and_farm",
-        "anchor_governance_claim_and_stake"*/];
+        "anchor_governance_claim_and_stake"*/
 
     for key in list {
         maybes.insert(key.to_string(), Arc::new(Mutex::new(vec![Maybe { data: Err(anyhow::anyhow!("Error: Entry reserved!")), timestamp: Utc::now().timestamp() }])));
@@ -392,8 +318,8 @@ pub async fn requirements_setup(maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe
 * retrieve the value when it is needed: "data.get_mut(String).unwrap().await"
 * use try_join!, join! or select! macros to optimise retrieval of multiple values.
 */
-async fn requirements(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, user_settings: &UserSettings, wallet_acc_address: &Arc<SecUtf8>, update_these_requirements: Vec<TaskSpec>) {
-    for req in update_these_requirements {
+async fn spawn_tasks(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, user_settings: &UserSettings, wallet_acc_address: &Arc<SecUtf8>, to_update: Vec<TaskSpec>) {
+    for req in to_update {
         let contains_key = maybes.contains_key(&req.name);
         if !contains_key {
             maybes.insert(req.name.clone(), Arc::new(Mutex::new(vec![Maybe { data: Err(anyhow::anyhow!("Error: Not yet resolved!")), timestamp: Utc::now().timestamp() }])));
