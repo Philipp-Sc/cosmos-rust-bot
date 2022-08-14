@@ -54,7 +54,8 @@
 **Notifications**
 - [ ] Arbitrage Opportunities: Notifications, Automation (including Terra pools on Osmosiszone)
 - [ ] Governance Notifications (new proposal, hit quorum, passed, rejected, executed, ..) 
-- - [ ] To Consider: off-chain forum activity.
+- - [ ] Voting
+- - [ ] To Consider: off-chain forum activity (sentiment analysis).
 
 **Automated Strategies**
 
