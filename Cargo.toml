@@ -6,15 +6,22 @@ repository = "https://github.com/Philipp-Sc/cosmos-rust-bot"
 version = "0.4.0"
 edition = "2021"
 
+[lib]
+name = "bot_library"
+path = "src/lib.rs"
+
 [[bin]]
 name = "cosmos-rust-bot"
+required-features = ["build-binary"]
+
+
+[features]
+build-binary = ["cosmos-rust-interface", "cosmos-rust-package"]
 
 [dependencies]
 
-cosmos-rust-interface = { path = "../cosmos-rust-interface" }
-cosmos-rust-package = { path = "../cosmos-rust-package" }
-#cosmos-rust-interface = { git = "https://github.com/Philipp-Sc/cosmos-rust-interface" }
-cosmos-rust-bot-essentials = { path = "./packages/cosmos-rust-bot-essentials" }
+cosmos-rust-interface = { path = "../cosmos-rust-interface", optional = true }
+cosmos-rust-package = { path = "../cosmos-rust-package", optional = true }
 tokio = { version = "1.18", features = ["full"] }
 anyhow = "1.0"
 serde = { version = "1.0", features = ["derive"] }
@@ -26,9 +33,6 @@ colored = "2"
 num_cpus = "1.13.1"
 rust_decimal_macros = "1.12.2"
 enum-as-inner = "0.3.3"
-#cosmwasm-bignumber = "2.2.0"
-#cosmwasm-std-deprecated = { package = "cosmwasm-std", version = "=0.16.7" }
-#cosmwasm-std-latest = { package = "cosmwasm-std", version = "^1.0.0" }
 num-format = "0.4.0"
 regex = "1.5.5"
 litcrypt = "0.3"

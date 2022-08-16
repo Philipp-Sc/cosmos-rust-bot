@@ -10,19 +10,19 @@ export LITCRYPT_ENCRYPT_KEY=$(openssl rand -hex 256)
 case $1 in
   "test")
     echo "test "
-  	RUSTFLAGS="--cfg tokio_unstable" cargo test -- --nocapture
+  	RUSTFLAGS="--cfg tokio_unstable" cargo test --features build-binary -- --nocapture
     ;;
 
 
 	"dev")
 	echo "development build"
-	RUSTFLAGS="--cfg tokio_unstable" cargo build
+	RUSTFLAGS="--cfg tokio_unstable" cargo build --features build-binary
 	mv ./target/debug/cosmos-rust-bot my-bot
 	;;
 
 	"native")
 	echo "optimized release build"
-	RUSTFLAGS="--cfg tokio_unstable -C target-cpu=native" cargo build --release
+	RUSTFLAGS="--cfg tokio_unstable -C target-cpu=native" cargo build --features build-binary --release
 	mv ./target/release/cosmos-rust-bot my-bot
 	;;
 	

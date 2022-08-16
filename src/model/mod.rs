@@ -29,8 +29,8 @@ use core::pin::Pin;
 use core::future::Future;
 use std::iter;
 
-use cosmos_rust_interface::utils::postproc::{EntryValue, Maybe as MaybeImported};
-use cosmos_rust_interface::utils::postproc::Entry;
+use cosmos_rust_interface::utils::entry::postproc::{EntryValue, Maybe as MaybeImported};
+use cosmos_rust_interface::utils::entry::postproc::Entry;
 
 
 use cosmos_rust_interface::ResponseResult;

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use serde_json::json;
-use cosmos_rust_bot_essentials::shared::UserSettings as UserSettingsImported;
+use bot_library::shared::UserSettings as UserSettingsImported;
 use std::fs;
 use serde::{Serialize, Deserialize};
 
@@ -58,6 +58,7 @@ pub fn feature_list() -> Vec<Feature> {
 pub fn feature_list_to_file() -> anyhow::Result<()> {
     let mut feature_list: Vec<Feature> = Vec::new();
 
+    // max_age: 1 month
     feature_list.push(Feature {
         name: "governance_proposal_notifications".to_string(),
         requirements: vec![

@@ -1,23 +1,31 @@
-[package] 
-name = "terra-rust-signal-bot"
-version = "0.4.0" 
+[package]
+name = "cosmos-rust-signal-bot"
+version = "0.4.0"
 edition = "2021"
 
 
 [dependencies]
-presage = { git = "https://github.com/Philipp-Sc/presage.git"}
-cosmos-rust-bot-essentials = { path = "../cosmos-rust-bot-essentials"}
-cosmos-rust-bot-output = { path = "./../cosmos-rust-bot-output"}
+presage = { git = "https://github.com/whisperfish/presage" }
+#cosmos-rust-bot-essentials = { path = "../cosmos-rust-bot-essentials" }
+#cosmos-rust-bot-output = { path = "./../cosmos-rust-bot-output" }
 anyhow = "1.0"
+chrono = "0.4"
 directories = "3.0"
 env_logger = "0.7"
 futures = "0.3"
 hex = "0.4"
 log = "0.4"
+mime_guess = "2.0"
 rand = "0.7"
-serde = { version = "1.0", features = ["derive"] } 
 serde_json = "1.0"
 structopt = "0.3"
-tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
+tempfile = "3.3"
 url = "2.2.2"
-chrono = "0.4"
+tokio = { version = "1.0", features = ["macros", "rt-multi-thread", "io-std", "io-util"] }
+qr2term = { version = "0.2.2" }
+
+
+cosmos-rust-bot = { path = "../../." }
+
+[patch.crates-io]
+"curve25519-dalek" = { git = 'https://github.com/signalapp/curve25519-dalek', branch = 'lizard2' }

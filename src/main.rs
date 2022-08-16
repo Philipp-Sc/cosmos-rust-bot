@@ -3,7 +3,7 @@ extern crate litcrypt;
 //https://github.com/anvie/litcrypt.rs
 use_litcrypt!();
 
-use cosmos_rust_bot_essentials::shared::{load_user_settings, get_input};
+use bot_library::shared::{load_user_settings, get_input};
 
 mod account;
 mod model;
@@ -34,11 +34,11 @@ use std::hash::{Hash, Hasher};
 use cosmos_rust_interface::blockchain::account_from_seed_phrase;
 
 use cosmos_rust_interface::ResponseResult;
-use cosmos_rust_interface::utils::postproc::blockchain::cosmos::gov::governance_proposal_notifications;
-use cosmos_rust_interface::utils::postproc::{Entry, EntryValue};
-use cosmos_rust_interface::utils::postproc::meta_data::debug::debug;
-use cosmos_rust_interface::utils::postproc::meta_data::errors::errors;
-use cosmos_rust_interface::utils::postproc::meta_data::logs::logs;
+use cosmos_rust_interface::utils::entry::postproc::blockchain::cosmos::gov::governance_proposal_notifications;
+use cosmos_rust_interface::utils::entry::postproc::{Entry, EntryValue};
+use cosmos_rust_interface::utils::entry::postproc::meta_data::debug::debug;
+use cosmos_rust_interface::utils::entry::postproc::meta_data::errors::errors;
+use cosmos_rust_interface::utils::entry::postproc::meta_data::logs::logs;
 
 use cosmos_rust_package::api::core::cosmos::channels::SupportedBlockchain;
 
@@ -100,6 +100,7 @@ async fn main() -> anyhow::Result<()> {
             if user_settings.governance_proposal_notifications {
                 entries.append(&mut governance_proposal_notifications(&snapshot_of_maybes));
             }
+            //\"/cosmwasm.wasm.v1.StoreCodeProposal\"
 
             /*
             if user_settings.terra_market_info {
@@ -169,7 +170,7 @@ async fn main() -> anyhow::Result<()> {
                 keys.sort();
                 let vec: Vec<Entry> = keys.iter().map(|x| vector[x].clone()).collect();
                 let line = format!("{}", serde_json::to_string(&*vec).unwrap());
-                fs::write("./packages/cosmos-rust-bot-output/cosmos-rust-bot-state.json", &line).ok();
+                fs::write("./cosmos-rust-bot-db.json", &line).ok();
                 state_refresh_timestamp = now;
             }
         }
