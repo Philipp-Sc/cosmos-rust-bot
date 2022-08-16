@@ -54,7 +54,8 @@
 **Notifications**
 - [ ] Arbitrage Opportunities: Notifications, Automation (including Terra pools on Osmosiszone)
 - [ ] Governance Notifications (new proposal, hit quorum, passed, rejected, executed, ..) 
-- - [ ] To Consider: off-chain forum activity.
+- - [ ] Voting
+- - [ ] To Consider: off-chain forum activity (sentiment analysis).
 
 **Automated Strategies**
 
@@ -110,26 +111,11 @@ Feature list:
 - I created this bot to learn about smart contracts, the Terra blockchain and to get to know the Rust programming
   language. Post-attack the journey continues with a stronger focus on the broader Cosmos ecosystem.
 - Cosmos-rust-bot is a constant work in progress: **Bug Reports** and **Feature Requests** are welcome!
-- Thanks to the people who helped me along the way on the <a href="https://discord.com/invite/EuKCeGFb93">terra
-  discord </a>. :heart:
+- Thanks to the people who helped me along the way on the terra
+  discord. :heart:
 - Special thanks to [PFC Validator](https://pfc-validator.github.io/) for being super helpful and providing their rust tooling open source.
 - Many thanks to the <img src="https://uploads-ssl.webflow.com/62aba8dc00fdd48273d4c874/62b327d14f4b5887c5a0c359_osmosis-logomark-white.svg" height="12"> [Osmosis Grants Program](https://grants.osmosis.zone/) for incentivizing this project. :pray:
-
-## Support!
-
-You do not need to donate to me, but I will be very happy if you can.
-
-- `terra1q0n5e43mmz8ddra8554xkxsvelnz4evwukxkht`
-- `osmo10885ryvnfvu7hjt8lqvge77uderycqcu50nmmh`
-
-Thanks a lot.
 
 ## Dependencies
 
 - [cosmos-rust-interface](https://github.com/Philipp-Sc/cosmos-rust-interface)
-
-## Similar projects
-
-- https://github.com/ALPAC-4/auto_repay
-- https://github.com/RomainLanz/anchor-borrow-bot
-- https://github.com/unl1k3ly/AnchorHODL
