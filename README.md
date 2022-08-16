@@ -116,15 +116,6 @@ Feature list:
 - Special thanks to [PFC Validator](https://pfc-validator.github.io/) for being super helpful and providing their rust tooling open source.
 - Many thanks to the <img src="https://uploads-ssl.webflow.com/62aba8dc00fdd48273d4c874/62b327d14f4b5887c5a0c359_osmosis-logomark-white.svg" height="12"> [Osmosis Grants Program](https://grants.osmosis.zone/) for incentivizing this project. :pray:
 
-## Support!
-
-You do not need to donate to me, but I will be very happy if you can.
-
-- `terra1q0n5e43mmz8ddra8554xkxsvelnz4evwukxkht`
-- `osmo10885ryvnfvu7hjt8lqvge77uderycqcu50nmmh`
-
-Thanks a lot.
-
 ## Dependencies
 
 - [cosmos-rust-interface](https://github.com/Philipp-Sc/cosmos-rust-interface)
