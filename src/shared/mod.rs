@@ -7,6 +7,8 @@ use std::io;
 use std::hash::{Hash};
 use serde_json::{Value};
 
+// todo: add functionality to add/remove/edit settings in-memory & the settings file on disk (load, edit, save).
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct UserSettings {
     pub governance_proposal_notifications: bool,

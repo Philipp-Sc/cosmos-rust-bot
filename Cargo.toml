@@ -17,6 +17,8 @@ required-features = ["build-binary"]
 
 [features]
 build-binary = ["cosmos-rust-interface", "cosmos-rust-package"]
+# todo: further remove dependencies, that are not in the lib
+# reason: bot_library is used by cosmos-rust-signal-bot, reduces the size of that package.
 
 [dependencies]
 

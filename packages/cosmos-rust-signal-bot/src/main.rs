@@ -21,7 +21,7 @@ use tokio::{
 };
 use url::Url;
 
-use bot_library::*;
+use cosmos_rust_signal_bot::presage_extension::*;
 
 #[derive(StructOpt)]
 #[structopt(about = "a basic signal CLI to try things out")]

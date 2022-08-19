@@ -5,9 +5,10 @@ edition = "2021"
 
 
 [dependencies]
+
+cosmos-rust-bot = { path = "../../." } # loads the bot_library
+cosmos-rust-interface = { path = "../../../cosmos-rust-interface", default-features = false, features = ["db"] } # only loads the db functionality
 presage = { git = "https://github.com/whisperfish/presage" }
-#cosmos-rust-bot-essentials = { path = "../cosmos-rust-bot-essentials" }
-#cosmos-rust-bot-output = { path = "./../cosmos-rust-bot-output" }
 anyhow = "1.0"
 chrono = "0.4"
 directories = "3.0"
@@ -24,8 +25,6 @@ url = "2.2.2"
 tokio = { version = "1.0", features = ["macros", "rt-multi-thread", "io-std", "io-util"] }
 qr2term = { version = "0.2.2" }
 
-
-cosmos-rust-bot = { path = "../../." }
 
 [patch.crates-io]
 "curve25519-dalek" = { git = 'https://github.com/signalapp/curve25519-dalek', branch = 'lizard2' }

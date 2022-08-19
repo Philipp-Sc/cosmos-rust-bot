@@ -29,17 +29,14 @@ use core::pin::Pin;
 use core::future::Future;
 use std::iter;
 
-use cosmos_rust_interface::utils::entry::postproc::{EntryValue, Maybe as MaybeImported};
-use cosmos_rust_interface::utils::entry::postproc::Entry;
+use cosmos_rust_interface::utils::entry::{EntryValue, Maybe};
+use cosmos_rust_interface::utils::entry::Entry;
 
 
 use cosmos_rust_interface::ResponseResult;
 use cosmos_rust_interface::blockchain::cosmos::gov::get_proposals;
 use cosmos_rust_package::api::core::cosmos::channels::SupportedBlockchain;
 use cosmos_rust_package::api::custom::query::gov::ProposalStatus;
-
-pub type Maybe<T> = MaybeImported<T>;
-
 
 pub async fn add_item(pointer: &Arc<Mutex<Vec<Maybe<ResponseResult>>>>, item: Maybe<ResponseResult>) {
     let mut lock = pointer.lock().await;

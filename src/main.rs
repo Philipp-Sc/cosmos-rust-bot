@@ -9,7 +9,7 @@ mod account;
 mod model;
 mod control;
 
-use model::{Maybe, next_iteration_of_upcoming_tasks, setup_required_keys, access_maybes};
+use model::{next_iteration_of_upcoming_tasks, setup_required_keys, access_maybes};
 use model::requirements::{UserSettings};
 use account::wallet::{encrypt_text_with_secret, decrypt_text_with_secret};
 use control::try_run_function;
@@ -35,7 +35,8 @@ use cosmos_rust_interface::blockchain::account_from_seed_phrase;
 
 use cosmos_rust_interface::ResponseResult;
 use cosmos_rust_interface::utils::entry::postproc::blockchain::cosmos::gov::governance_proposal_notifications;
-use cosmos_rust_interface::utils::entry::postproc::{Entry, EntryValue};
+use cosmos_rust_interface::utils::entry::{Entry, EntryValue, Maybe};
+use cosmos_rust_interface::utils::entry::db::save_entries;
 use cosmos_rust_interface::utils::entry::postproc::meta_data::debug::debug;
 use cosmos_rust_interface::utils::entry::postproc::meta_data::errors::errors;
 use cosmos_rust_interface::utils::entry::postproc::meta_data::logs::logs;
@@ -169,8 +170,7 @@ async fn main() -> anyhow::Result<()> {
                 let mut keys = vector.keys().collect::<Vec<&i64>>();
                 keys.sort();
                 let vec: Vec<Entry> = keys.iter().map(|x| vector[x].clone()).collect();
-                let line = format!("{}", serde_json::to_string(&*vec).unwrap());
-                fs::write("./cosmos-rust-bot-db.json", &line).ok();
+                save_entries("./cosmos-rust-bot-db.json", vec);
                 state_refresh_timestamp = now;
             }
         }

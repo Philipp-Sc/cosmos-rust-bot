@@ -8,7 +8,7 @@ use cosmos_rust_interface::ResponseResult;
 
 use crate::model::get_timestamps_of_tasks;
 use crate::model::try_register_function;
-use crate::model::Maybe;
+use cosmos_rust_interface::utils::entry::{Maybe};
 use crate::model::access_maybe;
 
 

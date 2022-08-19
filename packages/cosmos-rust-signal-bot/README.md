@@ -1,36 +1,32 @@
 <div align="center">
 
 
-  <h1>Terra Rust Signal Bot</h1> 
+  <h1>Cosmos Rust Signal Bot</h1> 
   <p>Signal Messenger integration</p> 
- 
-  <img src="https://github.com/Philipp-Sc/media/raw/main/cosmos-rust-bot/terra-rust-signal-bot/gallery/signal_bot_auto_stake.png" height="250">
-  <img src="https://github.com/Philipp-Sc/media/raw/main/cosmos-rust-bot/terra-rust-signal-bot/gallery/signal_bot_help.png" height="250">
-  <img src="https://github.com/Philipp-Sc/media/raw/main/cosmos-rust-bot/terra-rust-signal-bot/gallery/signal_messenger.png" height="250">
+
+  <img src="https://github.com/Philipp-Sc/media/raw/main/cosmos-rust-bot/cosmos-rust-signal-bot/gallery/signal_bot_auto_stake.png" height="250">
+  <img src="https://github.com/Philipp-Sc/media/raw/main/cosmos-rust-bot/cosmos-rust-signal-bot/gallery/signal_bot_help.png" height="250">
+  <img src="https://github.com/Philipp-Sc/media/raw/main/cosmos-rust-bot/cosmos-rust-signal-bot/gallery/signal_messenger.png" height="250">
 
   </div>
 <br/>
 
 ### [Install](#install) · [Usage](#usage)
 
-This package includes a Signal Messenger integration that can be used to obtain the latest informaction directly from
-the cosmos-rust-bot.
-
 > :warning: It is recommended to use a dedicated Signal account for cosmos-rust-bot.
 
-> :warning: Currently there is no local encryption for the linked Signal account. If the system is compromised your Signal account is vulnerable. This will be addressed in upcoming releases.
+> :warning: The Signal Configuration is kept in-memory and secured via the [secrets crate](https://github.com/stouset/secrets)
 
 ## How it works
 
 #### Configuration
 
-* The current state from cosmos-rust-bot is written to **./packages/cosmos-rust-bot-output/cosmos-rust-bot-state.json**.
-  Terra-rust-signal-bot reads the file and extracts the information needed.
+* Cosmos-rust-bot writes the current data (via cosmos-rust-interface) to a file called cosmos-rust-bot-state.json.
+* The file serves as database for **cosmos-rust-signal-bot** to handle commands/notifications.
 
-This enables **terra-rust-signal-bot** to answer to commands as well as sending alerts on it's own:
 
-* Errors: there are currenlty errors that hinder cosmos-rust-bot in any way.
-* Logs: a new transaction was made on behave of the user.
+* Errors: there are errors that hinder cosmos-rust-bot in any way.
+* Logs: a new transaction was made on behalf of the user.
 * Inactivity (threshold is 60s): the cosmos-rust-bot was unable to gather updated information in the given timeframe.
   This is helpful to detect when the bot is not running correctly. Be aware if the internet connection on the system
   signal-bot is running on is down you will not get any notifications.

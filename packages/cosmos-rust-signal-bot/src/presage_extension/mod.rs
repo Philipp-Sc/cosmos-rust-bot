@@ -1,0 +1,1 @@
+// extends presage, to run in-memory after the device is linked and delegate requests to the cosmos_rust_bot controller.
