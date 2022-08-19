@@ -21,7 +21,6 @@ use tokio::{
 };
 use url::Url;
 
-use cosmos_rust_signal_bot::presage_extension::*;
 
 #[derive(StructOpt)]
 #[structopt(about = "a basic signal CLI to try things out")]
@@ -38,6 +37,18 @@ struct Args {
 
 #[derive(StructOpt)]
 enum Subcommand {
+    #[structopt(about = "Start the Cosmos-Rust-Signal-Bot")]
+    CosmosRustBot {
+        /// Possible values: staging, production
+        #[structopt(long, short = "s", default_value = "production")]
+        servers: SignalServers,
+        #[structopt(
+        long,
+        short = "n",
+        help = "Name of the device to register in the primary client"
+        )]
+        device_name: String,
+    },
     #[structopt(about = "Register using a phone number")]
     Register {
         #[structopt(long = "servers", short = "s", default_value = "staging")]
@@ -152,6 +163,29 @@ async fn main() -> anyhow::Result<()> {
         debug!("opening config database from {}", db_path.display());
         let config_store = SledConfigStore::new(db_path)?;
         run(args.subcommand, config_store).await
+    }
+}
+
+async fn link_device<C: ConfigStore>(servers: SignalServers, device_name: String, config_store: C) -> Result<Manager<C, Registered>, presage::Error> {
+    let (provisioning_link_tx, provisioning_link_rx) = oneshot::channel();
+    match future::join(
+        Manager::link_secondary_device(
+            config_store,
+            servers,
+            device_name.clone(),
+            provisioning_link_tx,
+        ),
+        async move {
+            match provisioning_link_rx.await {
+                Ok(url) => {
+                    qr2term::print_qr(url.to_string()).expect("failed to render qrcode")
+                }
+                Err(e) => log::error!("Error linking device: {e}"),
+            }
+        },
+    ).await {
+        (res, _) => { res }
+        _ => { panic!() }
     }
 }
 
@@ -291,48 +325,30 @@ async fn run<C: ConfigStore>(subcommand: Subcommand, config_store: C) -> anyhow:
                 manager.confirm_verification_code(confirmation_code).await?;
             }
         }
+        Subcommand::CosmosRustBot {
+            servers,
+            device_name,
+        } => {
+            let manager = link_device(servers, device_name, config_store).await?;
+            cosmos_rust_signal_bot::presage_extension::run_cosmos_rust_signal_bot(manager).await;
+        }
         Subcommand::LinkDevice {
             servers,
             device_name,
             follow_up_command,
         } => {
-            let (provisioning_link_tx, provisioning_link_rx) = oneshot::channel();
-            let manager = future::join(
-                Manager::link_secondary_device(
-                    config_store,
-                    servers,
-                    device_name.clone(),
-                    provisioning_link_tx,
-                ),
-                async move {
-                    match provisioning_link_rx.await {
-                        Ok(url) => {
-                            qr2term::print_qr(url.to_string()).expect("failed to render qrcode")
-                        }
-                        Err(e) => log::error!("Error linking device: {e}"),
-                    }
-                },
-            )
-                .await;
+            let manager = link_device(servers, device_name, config_store).await?;
+            let uuid = manager.whoami().await.unwrap().uuid;
+            println!("{:?}", uuid);
 
-            match manager {
-                (Ok(manager), _) => {
-                    let uuid = manager.whoami().await.unwrap().uuid;
-                    println!("{:?}", uuid);
-
-                    match follow_up_command.as_ref() {
-                        "Send" => {
-                            send("Hello World", &uuid, &manager).await?;
-                        }
-                        "Receive" => {
-                            receive(&manager).await?;
-                        }
-                        _ => {}
-                    };
+            match follow_up_command.as_ref() {
+                "Send" => {
+                    send("Hello World", &uuid, &manager).await?;
                 }
-                (Err(err), _) => {
-                    println!("{:?}", err);
+                "Receive" => {
+                    receive(&manager).await?;
                 }
+                _ => {}
             };
         }
         Subcommand::Receive => {
