@@ -28,9 +28,16 @@
 
 ##
 
-- Grant Recipient of
-  the <img src="https://uploads-ssl.webflow.com/62aba8dc00fdd48273d4c874/62b327d14f4b5887c5a0c359_osmosis-logomark-white.svg" height="12"> [Osmosis Grants Program](https://grants.osmosis.zone/)
-- Open Source
+## Disclaimer
+
+This software is for educational purposes only. Do not risk money which you are afraid to lose. 
+USE THE SOFTWARE AT YOUR OWN RISK. THE AUTHOR ASSUMES NO RESPONSIBILITY FOR YOUR USE OF Cosmos-Rust-Bot.
+
+Always start by running with a dedicated test wallet and do not engage money before you understand how it works
+and what results you should expect.
+
+I strongly recommend you to have coding and Rust knowledge. Do not hesitate to read the source code and understand the
+mechanism of this bot.
 
 ##
 
@@ -55,21 +62,17 @@
 
 - [ ] Arbitrage Opportunities: Notifications, Automation (including Terra pools on Osmosiszone)
 - [ ] Governance Notifications (new proposal, hit quorum, passed, rejected, executed, ..)
--
-    - [ ] Voting
--
-    - [ ] To Consider: off-chain forum activity (sentiment analysis).
+-- [ ] Voting
+-- [ ] To Consider: off-chain forum activity (sentiment analysis).
 
 **Automated Strategies**
 
 - [ ] Arbitrage: Automation (including Terra pools on Osmosiszone)
 - [ ] Impermanent Loss Protection (Osmosiszone, Astroport, Spectrum)
 - [ ] DCA
-  -
-        - [ ] Martingale Feature (double or otherwise modify buys depending on price and tx history)
+- [ ] Martingale Feature (double or otherwise modify buys depending on price and tx history)
 - [ ] Limit Orders
-  -
-        - [ ] TP and SL
+- [ ] TP and SL
 - [ ] Take Profits & Diversify (reducing single point of failure risk)
 
 **Interface**
@@ -113,9 +116,6 @@ In short it's purpose is to have a bot on your side:
 - Showcase how to use [cosmos-rust](https://github.com/cosmos/cosmos-rust/)
 - Rust
 
-Feature list:
-
-- to be updated after CosmWasm v.1.0.0 refactoring.
 
 ## Summary
 
@@ -125,24 +125,20 @@ Feature list:
 - Thanks to the people who helped me along the way on the terra discord. :heart:
 - Special thanks to [PFC Validator](https://pfc-validator.github.io/) for being super helpful and providing their rust
   tooling open source.
-- Many thanks to
+ 
+##
+
+-  Grant Recipient of
   the <img src="https://uploads-ssl.webflow.com/62aba8dc00fdd48273d4c874/62b327d14f4b5887c5a0c359_osmosis-logomark-white.svg" height="12"> [Osmosis Grants Program](https://grants.osmosis.zone/)
-  for incentivizing this project. :pray:
+- Many thanks to the Osmosis Grants Team for incentivizing this project. :pray:
+
+## License
+
+- Open Source
+- Apache-2.0 license 
 
 ## Dependencies
 
-- [cosmos-rust-signal-bot](https://github.com/Philipp-Sc/cosmos-rust-bot/tree/development/packages/cosmos-rust-signal-bot) (
-  optional)
+- [cosmos-rust-signal-bot](https://github.com/Philipp-Sc/cosmos-rust-bot/tree/development/packages/cosmos-rust-signal-bot) (optional)
 
 - [cosmos-rust-interface](https://github.com/Philipp-Sc/cosmos-rust-interface)
-
-## Disclaimer
-
-This software is for educational purposes only. Do not risk money which you are afraid to lose. USE THE SOFTWARE AT YOUR
-OWN RISK. THE AUTHOR ASSUMES NO RESPONSIBILITY FOR YOUR RESULTS.
-
-Always start by running a bot with a dedicated test wallet and do not engage money before you understand how it works
-and what results you should expect.
-
-I strongly recommend you to have coding and Rust knowledge. Do not hesitate to read the source code and understand the
-mechanism of this bot.
