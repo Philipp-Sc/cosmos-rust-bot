@@ -45,9 +45,15 @@ enum Subcommand {
         #[structopt(
         long,
         short = "n",
-        help = "Name of the device to register in the primary client"
+        help = "Name of the device to register in the primary client",
+        default_value = "cosmos-rust-bot"
         )]
         device_name: String,
+        #[structopt(
+        long,
+        help = "Use the console instead of the signal messenger.",
+        )]
+        use_console: bool,
     },
     #[structopt(about = "Register using a phone number")]
     Register {
@@ -328,8 +334,12 @@ async fn run<C: ConfigStore>(subcommand: Subcommand, config_store: C) -> anyhow:
         Subcommand::CosmosRustBot {
             servers,
             device_name,
+            use_console
         } => {
-            let manager = link_device(servers, device_name, config_store).await?;
+            let mut manager: Option<Manager<C, Registered>> = None;
+            if !use_console {
+                manager = Some(link_device(servers, device_name, config_store).await?);
+            }
             cosmos_rust_signal_bot::presage_extension::run_cosmos_rust_signal_bot(manager).await;
         }
         Subcommand::LinkDevice {

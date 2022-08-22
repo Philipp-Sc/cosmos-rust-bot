@@ -24,13 +24,14 @@
 > :warning: The bot needs your **seed phrase** to create and sign transactions.  
 > :arrow_right_hook: You can use Cosmos-rust-bot without a seed phrase in view mode. Test this first.
 
-> :warning: No security audit has been performed. (*See Disclaimer: This may steal your money. Do your own research. Take a look at the code.*)
+> :warning: No security audit has been performed. (*See Disclaimer: This may steal your money. Do your own research.
+Take a look at the code.*)
 
 ##
 
 ## Disclaimer
 
-This software is for educational purposes only. Do not risk money which you are afraid to lose. 
+This software is for educational purposes only. Do not risk money which you are afraid to lose.
 USE THE SOFTWARE AT YOUR OWN RISK. THE AUTHOR ASSUMES NO RESPONSIBILITY FOR YOUR USE OF Cosmos-Rust-Bot.
 
 Always start by running with a dedicated test wallet and do not engage money before you understand how it works
@@ -45,12 +46,6 @@ mechanism of this bot.
 
 ## New Roadmap:
 
-**Technical**
-
-- [x] Refactor to Cosmos-rust-bot
-- [x] CosmWasm v.1.0.0: Use gRPC instead of LCD/FCD using [cosmos-rust](https://github.com/cosmos/cosmos-rust/).
-- [x] Signal: In-Memory ConfigStore
-
 **Cosmos Ecosystem**:
 
 **Analysis**
@@ -62,8 +57,8 @@ mechanism of this bot.
 
 - [ ] Arbitrage Opportunities: Notifications, Automation (including Terra pools on Osmosiszone)
 - [ ] Governance Notifications (new proposal, hit quorum, passed, rejected, executed, ..)
--- [ ] Voting
--- [ ] To Consider: off-chain forum activity (sentiment analysis).
+  -- [ ] Voting
+  -- [ ] To Consider: off-chain forum activity (sentiment analysis).
 
 **Automated Strategies**
 
@@ -116,6 +111,18 @@ In short it's purpose is to have a bot on your side:
 - Showcase how to use [cosmos-rust](https://github.com/cosmos/cosmos-rust/)
 - Rust
 
+## Features
+
+- [x] Monitor Cosmos-Rust-Bot
+- [x] Lookup Governance Proposals
+- [ ] Subscribe to Governance Proposal Notifications
+- [ ] Vote on proposals in deposit/voting period
+- [ ] Transfer tokens to existing or new wallet
+- [ ] Transfer IBC tokens Cross-Chain
+- [ ] Swap in/out Stablecoin
+- [ ] Sentiment Analysis on Governance Proposals (scrapping news)
+- [ ] Sentiment Analysis on Blockchain (e.g Osmosis, Terra, Juno)
+- [ ] Sentiment Analysis on Stablecoin (e.g axelarUSDC, USK)
 
 ## Summary
 
@@ -125,20 +132,21 @@ In short it's purpose is to have a bot on your side:
 - Thanks to the people who helped me along the way on the terra discord. :heart:
 - Special thanks to [PFC Validator](https://pfc-validator.github.io/) for being super helpful and providing their rust
   tooling open source.
- 
+
 ##
 
--  Grant Recipient of
+- Grant Recipient of
   the <img src="https://uploads-ssl.webflow.com/62aba8dc00fdd48273d4c874/62b327d14f4b5887c5a0c359_osmosis-logomark-white.svg" height="12"> [Osmosis Grants Program](https://grants.osmosis.zone/)
 - Many thanks to the Osmosis Grants Team for incentivizing this project. :pray:
 
 ## License
 
 - Open Source
-- Apache-2.0 license 
+- Apache-2.0 license
 
 ## Dependencies
 
-- [cosmos-rust-signal-bot](https://github.com/Philipp-Sc/cosmos-rust-bot/tree/development/packages/cosmos-rust-signal-bot) (optional)
+- [cosmos-rust-signal-bot](https://github.com/Philipp-Sc/cosmos-rust-bot/tree/development/packages/cosmos-rust-signal-bot) (
+  optional)
 
 - [cosmos-rust-interface](https://github.com/Philipp-Sc/cosmos-rust-interface)

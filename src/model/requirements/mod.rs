@@ -58,52 +58,26 @@ pub fn feature_list() -> Vec<Feature> {
 pub fn feature_list_to_file() -> anyhow::Result<()> {
     let mut feature_list: Vec<Feature> = Vec::new();
 
-    // max_age: 1 month
+    let mut governance_proposals: Vec<TaskSpec> = Vec::new();
+    let proposal_status_list = vec!["voting_period", "deposit_period", "failed", "passed", "rejected", "nil"];
+    let blockchain_list = vec!["osmosis", "terra", "juno"];
+    for blockchain in &blockchain_list {
+        for proposal_status in &proposal_status_list {
+            let task = TaskSpec {
+                kind: TaskType::GovernanceProposals,
+                name: format!("{}_governance_{}_proposals", blockchain, proposal_status),
+                args: json!({
+                    "blockchain": blockchain,
+                    "proposal_status": proposal_status
+                }),
+                refresh_rate: medium,
+            };
+            governance_proposals.push(task);
+        }
+    }
     feature_list.push(Feature {
         name: "governance_proposal_notifications".to_string(),
-        requirements: vec![
-            TaskSpec {
-                kind: TaskType::GovernanceProposals,
-                name: "osmosis_governance_voting_period_proposals".to_string(),
-                args: json!({
-                    "blockchain": "osmosis",
-                    "proposal_status": "voting_period"
-                }),
-                refresh_rate: fast,
-            }, TaskSpec {
-                kind: TaskType::GovernanceProposals,
-                name: "osmosis_governance_deposit_period_proposals".to_string(),
-                args: json!({
-                    "blockchain": "osmosis",
-                    "proposal_status": "deposit_period"
-                }),
-                refresh_rate: fast,
-            }, TaskSpec {
-                kind: TaskType::GovernanceProposals,
-                name: "osmosis_governance_failed_proposals".to_string(),
-                args: json!({
-                    "blockchain": "osmosis",
-                    "proposal_status": "failed"
-                }),
-                refresh_rate: fast,
-            }, TaskSpec {
-                kind: TaskType::GovernanceProposals,
-                name: "osmosis_governance_passed_proposals".to_string(),
-                args: json!({
-                    "blockchain": "osmosis",
-                    "proposal_status": "passed"
-                }),
-                refresh_rate: fast,
-            },
-            TaskSpec {
-                kind: TaskType::GovernanceProposals,
-                name: "terra_governance_rejected_proposals".to_string(),
-                args: json!({
-                    "blockchain": "terra",
-                    "proposal_status": "rejected"}),
-                refresh_rate: fast,
-            },
-        ],
+        requirements: governance_proposals,
     });
 
     let line = format!("{}", serde_json::to_string(&feature_list).unwrap());

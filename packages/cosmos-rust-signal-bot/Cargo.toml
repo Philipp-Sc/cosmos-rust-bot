@@ -24,7 +24,7 @@ tempfile = "3.3"
 url = "2.2.2"
 tokio = { version = "1.0", features = ["macros", "rt-multi-thread", "io-std", "io-util"] }
 qr2term = { version = "0.2.2" }
-
+regex = "1.6.0"
 
 [patch.crates-io]
 "curve25519-dalek" = { git = 'https://github.com/signalapp/curve25519-dalek', branch = 'lizard2' }

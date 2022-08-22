@@ -36,10 +36,11 @@ num_cpus = "1.13.1"
 rust_decimal_macros = "1.12.2"
 enum-as-inner = "0.3.3"
 num-format = "0.4.0"
-regex = "1.5.5"
 litcrypt = "0.3"
 crossbeam-channel = "0.4.0"
 notify = "4.0.17"
+heck = "0.4.0"
+regex = "1.6.0"
 
 [profile.release]
 # Enable link-time optimization, eliminates more code and inlines across crate boundaries.

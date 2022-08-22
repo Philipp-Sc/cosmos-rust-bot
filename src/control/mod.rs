@@ -4,7 +4,7 @@ use tokio::sync::{Mutex};
 use tokio::task::JoinSet;
 use core::pin::Pin;
 use core::future::Future;
-use cosmos_rust_interface::ResponseResult;
+use cosmos_rust_interface::utils::response::ResponseResult;
 
 use crate::model::get_timestamps_of_tasks;
 use crate::model::try_register_function;

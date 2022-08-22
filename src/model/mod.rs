@@ -17,13 +17,13 @@ use anyhow::anyhow;
 use std::sync::Arc;
 use tokio::sync::{Mutex};
 use tokio::task::JoinSet;
-
+use heck::ToTitleCase;
 
 use std::time::{Duration};
 use tokio::time::timeout;
 
 
-use chrono::{Utc};
+use chrono::{TimeZone, Utc};
 
 use core::pin::Pin;
 use core::future::Future;
@@ -33,10 +33,12 @@ use cosmos_rust_interface::utils::entry::{EntryValue, Maybe};
 use cosmos_rust_interface::utils::entry::Entry;
 
 
-use cosmos_rust_interface::ResponseResult;
+use cosmos_rust_interface::utils::response::ResponseResult;
 use cosmos_rust_interface::blockchain::cosmos::gov::get_proposals;
+use cosmos_rust_package::api::core::cosmos::channels;
 use cosmos_rust_package::api::core::cosmos::channels::SupportedBlockchain;
 use cosmos_rust_package::api::custom::query::gov::ProposalStatus;
+use serde_json::Value;
 
 pub async fn add_item(pointer: &Arc<Mutex<Vec<Maybe<ResponseResult>>>>, item: Maybe<ResponseResult>) {
     let mut lock = pointer.lock().await;
@@ -178,39 +180,63 @@ pub async fn await_function(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<Response
 
 pub fn task_meta_data(task_list: Vec<(String, String, i64)>) -> Vec<Entry> {
     let now = Utc::now().timestamp();
+
     let mut entries: Vec<Entry> = Vec::new();
 
     let status_list = vec!["failed".to_string(), "pending".to_string(), "upcoming".to_string(), "resolved".to_string()];
     let data_list: Vec<(String, String, String)> =
         task_list.iter().filter(|x| x.1 == "resolved".to_string()).map(|x|
             (
-                "[Task][History]".to_string(), x.0.to_string(), x.2.to_string()))
+                "task_history".to_string(), x.0.to_string(), x.2.to_string()))
             .chain(status_list.iter().map(|y| {
                 (
-                    "[Task][Count]".to_string(), y.to_owned(), task_list.iter().filter(|x| x.1 == y.to_string()).count().to_string())
+                    "task_count".to_string(), y.to_owned(), task_list.iter().filter(|x| x.1 == y.to_string()).count().to_string())
             }))
             .chain(iter::once(
                 (
-                    "[Task][Count]".to_string(), "all".to_string(), task_list.len().to_string()))
+                    "task_count".to_string(), "all".to_string(), task_list.len().to_string()))
             )
             .chain(status_list.iter().map(|y| {
                 (
-                    "[Task][List]".to_string(), y.to_owned(), format!("{:?}", task_list.iter().filter(|x| x.1 == y.to_string()).map(|x| x.0.to_string()).collect::<Vec<String>>()).to_string())
+                    "task_list".to_string(), y.to_owned(), format!("{:?}", task_list.iter().filter(|x| x.1 == y.to_string()).map(|x| x.0.to_string()).collect::<Vec<String>>()).to_string())
             }))
             .chain(iter::once(
                 (
-                    "[Task][List]".to_string(), "all".to_string(), format!("{:?}", task_list.iter().map(|x| x.0.to_string()).collect::<Vec<String>>())))
+                    "task_list".to_string(), "all".to_string(), format!("{:?}", task_list.iter().map(|x| x.0.to_string()).collect::<Vec<String>>())))
             )
             .collect();
 
     for i in 0..data_list.len() {
+        let rank = serde_json::json!({"index":i});
+        let filter = serde_json::json!({
+            "key": data_list[i].1.to_owned(),
+            "value": data_list[i].2.to_owned(),
+            "group": data_list[i].0.to_owned()
+        });
+
+
+        let is_number = data_list[i].2.chars().all(char::is_numeric);
+        let parsed_text = match is_number {
+            true => {
+                if data_list[i].2.len() >= 10 {
+                    format!("{}", Utc.timestamp(data_list[i].2.parse::<i64>().unwrap(), 0))
+                } else {
+                    data_list[i].2.to_string()
+                }
+            }
+            false => {
+                data_list[i].2.to_string()
+            }
+        };
+
+
         let entry = Entry {
             timestamp: now,
-            key: data_list[i].1.to_owned(),
+            origin: format!("task_meta_data_{}", data_list[i].0.to_owned()).to_string(),
             value: EntryValue::Value(serde_json::json!({
-                        "data": data_list[i].2.to_owned(),
-                        "group": Some(data_list[i].0.to_owned()),
-                        "index": Some(i as i32),
+                        "info": format!("{} Tasks: {}", data_list[i].1.to_string().to_title_case(),parsed_text),
+                        "where": filter,
+                        "order_by": rank
                     })),
         };
         entries.push(entry);
@@ -334,7 +360,7 @@ async fn spawn_tasks(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, Ar
         match req.kind {
             TaskType::GovernanceProposals => {
                 let status = ProposalStatus::new(req.args["proposal_status"].as_str().unwrap());
-                let blockchain = SupportedBlockchain::new(req.args["blockchain"].as_str().unwrap());
+                let blockchain = channels::get_supported_blockchains().get(req.args["blockchain"].as_str().unwrap()).unwrap().clone();
                 f = Some(Box::pin(get_proposals(blockchain, status)));
             }
             _ => {}

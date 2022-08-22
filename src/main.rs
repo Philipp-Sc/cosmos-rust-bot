@@ -33,13 +33,14 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use cosmos_rust_interface::blockchain::account_from_seed_phrase;
 
-use cosmos_rust_interface::ResponseResult;
+use cosmos_rust_interface::utils::response::ResponseResult;
 use cosmos_rust_interface::utils::entry::postproc::blockchain::cosmos::gov::governance_proposal_notifications;
 use cosmos_rust_interface::utils::entry::{Entry, EntryValue, Maybe};
 use cosmos_rust_interface::utils::entry::db::save_entries;
 use cosmos_rust_interface::utils::entry::postproc::meta_data::debug::debug;
 use cosmos_rust_interface::utils::entry::postproc::meta_data::errors::errors;
 use cosmos_rust_interface::utils::entry::postproc::meta_data::logs::logs;
+use cosmos_rust_package::api::core::cosmos::channels;
 
 use cosmos_rust_package::api::core::cosmos::channels::SupportedBlockchain;
 
@@ -101,8 +102,6 @@ async fn main() -> anyhow::Result<()> {
             if user_settings.governance_proposal_notifications {
                 entries.append(&mut governance_proposal_notifications(&snapshot_of_maybes));
             }
-            //\"/cosmwasm.wasm.v1.StoreCodeProposal\"
-
             /*
             if user_settings.terra_market_info {
                 maybe_futures.append(&mut market_info(&copy_of_maybes).await);
@@ -191,7 +190,7 @@ async fn get_wallet_details(user_settings: &UserSettings) -> (Arc<SecUtf8>, Arc<
         // ** seed phrase needed **
         wallet_seed_phrase = encrypt_text_with_secret(get_input("Enter your seed phrase (press Enter to skip):").to_string());
         if wallet_acc_address.unsecure().len() != 44 || !user_settings.test {
-            wallet_acc_address = SecUtf8::from(account_from_seed_phrase(decrypt_text_with_secret(&wallet_seed_phrase), SupportedBlockchain::Terra).unwrap_or("".to_string()));
+            wallet_acc_address = SecUtf8::from(account_from_seed_phrase(decrypt_text_with_secret(&wallet_seed_phrase), channels::get_supported_blockchains().get("terra").unwrap().clone()).unwrap_or("".to_string()));
         }
     } else if wallet_acc_address.unsecure().len() == 0 {
         // ** maybe need wallet address **
