@@ -7,7 +7,7 @@
     <img src="https://img.shields.io/github/repo-size/Philipp-Sc/cosmos-rust-bot"> 
     <img src="https://img.shields.io/github/commit-activity/m/Philipp-Sc/cosmos-rust-bot"> 
     <img src="https://img.shields.io/github/license/Philipp-Sc/cosmos-rust-bot">
-    <img src="https://img.shields.io/twitter/follow/PSchlutermann?style=social"> 
+    <a href="https://twitter.com/cosmosrustbot"><img src="https://img.shields.io/twitter/follow/CosmosRustBot?style=social"></a>
   </div>
 <br/>
 <div align="center">
