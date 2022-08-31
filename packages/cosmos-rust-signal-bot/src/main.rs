@@ -44,11 +44,9 @@ enum Subcommand {
         servers: SignalServers,
         #[structopt(
         long,
-        short = "n",
-        help = "Name of the device to register in the primary client",
-        default_value = "cosmos-rust-bot"
+        help = "Use already linked device (do not use in combination with the flag --volatile)",
         )]
-        device_name: String,
+        try_use_linked_device: bool,
         #[structopt(
         long,
         help = "Use the console instead of the signal messenger.",
@@ -333,12 +331,22 @@ async fn run<C: ConfigStore>(subcommand: Subcommand, config_store: C) -> anyhow:
         }
         Subcommand::CosmosRustBot {
             servers,
-            device_name,
+            try_use_linked_device,
             use_console
         } => {
+            let device_name = "CosmosRustBot".to_string();
             let mut manager: Option<Manager<C, Registered>> = None;
+
+
             if !use_console {
-                manager = Some(link_device(servers, device_name, config_store).await?);
+                if try_use_linked_device {
+                    manager = match Manager::load_registered(config_store) {
+                        Ok(m) => Some(m),
+                        Err(e) => None,
+                    };
+                } else {
+                    manager = Some(link_device(servers, device_name, config_store).await?);
+                }
             }
             cosmos_rust_signal_bot::presage_extension::run_cosmos_rust_signal_bot(manager).await;
         }

@@ -25,19 +25,21 @@ use tokio::{
 
 use crate::cosmos_rust_bot::{handle_message, handle_notifications};
 
-async fn send_message_to_self<C: ConfigStore>(manager: &Manager<C, Registered>, message: String, my_uuid: Uuid) -> anyhow::Result<()> {
-    let timestamp = std::time::SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("Time went backwards")
-        .as_millis() as u64;
+async fn send_message_to_self<C: ConfigStore>(manager: &Manager<C, Registered>, message: Vec<String>, my_uuid: Uuid) -> anyhow::Result<()> {
+    for msg in message {
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("Time went backwards")
+            .as_millis() as u64;
 
-    let message = ContentBody::DataMessage(DataMessage {
-        body: Some(message),
-        timestamp: Some(timestamp),
-        ..Default::default()
-    });
+        let message = ContentBody::DataMessage(DataMessage {
+            body: Some(msg),
+            timestamp: Some(timestamp),
+            ..Default::default()
+        });
 
-    manager.send_message(my_uuid, message, timestamp).await?;
+        manager.send_message(my_uuid, message, timestamp).await?;
+    }
     Ok(())
 }
 
@@ -157,7 +159,7 @@ pub async fn run_cosmos_rust_signal_bot<C: ConfigStore>(manager_option: Option<M
                                         info!("Status: Notification Available - {}\n{}", Utc::now(),text_to_send_back);
                                         let mut msg_sent = false;
                                         while !msg_sent {
-                                            msg_sent = match send_message_to_self(&manager, text_to_send_back.to_owned(), my_uuid).await
+                                            msg_sent = match send_message_to_self(&manager, vec![text_to_send_back.to_owned()], my_uuid).await
                                             {
                                                 Ok(()) => true,
                                                 Err(e) => {
@@ -182,8 +184,10 @@ pub async fn run_cosmos_rust_signal_bot<C: ConfigStore>(manager_option: Option<M
             loop {
                 match &reader.next_line().await {
                     Ok(Some(line)) => {
-                        let text = handle_message(line.to_owned()).await;
-                        println!("{}", text);
+                        let text: Vec<String> = handle_message(line.to_owned()).await;
+                        for text_item in text {
+                            println!("{}", text_item);
+                        }
                     }
                     _ => {}
                 }

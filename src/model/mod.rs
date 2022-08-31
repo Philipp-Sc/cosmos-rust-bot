@@ -38,7 +38,28 @@ use cosmos_rust_interface::blockchain::cosmos::gov::get_proposals;
 use cosmos_rust_package::api::core::cosmos::channels;
 use cosmos_rust_package::api::core::cosmos::channels::SupportedBlockchain;
 use cosmos_rust_package::api::custom::query::gov::ProposalStatus;
-use serde_json::Value;
+use serde_json::{json, Value};
+use strum::IntoEnumIterator;
+use strum_macros::EnumIter;
+use std::string::ToString;
+use strum_macros;
+
+#[derive(strum_macros::ToString, Debug, EnumIter, PartialEq)]
+pub enum TaskState {
+    Unknown,
+    Pending,
+    Reserved,
+    Failed,
+    Resolved,
+    Upcoming,
+}
+
+pub struct TaskItem {
+    pub name: String,
+    pub state: TaskState,
+    pub timestamp: i64,
+}
+
 
 pub async fn add_item(pointer: &Arc<Mutex<Vec<Maybe<ResponseResult>>>>, item: Maybe<ResponseResult>) {
     let mut lock = pointer.lock().await;
@@ -129,7 +150,7 @@ pub async fn register_value(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<Respons
 
 pub async fn try_register_function(join_set: &mut JoinSet<()>, maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, key: String, f: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>>, timeout_duration: u64, block_duration_after_resolve: i64) {
     let timestamp;
-    let state;
+    let state: TaskState;
 
     match maybes.get(&key) {
         Some(val) => {
@@ -137,27 +158,36 @@ pub async fn try_register_function(join_set: &mut JoinSet<()>, maybes: &HashMap<
                 Maybe { data: Err(err), timestamp: t } => {
                     timestamp = t;
                     if err.to_string() == "Error: Not yet resolved!".to_string() {
-                        state = "pending";
+                        state = TaskState::Pending;
                     } else if err.to_string() == "Error: Entry reserved!".to_string() {
-                        state = "reserved";
+                        state = TaskState::Reserved;
                     } else {
-                        state = "failed";
+                        state = TaskState::Failed;
                     }
                 }
                 Maybe { data: Ok(_), timestamp: t } => {
-                    state = "resolved";
+                    state = TaskState::Resolved;
                     timestamp = t;
                 }
             }
         }
         None => {
-            state = "unknown";
+            state = TaskState::Unknown;
             timestamp = 0i64;
         }
     }
     let now = Utc::now().timestamp();
 
-    if state == "unknown" || state == "reserved" || state == "failed" || (state == "resolved" && now - timestamp >= block_duration_after_resolve) {
+    let spawn = match state {
+        TaskState::Unknown | TaskState::Reserved | TaskState::Failed => { true }
+        TaskState::Resolved => {
+            if now - timestamp >= block_duration_after_resolve {
+                true
+            } else { false }
+        }
+        _ => { false }
+    };
+    if spawn {
         let pointer = maybes.get(key.to_string().as_str()).unwrap().clone();
         join_set.spawn(async move {
             let result = timeout(Duration::from_secs(timeout_duration), f).await.unwrap_or(Maybe { data: Ok("timeout".to_string()), timestamp: Utc::now().timestamp() });
@@ -178,70 +208,54 @@ pub async fn await_function(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<Response
     }
 }
 
-pub fn task_meta_data(task_list: Vec<(String, String, i64)>) -> Vec<Entry> {
+pub fn task_meta_data(task_list: Vec<TaskItem>) -> Vec<Entry> {
     let now = Utc::now().timestamp();
 
-    let mut entries: Vec<Entry> = Vec::new();
+    task_list.iter().map(|x|
+        ( // iterate over all statuses not only resolved
+          "task_history".to_string(), x.state.to_string(), json!({"value": x.name, "timestamp": x.timestamp})))
+        .chain(TaskState::iter().map(|y| {
+            ("task_count".to_string(), y.to_string(), json!({"value": task_list.iter().filter(|x| x.state == y).count().to_string()}))
+        }))
+        .chain(iter::once(
+            ("task_count".to_string(), "all".to_string(), json!({"value": task_list.len().to_string()})))
+        )
+        .chain(TaskState::iter().map(|y| {
+            ("task_list".to_string(), y.to_string(), json!({"value": format!("{:?}", task_list.iter().filter(|x| x.state == y).map(|x| x.name.to_string()).collect::<Vec<String>>()).to_string()}))
+        }))
+        .chain(iter::once(
+            ("task_list".to_string(), "all".to_string(), json!({"value": format!("{:?}", task_list.iter().map(|x| x.name.to_string()).collect::<Vec<String>>())})))
+        ).enumerate().map(|(i, v)| {
+        let group = v.0;
+        let state = v.1.to_title_case();
+        let value = v.2.get("value").unwrap().as_str().unwrap();
 
-    let status_list = vec!["failed".to_string(), "pending".to_string(), "upcoming".to_string(), "resolved".to_string()];
-    let data_list: Vec<(String, String, String)> =
-        task_list.iter().filter(|x| x.1 == "resolved".to_string()).map(|x|
-            (
-                "task_history".to_string(), x.0.to_string(), x.2.to_string()))
-            .chain(status_list.iter().map(|y| {
-                (
-                    "task_count".to_string(), y.to_owned(), task_list.iter().filter(|x| x.1 == y.to_string()).count().to_string())
-            }))
-            .chain(iter::once(
-                (
-                    "task_count".to_string(), "all".to_string(), task_list.len().to_string()))
-            )
-            .chain(status_list.iter().map(|y| {
-                (
-                    "task_list".to_string(), y.to_owned(), format!("{:?}", task_list.iter().filter(|x| x.1 == y.to_string()).map(|x| x.0.to_string()).collect::<Vec<String>>()).to_string())
-            }))
-            .chain(iter::once(
-                (
-                    "task_list".to_string(), "all".to_string(), format!("{:?}", task_list.iter().map(|x| x.0.to_string()).collect::<Vec<String>>())))
-            )
-            .collect();
+        let mut rank = serde_json::json!({"index":i});
+        let mut info = "".to_string();
 
-    for i in 0..data_list.len() {
-        let rank = serde_json::json!({"index":i});
+        if let Some(timestamp) = v.2.get("timestamp") {
+            let timestamp = timestamp.as_i64().unwrap();
+            rank.as_object_mut().unwrap().insert("timestamp".to_string(), serde_json::json!(timestamp));
+            info = format!("[{}] - {} - {}", Utc.timestamp(timestamp, 0), state, value.to_string().to_title_case());
+        } else {
+            info = format!("{} Tasks: {}", state, value);
+        }
+
         let filter = serde_json::json!({
-            "key": data_list[i].1.to_owned(),
-            "value": data_list[i].2.to_owned(),
-            "group": data_list[i].0.to_owned()
-        });
-
-
-        let is_number = data_list[i].2.chars().all(char::is_numeric);
-        let parsed_text = match is_number {
-            true => {
-                if data_list[i].2.len() >= 10 {
-                    format!("{}", Utc.timestamp(data_list[i].2.parse::<i64>().unwrap(), 0))
-                } else {
-                    data_list[i].2.to_string()
-                }
-            }
-            false => {
-                data_list[i].2.to_string()
-            }
-        };
-
-
-        let entry = Entry {
+                    "state": state.to_owned(),
+                    "value": value.to_owned(),
+                    "group": group.to_owned()
+                });
+        Entry {
             timestamp: now,
-            origin: format!("task_meta_data_{}", data_list[i].0.to_owned()).to_string(),
+            origin: format!("task_meta_data_{}", group),
             value: EntryValue::Value(serde_json::json!({
-                        "info": format!("{} Tasks: {}", data_list[i].1.to_string().to_title_case(),parsed_text),
+                        "info": info,
                         "where": filter,
                         "order_by": rank
                     })),
-        };
-        entries.push(entry);
-    }
-    entries
+        }
+    }).collect::<Vec<Entry>>()
 }
 
 pub async fn next_iteration_of_upcoming_tasks(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, user_settings: &UserSettings, wallet_acc_address: &Arc<SecUtf8>) -> Vec<Entry> {
@@ -255,59 +269,60 @@ pub async fn next_iteration_of_upcoming_tasks(join_set: &mut JoinSet<()>, maybes
 
     let req = get_requirements(&user_settings);
 
-    let mut task_list: Vec<(String, String, i64)> = Vec::new();
+    let mut task_list: Vec<TaskItem> = Vec::new();
+    //Vec<(String, String, i64)> = Vec::new();
 
     let now = Utc::now().timestamp();
     for (k, v) in maybes.iter() {
-        let state: &str;
+        let state: TaskState;
         let time: i64;
         match v.lock().await[0].clone() {
             Maybe { data: Err(err), timestamp } => {
                 time = timestamp;
                 if err.to_string() == "Error: Not yet resolved!".to_string() {
-                    state = "pending";
+                    state = TaskState::Pending;
                 } else if err.to_string() == "Error: Entry reserved!".to_string() {
-                    state = "reserved";
+                    state = TaskState::Reserved;
                 } else {
-                    state = "failed";
+                    state = TaskState::Failed;
                 }
             }
             Maybe { data: Ok(_), timestamp } => {
                 time = timestamp;
-                state = "resolved";
+                state = TaskState::Resolved;
             }
         }
-        task_list.push((k.to_string(), state.to_string(), time));
+        task_list.push(TaskItem { name: k.to_string(), state, timestamp: time });
     }
     for i in 0..req.len() {
-        if task_list.iter().filter(|x| x.0 == req[i].name).count() == 0 {
-            task_list.push(((&req[i].name).to_string(), "unknown".to_string(), 0i64));
+        if task_list.iter().filter(|x| x.name == req[i].name).count() == 0 {
+            task_list.push(TaskItem { name: (&req[i].name).to_string(), state: TaskState::Unknown, timestamp: 0i64 });
         }
     }
 
     for i in 0..task_list.len() {
         let mut update = false;
-        if task_list[i].1 == "reserved".to_string() {} else if task_list[i].1 == "unknown".to_string() {
+        if task_list[i].state == TaskState::Reserved {} else if task_list[i].state == TaskState::Unknown {
             update = true;
-        } else if task_list[i].1 == "failed".to_string() {
-            if req.iter().filter(|x| x.name == task_list[i].0).count() == 1 {
+        } else if task_list[i].state == TaskState::Unknown {
+            if req.iter().filter(|x| x.name == task_list[i].name).count() == 1 {
                 update = true;
             }
-        } else if task_list[i].1 == "resolved" {
-            let period: Vec<i64> = req.iter().filter(|x| x.name == task_list[i].0).map(|x| x.refresh_rate as i64).collect();
+        } else if task_list[i].state == TaskState::Resolved {
+            let period: Vec<i64> = req.iter().filter(|x| x.name == task_list[i].name).map(|x| x.refresh_rate as i64).collect();
             if period.len() == 1 {
-                if (now - task_list[i].2) > period[0] {
+                if (now - task_list[i].timestamp) > period[0] {
                     update = true;
                 }
             }
         }
         if update {
-            task_list.push((task_list[i].0.to_owned(), "upcoming".to_string(), task_list[i].2));
+            task_list.push(TaskItem { name: task_list[i].name.to_owned(), state: TaskState::Upcoming, timestamp: task_list[i].timestamp });
         }
     }
-    task_list.sort_by_key(|k| k.2);
+    task_list.sort_by_key(|k| k.timestamp);
 
-    let upcoming_task_name_list: Vec<String> = task_list.iter().filter(|x| x.1 == "upcoming".to_string()).map(|x| x.0.to_string()).collect();
+    let upcoming_task_name_list: Vec<String> = task_list.iter().filter(|x| x.state == TaskState::Upcoming).map(|x| x.name.to_string()).collect();
     let upcoming_task_spec_list: Vec<TaskSpec> = req.into_iter().filter(|x| upcoming_task_name_list.contains(&x.name)).collect();
 
     spawn_tasks(join_set, maybes, &user_settings, &wallet_acc_address, upcoming_task_spec_list).await;
