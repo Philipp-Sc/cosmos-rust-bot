@@ -73,10 +73,16 @@ In short it's purpose is to have a bot on your side:
 - [x] Monitor Cosmos-Rust-Bot
 - [x] Lookup Governance Proposals
 - [ ] Subscribe to Governance Proposal Notifications
+- [ ] Telegram Chat Bot
+- [ ] Lookup Prices (Osmosiszone)
+- [ ] Subscribe to Price Alerts
 - [ ] Vote on proposals in deposit/voting period
+- [ ] Auto compound staking rewards
+- [ ] Lookup Airdrops
 - [ ] Transfer tokens to existing or new wallet
 - [ ] Transfer IBC tokens Cross-Chain
 - [ ] Swap in/out Stablecoin
+- [ ] Manage Collateral / Loans
 - [ ] Sentiment Analysis on Governance Proposals (scrapping news)
 - [ ] Sentiment Analysis on Blockchain (e.g Osmosis, Terra, Juno)
 - [ ] Sentiment Analysis on Stablecoin (e.g axelarUSDC, USK)
