@@ -44,49 +44,6 @@ mechanism of this bot.
 
 ### [Install](#install) · [Config](#config) · [Usage](#usage) · [Summary](#summary)
 
-## New Roadmap:
-
-**Cosmos Ecosystem**:
-
-**Analysis**
-
-- [ ] Terra Dashboard: List Tokens, Prices & Pools (Terraswap, Astroport)
-- [ ] Osmosis Dashboard: List Tokens, Prices & Pools (Osmosiszone)
-
-**Notifications**
-
-- [ ] Arbitrage Opportunities: Notifications, Automation (including Terra pools on Osmosiszone)
-- [ ] Governance Notifications (new proposal, hit quorum, passed, rejected, executed, ..)
-  -- [ ] Voting
-  -- [ ] To Consider: off-chain forum activity (sentiment analysis).
-
-**Automated Strategies**
-
-- [ ] Arbitrage: Automation (including Terra pools on Osmosiszone)
-- [ ] Impermanent Loss Protection (Osmosiszone, Astroport, Spectrum)
-- [ ] DCA
-- [ ] Martingale Feature (double or otherwise modify buys depending on price and tx history)
-- [ ] Limit Orders
-- [ ] TP and SL
-- [ ] Take Profits & Diversify (reducing single point of failure risk)
-
-**Interface**
-
-Add commands to quickly broadcast transactions via Terminal/Signal Messenger
-
--
-    - [ ] Show **Analysis**
--
-    - [ ] Enable / Disable **Notifications**
--
-    - [ ] Enable / Disable **Automated Strategies**
--
-    - [ ] Dust Converter (convert small balances into a token of choice)
--
-    - [ ] Abort Mission (sell selected investments and trade in for stablecoin)
--
-    - [ ] Migrate Wallet (safety feature: immediately move tokens/coins to a new wallet)
-
 ## About
 
 **CRB** is currently undergoing a rewrite. Available functionality will be described here shortly.
