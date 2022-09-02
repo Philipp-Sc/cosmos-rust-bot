@@ -35,8 +35,8 @@ use cosmos_rust_interface::blockchain::account_from_seed_phrase;
 
 use cosmos_rust_interface::utils::response::ResponseResult;
 use cosmos_rust_interface::utils::entry::postproc::blockchain::cosmos::gov::governance_proposal_notifications;
-use cosmos_rust_interface::utils::entry::{Entry, EntryValue, Maybe};
-use cosmos_rust_interface::utils::entry::db::save_entries;
+use cosmos_rust_interface::utils::entry::*;
+use cosmos_rust_interface::utils::entry::db::{load_sled_db, spawn_socket_query_server};
 use cosmos_rust_interface::utils::entry::postproc::meta_data::debug::debug;
 use cosmos_rust_interface::utils::entry::postproc::meta_data::errors::errors;
 use cosmos_rust_interface::utils::entry::postproc::meta_data::logs::logs;
@@ -44,31 +44,30 @@ use cosmos_rust_package::api::core::cosmos::channels;
 
 use cosmos_rust_package::api::core::cosmos::channels::SupportedBlockchain;
 
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let state: Arc<RwLock<HashMap<i64, Entry>>> = Arc::new(RwLock::new(HashMap::new()));
 
-    let mut state_refresh_timestamp = 0i64;
     // stores all requirements either as task or the resolved value.
     let mut join_set: JoinSet<()> = JoinSet::new();
     let mut maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>> = HashMap::new();
 
     let mut user_settings: UserSettings = load_user_settings("./cosmos-rust-bot.json");
     //println!("{}", serde_json::to_string_pretty(&user_settings)?);
-    //loop {}
 
     let (wallet_seed_phrase, wallet_acc_address) = get_wallet_details(&user_settings).await;
 
     // Create a channel to receive the events.
     let (tx, rx) = channel();
-
     // Create a watcher object, delivering debounced events.
     // The notification back-end is selected based on the platform.
     let mut watcher = watcher(tx, Duration::from_secs(10)).unwrap();
-
     // Add a path to be watched. All files and directories at that path and
     // below will be monitored for changes.
     watcher.watch("./cosmos-rust-bot.json", RecursiveMode::Recursive).unwrap();
+
+    let tree = load_sled_db("cosmos-rust-bot-sled-db");
+    spawn_socket_query_server(&tree);
 
     loop {
         setup_required_keys(&mut maybes).await;
@@ -86,18 +85,15 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
 
-            let mut entries: Vec<Entry> = Vec::new();
-            let mut task_list_meta_data: Vec<Entry> = next_iteration_of_upcoming_tasks(&mut join_set, &mut maybes, &user_settings, &wallet_acc_address).await;
-            entries.append(&mut task_list_meta_data);
+            let mut entries: Vec<CosmosRustBotValue> = Vec::new();
+            let mut task_meta_data: Vec<CosmosRustBotValue> = next_iteration_of_upcoming_tasks(&mut join_set, &mut maybes, &user_settings, &wallet_acc_address).await;
+            entries.append(&mut task_meta_data);
 
             // ensures the display tasks operates on the same snapshot
             // since the processing of the ResponseResults is blazing fast, it makes no sense to hope for a value to be refreshed
             // so potentially reduces function calls
             // also post processing does not need to deal with Arc<Mutex>
             let snapshot_of_maybes = access_maybes(&maybes).await;
-
-
-            let mut maybe_futures: Vec<(Entry, Pin<Box<dyn Future<Output=Maybe<String>> + Send>>)> = Vec::new();
 
             if user_settings.governance_proposal_notifications {
                 entries.append(&mut governance_proposal_notifications(&snapshot_of_maybes));
@@ -139,39 +135,30 @@ async fn main() -> anyhow::Result<()> {
                 let asset_list = asset_whitelist.clone();
                 let task: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>> = Box::pin(anchor_borrow_and_deposit_stable(asset_list, copy_of_maybes.clone(), wallet_acc_address.clone(), wallet_seed_phrase.clone(), user_settings.test));
                 try_run_function(&mut join_set, &copy_of_maybes, task, "anchor_auto_borrow", user_settings.test).await;
-                maybe_futures.append(&mut lazy_anchor_account_auto_borrow(&copy_of_maybes, user_settings.test).await);
+                -maybe_futures.append(&mut lazy_anchor_account_auto_borrow(&copy_of_maybes, user_settings.test).await);
             }
             */
 
-            state.write().await.clear();
-
-            try_calculate_promises(&state, maybe_futures).await; // currently not in use.
-
+            let mut result_meta_data: Vec<CosmosRustBotValue> = Vec::new();
             //let mut debug: Vec<Entry> = debug(&snapshot_of_maybes);
-            let mut logs: Vec<Entry> = logs(&snapshot_of_maybes);
-            let mut errors: Vec<Entry> = errors(&snapshot_of_maybes);
-            //entries.append(&mut debug);
-            entries.append(&mut logs);
-            entries.append(&mut errors);
+            let mut logs: Vec<CosmosRustBotValue> = logs(&snapshot_of_maybes);
+            let mut errors: Vec<CosmosRustBotValue> = errors(&snapshot_of_maybes);
+            //meta_data.append(&mut debug);
+            result_meta_data.append(&mut logs);
+            result_meta_data.append(&mut errors);
+            entries.append(&mut result_meta_data);
 
+            CosmosRustBotValue::add_index(&mut entries, "timestamp", "timestamp");
+
+            let mut batch = sled::Batch::default();
+            for k in tree.iter().keys() {
+                let key = k?;
+                batch.remove(key);
+            }
             for x in 0..entries.len() {
-                insert_to_state(&state, x as u64, &entries[x]).await;
+                batch.insert(entries[x].key(), entries[x].value());
             }
-
-
-            // ensuring one file write per 300ms, not faster.
-            let now = Utc::now().timestamp_millis();
-
-            if state_refresh_timestamp == 0i64 || now - state_refresh_timestamp > 300i64 {
-                // writing display to file.
-                // let new_line = format!("{esc}c", esc = 27 as char);
-                let vector = state.read().await;
-                let mut keys = vector.keys().collect::<Vec<&i64>>();
-                keys.sort();
-                let vec: Vec<Entry> = keys.iter().map(|x| vector[x].clone()).collect();
-                save_entries("./cosmos-rust-bot-db.json", vec);
-                state_refresh_timestamp = now;
-            }
+            tree.apply_batch(batch)?;
         }
         join_set.shutdown().await;
         if user_settings.hot_reload {
@@ -207,32 +194,8 @@ async fn get_wallet_details(user_settings: &UserSettings) -> (Arc<SecUtf8>, Arc<
     (wallet_seed_phrase, wallet_acc_address)
 }
 
-async fn try_calculate_promises(state: &Arc<RwLock<HashMap<i64, Entry>>>, maybe_futures: Vec<(Entry, Pin<Box<dyn Future<Output=Maybe<String>> + Send>>)>) {
-    for t in maybe_futures {
-        let h = calculate_hash(&t.0) as i64;
-        push_to_state(&state, h, &t.0, Box::pin(t.1)).await.ok();
-    }
-}
-
 fn calculate_hash<T: Hash>(t: &T) -> u64 {
     let mut s = DefaultHasher::new();
     t.hash(&mut s);
     s.finish()
-}
-
-
-async fn insert_to_state(state: &Arc<RwLock<HashMap<i64, Entry>>>, hash: u64, entry: &Entry) {
-    let mut vector = state.write().await;
-    vector.insert(hash as i64 * (-1), entry.clone());
-}
-
-async fn push_to_state<'a>(state: &'a Arc<RwLock<HashMap<i64, Entry>>>, hash: i64, entry: &'a Entry, f: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>>) -> anyhow::Result<()> {
-    let mut e = entry.clone();
-    let result = f.await;
-    e.value = EntryValue::Text(result.data.unwrap_or("--".to_string()));
-    e.timestamp = result.timestamp;
-
-    let mut vector = state.write().await;
-    vector.insert(hash, e);
-    Ok(())
 }

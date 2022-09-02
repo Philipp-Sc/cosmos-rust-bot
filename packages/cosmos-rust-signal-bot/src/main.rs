@@ -21,6 +21,7 @@ use tokio::{
 };
 use url::Url;
 
+// RUST_LOG=error,debug,info
 
 #[derive(StructOpt)]
 #[structopt(about = "a basic signal CLI to try things out")]

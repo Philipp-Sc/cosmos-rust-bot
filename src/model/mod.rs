@@ -29,8 +29,7 @@ use core::pin::Pin;
 use core::future::Future;
 use std::iter;
 
-use cosmos_rust_interface::utils::entry::{EntryValue, Maybe};
-use cosmos_rust_interface::utils::entry::Entry;
+use cosmos_rust_interface::utils::entry::*;
 
 
 use cosmos_rust_interface::utils::response::ResponseResult;
@@ -38,7 +37,7 @@ use cosmos_rust_interface::blockchain::cosmos::gov::get_proposals;
 use cosmos_rust_package::api::core::cosmos::channels;
 use cosmos_rust_package::api::core::cosmos::channels::SupportedBlockchain;
 use cosmos_rust_package::api::custom::query::gov::ProposalStatus;
-use serde_json::{json, Value};
+use serde_json::{json};
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 use std::string::ToString;
@@ -208,10 +207,10 @@ pub async fn await_function(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<Response
     }
 }
 
-pub fn task_meta_data(task_list: Vec<TaskItem>) -> Vec<Entry> {
+pub fn task_meta_data(task_list: Vec<TaskItem>) -> Vec<CosmosRustBotValue> {
     let now = Utc::now().timestamp();
 
-    task_list.iter().map(|x|
+    let mut task_meta_data = task_list.iter().map(|x|
         ( // iterate over all statuses not only resolved
           "task_history".to_string(), x.state.to_string(), json!({"value": x.name, "timestamp": x.timestamp})))
         .chain(TaskState::iter().map(|y| {
@@ -226,39 +225,36 @@ pub fn task_meta_data(task_list: Vec<TaskItem>) -> Vec<Entry> {
         .chain(iter::once(
             ("task_list".to_string(), "all".to_string(), json!({"value": format!("{:?}", task_list.iter().map(|x| x.name.to_string()).collect::<Vec<String>>())})))
         ).enumerate().map(|(i, v)| {
-        let group = v.0;
         let state = v.1.to_title_case();
         let value = v.2.get("value").unwrap().as_str().unwrap();
 
-        let mut rank = serde_json::json!({"index":i});
-        let mut info = "".to_string();
+        let info = match v.2.get("timestamp") {
+            Some(timestamp) => {
+                format!("[{}] - {} - {}", Utc.timestamp(timestamp.as_i64().unwrap(), 0), state, value.to_string().to_title_case())
+            }
+            None => {
+                format!("{} Tasks: {}", state, value)
+            }
+        };
 
-        if let Some(timestamp) = v.2.get("timestamp") {
-            let timestamp = timestamp.as_i64().unwrap();
-            rank.as_object_mut().unwrap().insert("timestamp".to_string(), serde_json::json!(timestamp));
-            info = format!("[{}] - {} - {}", Utc.timestamp(timestamp, 0), state, value.to_string().to_title_case());
-        } else {
-            info = format!("{} Tasks: {}", state, value);
-        }
-
-        let filter = serde_json::json!({
-                    "state": state.to_owned(),
-                    "value": value.to_owned(),
-                    "group": group.to_owned()
-                });
-        Entry {
+        CosmosRustBotValue::Entry(Entry::MetaData(MetaData {
+            index: i as i32,
             timestamp: now,
-            origin: format!("task_meta_data_{}", group),
-            value: EntryValue::Value(serde_json::json!({
-                        "info": info,
-                        "where": filter,
-                        "order_by": rank
-                    })),
-        }
-    }).collect::<Vec<Entry>>()
+            origin: "task_meta_data".to_string(),
+            kind: v.0.to_owned(),
+            state: state.to_owned(),
+            value: value.to_owned(),
+            summary: info.to_owned(),
+        }))
+    }).collect::<Vec<CosmosRustBotValue>>();
+
+    CosmosRustBotValue::add_index(&mut task_meta_data, "index", "index");
+    CosmosRustBotValue::add_membership(&mut task_meta_data, None, "task_meta_data");
+    CosmosRustBotValue::add_variants_of_memberships(&mut task_meta_data, vec!["kind", "state"]);
+    task_meta_data
 }
 
-pub async fn next_iteration_of_upcoming_tasks(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, user_settings: &UserSettings, wallet_acc_address: &Arc<SecUtf8>) -> Vec<Entry> {
+pub async fn next_iteration_of_upcoming_tasks(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, user_settings: &UserSettings, wallet_acc_address: &Arc<SecUtf8>) -> Vec<CosmosRustBotValue> {
     for _ in 0..join_set.len() {
         let result = timeout(Duration::from_millis(0), join_set.join_one()).await;
         match result {
