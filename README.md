@@ -56,8 +56,8 @@ In short it's purpose is to have a bot on your side:
 
 **users**
 
-- Save you the hassle of managing your positions manually
-- Enable you to run strategies only bots can execute
+- Save the hassle of managing positions manually
+- Enable strategies only bots can execute
 - Receive alerts and notifications
 - Send commands for the bot to execute
 
@@ -68,24 +68,46 @@ In short it's purpose is to have a bot on your side:
 - Showcase how to use [cosmos-rust](https://github.com/cosmos/cosmos-rust/)
 - Rust
 
-## Features
+## Use Case #1
 
+- Lookup on-chain information and subscribe to get notified on state changes.
+- Easy access via Telegram bot.
+
+## Use Case #2
+
+- Set notifications (events) to trigger/execute on-chain actions. (Send, Execute Contract,..)
+- Requires: You to manage a (Linux) Server and provide a wallet seed phrase.
+- Secure acces via Signal Messenger.
+
+## Features
+> This roadmap is intended to outline the general direction for CRB. It does not represent a commitment, guarantee, obligation, or promise to deliver any feature.
+
+### Notifications
 - [x] Monitor Cosmos-Rust-Bot
 - [x] Lookup Governance Proposals
 - [ ] Subscribe to Governance Proposal Notifications
-- [ ] Telegram Chat Bot
+- [ ] Telegram Chat Bot 
+- [ ] Lookup Protocol Governance Proposals
+- [ ] Scam Detection/Classification for Governance Proposals
 - [ ] Lookup Prices (Osmosiszone)
 - [ ] Subscribe to Price Alerts
-- [ ] Vote on proposals in deposit/voting period
-- [ ] Auto compound staking rewards
+- [ ] Token Listings/Pools (Add/Remove/Update)
+- [ ] NFT sales tracking
+- [ ] Wallet actions tracking (Whale tracking)
+- [ ] Validator Profile (name, comission, votes)
+- [ ] Impermanent Loss tracking
 - [ ] Lookup Airdrops
+
+### Actions
+- [ ] Send
+- [ ] Staking: Delegate/Re-delegate/Un-delegate
+- [ ] Vote on proposals in deposit/voting period
+- [ ] Buy/Sell Asset
+- [ ] Auto compound staking rewards
 - [ ] Transfer tokens to existing or new wallet
 - [ ] Transfer IBC tokens Cross-Chain
 - [ ] Swap in/out Stablecoin
 - [ ] Manage Collateral / Loans
-- [ ] Sentiment Analysis on Governance Proposals (scrapping news)
-- [ ] Sentiment Analysis on Blockchain (e.g Osmosis, Terra, Juno)
-- [ ] Sentiment Analysis on Stablecoin (e.g axelarUSDC, USK)
 
 ## Summary
 
