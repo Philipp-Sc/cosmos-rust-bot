@@ -6,13 +6,18 @@ use directories::ProjectDirs;
 use env_logger::Env;
 use futures::{channel::oneshot, future, pin_mut, StreamExt};
 use log::{debug, info};
-use presage::{prelude::{
-    content::{
-        Content, ContentBody, DataMessage, GroupContext, GroupContextV2, GroupType, SyncMessage,
+use presage::{
+    prelude::{
+        content::{
+            Content, ContentBody, DataMessage, GroupContext, GroupContextV2, GroupType, SyncMessage,
+        },
+        proto::sync_message::Sent,
+        Contact, GroupMasterKey, SignalServers,
     },
-    proto::sync_message::Sent,
-    Contact, GroupMasterKey, SignalServers,
-}, prelude::{phonenumber::PhoneNumber, ServiceAddress, Uuid}, ConfigStore, Manager, RegistrationOptions, SledConfigStore, SecretVolatileConfigStore, Registered};
+    prelude::{phonenumber::PhoneNumber, ServiceAddress, Uuid},
+    ConfigStore, Manager, Registered, RegistrationOptions, SecretVolatileConfigStore,
+    SledConfigStore,
+};
 use structopt::StructOpt;
 use tempfile::Builder;
 use tokio::{
@@ -44,14 +49,11 @@ enum Subcommand {
         #[structopt(long, short = "s", default_value = "production")]
         servers: SignalServers,
         #[structopt(
-        long,
-        help = "Use already linked device (do not use in combination with the flag --volatile)",
+            long,
+            help = "Use already linked device (do not use in combination with the flag --volatile)"
         )]
         try_use_linked_device: bool,
-        #[structopt(
-        long,
-        help = "Use the console instead of the signal messenger.",
-        )]
+        #[structopt(long, help = "Use the console instead of the signal messenger.")]
         use_console: bool,
     },
     #[structopt(about = "Register using a phone number")]
@@ -63,8 +65,8 @@ enum Subcommand {
         #[structopt(long)]
         use_voice_call: bool,
         #[structopt(
-        long = "captcha",
-        help = "Captcha obtained from https://signalcaptchas.org/registration/generate.html"
+            long = "captcha",
+            help = "Captcha obtained from https://signalcaptchas.org/registration/generate.html"
         )]
         captcha: Url,
         #[structopt(long, help = "Force to register again if already registered")]
@@ -73,22 +75,22 @@ enum Subcommand {
     #[structopt(about = "Unregister from Signal")]
     Unregister,
     #[structopt(
-    about = "Generate a QR code to scan with Signal for iOS or Android to link this client as secondary device"
+        about = "Generate a QR code to scan with Signal for iOS or Android to link this client as secondary device"
     )]
     LinkDevice {
         /// Possible values: staging, production
         #[structopt(long, short = "s", default_value = "production")]
         servers: SignalServers,
         #[structopt(
-        long,
-        short = "n",
-        help = "Name of the device to register in the primary client"
+            long,
+            short = "n",
+            help = "Name of the device to register in the primary client"
         )]
         device_name: String,
         #[structopt(
-        long,
-        short = "f",
-        help = "Command to execute after linking the device. (Send or Receive)"
+            long,
+            short = "f",
+            help = "Command to execute after linking the device. (Send or Receive)"
         )]
         follow_up_command: String,
     },
@@ -129,11 +131,11 @@ enum Subcommand {
     #[structopt(about = "Send a message to group")]
     SendToGroup {
         #[structopt(
-        long = "phone-number",
-        short = "n",
-        min_values = 1,
-        required = true,
-        help = "Phone number of the recipient"
+            long = "phone-number",
+            short = "n",
+            min_values = 1,
+            required = true,
+            help = "Phone number of the recipient"
         )]
         recipients: Vec<PhoneNumber>,
         #[structopt(long, short = "m", help = "Contents of the message to send")]
@@ -152,7 +154,7 @@ async fn main() -> anyhow::Result<()> {
     env_logger::from_env(
         Env::default().default_filter_or(format!("{}=info", env!("CARGO_PKG_NAME"))),
     )
-        .init();
+    .init();
 
     let args = Args::from_args();
 
@@ -171,7 +173,11 @@ async fn main() -> anyhow::Result<()> {
     }
 }
 
-async fn link_device<C: ConfigStore>(servers: SignalServers, device_name: String, config_store: C) -> Result<Manager<C, Registered>, presage::Error> {
+async fn link_device<C: ConfigStore>(
+    servers: SignalServers,
+    device_name: String,
+    config_store: C,
+) -> Result<Manager<C, Registered>, presage::Error> {
     let (provisioning_link_tx, provisioning_link_rx) = oneshot::channel();
     match future::join(
         Manager::link_secondary_device(
@@ -182,19 +188,25 @@ async fn link_device<C: ConfigStore>(servers: SignalServers, device_name: String
         ),
         async move {
             match provisioning_link_rx.await {
-                Ok(url) => {
-                    qr2term::print_qr(url.to_string()).expect("failed to render qrcode")
-                }
+                Ok(url) => qr2term::print_qr(url.to_string()).expect("failed to render qrcode"),
                 Err(e) => log::error!("Error linking device: {e}"),
             }
         },
-    ).await {
-        (res, _) => { res }
-        _ => { panic!() }
+    )
+    .await
+    {
+        (res, _) => res,
+        _ => {
+            panic!()
+        }
     }
 }
 
-async fn send<C: ConfigStore>(msg: &str, uuid: &Uuid, manager: &Manager<C, Registered>) -> anyhow::Result<()> {
+async fn send<C: ConfigStore>(
+    msg: &str,
+    uuid: &Uuid,
+    manager: &Manager<C, Registered>,
+) -> anyhow::Result<()> {
     let timestamp = std::time::SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("Time went backwards")
@@ -213,9 +225,9 @@ async fn send<C: ConfigStore>(msg: &str, uuid: &Uuid, manager: &Manager<C, Regis
 async fn receive<C: ConfigStore>(manager: &Manager<C, Registered>) -> anyhow::Result<()> {
     let attachments_tmp_dir = Builder::new().prefix("presage-attachments").tempdir()?;
     info!(
-                                    "attachments will be stored in {}",
-                                    attachments_tmp_dir.path().display()
-                                );
+        "attachments will be stored in {}",
+        attachments_tmp_dir.path().display()
+    );
 
     let messages = manager
         .clone()
@@ -227,13 +239,13 @@ async fn receive<C: ConfigStore>(manager: &Manager<C, Registered>) -> anyhow::Re
         match body {
             ContentBody::DataMessage(message)
             | ContentBody::SynchronizeMessage(SyncMessage {
-                                                  sent:
-                                                  Some(Sent {
-                                                           message: Some(message),
-                                                           ..
-                                                       }),
-                                                  ..
-                                              }) => {
+                sent:
+                    Some(Sent {
+                        message: Some(message),
+                        ..
+                    }),
+                ..
+            }) => {
                 if let Some(quote) = &message.quote {
                     println!(
                         "Quote from {:?}: > {:?} / {}",
@@ -253,17 +265,15 @@ async fn receive<C: ConfigStore>(manager: &Manager<C, Registered>) -> anyhow::Re
                     println!("Message from {:?}: {:?}", metadata, message);
                     // fetch the groups v2 info here, just for testing purposes
                     if let Some(group_v2) = message.group_v2 {
-                        let master_key = GroupMasterKey::new(
-                            group_v2.master_key.unwrap().try_into().unwrap(),
-                        );
+                        let master_key =
+                            GroupMasterKey::new(group_v2.master_key.unwrap().try_into().unwrap());
                         let group = manager.get_group_v2(master_key).await?;
                         println!("Group v2: {:?}", group.title);
                     }
                 }
 
                 for attachment_pointer in message.attachments {
-                    let attachment_data =
-                        manager.get_attachment(&attachment_pointer).await?;
+                    let attachment_data = manager.get_attachment(&attachment_pointer).await?;
                     let extensions = mime_guess::get_mime_extensions_str(
                         attachment_pointer
                             .content_type
@@ -278,10 +288,10 @@ async fn receive<C: ConfigStore>(manager: &Manager<C, Registered>) -> anyhow::Re
                     ));
                     fs::write(&file_path, &attachment_data).await?;
                     info!(
-                                "saved received attachment from {} to {}",
-                                metadata.sender,
-                                file_path.display()
-                            );
+                        "saved received attachment from {} to {}",
+                        metadata.sender,
+                        file_path.display()
+                    );
                 }
             }
             ContentBody::SynchronizeMessage(m) => {
@@ -320,7 +330,7 @@ async fn run<C: ConfigStore>(subcommand: Subcommand, config_store: C) -> anyhow:
                     force,
                 },
             )
-                .await?;
+            .await?;
 
             // ask for confirmation code here
             let stdin = io::stdin();
@@ -333,11 +343,10 @@ async fn run<C: ConfigStore>(subcommand: Subcommand, config_store: C) -> anyhow:
         Subcommand::CosmosRustBot {
             servers,
             try_use_linked_device,
-            use_console
+            use_console,
         } => {
             let device_name = "CosmosRustBot".to_string();
             let mut manager: Option<Manager<C, Registered>> = None;
-
 
             if !use_console {
                 if try_use_linked_device {
@@ -442,11 +451,11 @@ async fn run<C: ConfigStore>(subcommand: Subcommand, config_store: C) -> anyhow:
                 if let Contact {
                     name,
                     address:
-                    ServiceAddress {
-                        uuid: Some(uuid),
-                        phonenumber: Some(phonenumber),
-                        ..
-                    },
+                        ServiceAddress {
+                            uuid: Some(uuid),
+                            phonenumber: Some(phonenumber),
+                            ..
+                        },
                     ..
                 } = contact
                 {

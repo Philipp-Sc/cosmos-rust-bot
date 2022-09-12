@@ -7,41 +7,39 @@
 
 pub mod requirements;
 
-use requirements::{UserSettings, Feature, TaskSpec, get_requirements, TaskType};
+use requirements::{get_requirements, Feature, TaskSpec, TaskType, UserSettings};
 use secstr::*;
 
 use std::collections::HashMap;
 
 use anyhow::anyhow;
 
-use std::sync::Arc;
-use tokio::sync::{Mutex};
-use tokio::task::JoinSet;
 use heck::ToTitleCase;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use tokio::task::JoinSet;
 
-use std::time::{Duration};
+use std::time::Duration;
 use tokio::time::timeout;
-
 
 use chrono::{TimeZone, Utc};
 
-use core::pin::Pin;
 use core::future::Future;
+use core::pin::Pin;
 use std::iter;
 
 use cosmos_rust_interface::utils::entry::*;
 
-
-use cosmos_rust_interface::utils::response::ResponseResult;
 use cosmos_rust_interface::blockchain::cosmos::gov::get_proposals;
+use cosmos_rust_interface::utils::response::ResponseResult;
 use cosmos_rust_package::api::core::cosmos::channels;
 use cosmos_rust_package::api::core::cosmos::channels::SupportedBlockchain;
 use cosmos_rust_package::api::custom::query::gov::ProposalStatus;
-use serde_json::{json};
-use strum::IntoEnumIterator;
-use strum_macros::EnumIter;
+use serde_json::json;
 use std::string::ToString;
+use strum::IntoEnumIterator;
 use strum_macros;
+use strum_macros::EnumIter;
 
 #[derive(strum_macros::ToString, Debug, EnumIter, PartialEq)]
 pub enum TaskState {
@@ -59,8 +57,10 @@ pub struct TaskItem {
     pub timestamp: i64,
 }
 
-
-pub async fn add_item(pointer: &Arc<Mutex<Vec<Maybe<ResponseResult>>>>, item: Maybe<ResponseResult>) {
+pub async fn add_item(
+    pointer: &Arc<Mutex<Vec<Maybe<ResponseResult>>>>,
+    item: Maybe<ResponseResult>,
+) {
     let mut lock = pointer.lock().await;
     lock.insert(0, item);
     if lock.len() > 4 {
@@ -97,40 +97,39 @@ pub async fn get_item(pointer: &Arc<Mutex<Vec<Maybe<ResponseResult>>>>) -> Maybe
  * will not await the future if it is not yet resolved.
  * in that case it returns an error.
  */
-pub async fn access_maybe(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, key: &str) -> Maybe<ResponseResult> {
+pub async fn access_maybe(
+    maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,
+    key: &str,
+) -> Maybe<ResponseResult> {
     match maybes.get(key.to_string().as_str()) {
-        Some(pointer) => {
-            get_item(pointer).await
-        }
-        None => {
-            Maybe {
-                data: Err(anyhow!("Error: key does not exist")),
-                timestamp: Utc::now().timestamp(),
-            }
-        }
+        Some(pointer) => get_item(pointer).await,
+        None => Maybe {
+            data: Err(anyhow!("Error: key does not exist")),
+            timestamp: Utc::now().timestamp(),
+        },
     }
 }
 
-pub async fn access_maybes(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>) -> HashMap<String, Maybe<ResponseResult>> {
+pub async fn access_maybes(
+    maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,
+) -> HashMap<String, Maybe<ResponseResult>> {
     let mut only_maybes: HashMap<String, Maybe<ResponseResult>> = HashMap::new();
     for (key, val) in maybes.iter() {
         let value = match maybes.get(key.as_str()) {
-            Some(pointer) => {
-                get_item(pointer).await
-            }
-            None => {
-                Maybe {
-                    data: Err(anyhow!("Error: key does not exist")),
-                    timestamp: Utc::now().timestamp(),
-                }
-            }
+            Some(pointer) => get_item(pointer).await,
+            None => Maybe {
+                data: Err(anyhow!("Error: key does not exist")),
+                timestamp: Utc::now().timestamp(),
+            },
         };
         only_maybes.insert(key.to_string(), value);
     }
     only_maybes
 }
 
-pub async fn get_timestamps_of_tasks(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>) -> Vec<(String, i64)> {
+pub async fn get_timestamps_of_tasks(
+    maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,
+) -> Vec<(String, i64)> {
     let mut keys: Vec<(String, i64)> = Vec::new();
 
     for key in maybes.keys() {
@@ -141,35 +140,53 @@ pub async fn get_timestamps_of_tasks(maybes: &HashMap<String, Arc<Mutex<Vec<Mayb
     return keys;
 }
 
-pub async fn register_value(maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, key: String, value: String) {
+pub async fn register_value(
+    maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,
+    key: String,
+    value: String,
+) {
     let pointer = maybes.get(key.to_string().as_str()).unwrap();
-    let result: Maybe<ResponseResult> = Maybe { data: Ok(ResponseResult::Text(value)), timestamp: Utc::now().timestamp() };
+    let result: Maybe<ResponseResult> = Maybe {
+        data: Ok(ResponseResult::Text(value)),
+        timestamp: Utc::now().timestamp(),
+    };
     add_item(pointer, result).await;
 }
 
-pub async fn try_register_function(join_set: &mut JoinSet<()>, maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, key: String, f: Pin<Box<dyn Future<Output=Maybe<String>> + Send + 'static>>, timeout_duration: u64, block_duration_after_resolve: i64) {
+pub async fn try_register_function(
+    join_set: &mut JoinSet<()>,
+    maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,
+    key: String,
+    f: Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>,
+    timeout_duration: u64,
+    block_duration_after_resolve: i64,
+) {
     let timestamp;
     let state: TaskState;
 
     match maybes.get(&key) {
-        Some(val) => {
-            match val.lock().await[0].clone() {
-                Maybe { data: Err(err), timestamp: t } => {
-                    timestamp = t;
-                    if err.to_string() == "Error: Not yet resolved!".to_string() {
-                        state = TaskState::Pending;
-                    } else if err.to_string() == "Error: Entry reserved!".to_string() {
-                        state = TaskState::Reserved;
-                    } else {
-                        state = TaskState::Failed;
-                    }
-                }
-                Maybe { data: Ok(_), timestamp: t } => {
-                    state = TaskState::Resolved;
-                    timestamp = t;
+        Some(val) => match val.lock().await[0].clone() {
+            Maybe {
+                data: Err(err),
+                timestamp: t,
+            } => {
+                timestamp = t;
+                if err.to_string() == "Error: Not yet resolved!".to_string() {
+                    state = TaskState::Pending;
+                } else if err.to_string() == "Error: Entry reserved!".to_string() {
+                    state = TaskState::Reserved;
+                } else {
+                    state = TaskState::Failed;
                 }
             }
-        }
+            Maybe {
+                data: Ok(_),
+                timestamp: t,
+            } => {
+                state = TaskState::Resolved;
+                timestamp = t;
+            }
+        },
         None => {
             state = TaskState::Unknown;
             timestamp = 0i64;
@@ -178,32 +195,55 @@ pub async fn try_register_function(join_set: &mut JoinSet<()>, maybes: &HashMap<
     let now = Utc::now().timestamp();
 
     let spawn = match state {
-        TaskState::Unknown | TaskState::Reserved | TaskState::Failed => { true }
+        TaskState::Unknown | TaskState::Reserved | TaskState::Failed => true,
         TaskState::Resolved => {
             if now - timestamp >= block_duration_after_resolve {
                 true
-            } else { false }
+            } else {
+                false
+            }
         }
-        _ => { false }
+        _ => false,
     };
     if spawn {
         let pointer = maybes.get(key.to_string().as_str()).unwrap().clone();
         join_set.spawn(async move {
-            let result = timeout(Duration::from_secs(timeout_duration), f).await.unwrap_or(Maybe { data: Ok("timeout".to_string()), timestamp: Utc::now().timestamp() });
-            let result: Maybe<ResponseResult> = Maybe { data: Ok(ResponseResult::Text(result.data.unwrap_or("--".to_string()))), timestamp: Utc::now().timestamp() };
+            let result = timeout(Duration::from_secs(timeout_duration), f)
+                .await
+                .unwrap_or(Maybe {
+                    data: Ok("timeout".to_string()),
+                    timestamp: Utc::now().timestamp(),
+                });
+            let result: Maybe<ResponseResult> = Maybe {
+                data: Ok(ResponseResult::Text(
+                    result.data.unwrap_or("--".to_string()),
+                )),
+                timestamp: Utc::now().timestamp(),
+            };
             add_item(&pointer, result).await;
         });
     }
 }
 
-pub async fn await_function(maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, key: String) -> Maybe<String> {
+pub async fn await_function(
+    maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,
+    key: String,
+) -> Maybe<String> {
     match access_maybe(&maybes, &key).await {
-        Maybe { data: Ok(succ), timestamp: t } => {
-            Maybe { data: Ok(succ.as_text().unwrap().to_string()), timestamp: t }
-        }
-        Maybe { data: Err(err), timestamp: t } => {
-            Maybe { data: Ok(err.to_string()), timestamp: t }
-        }
+        Maybe {
+            data: Ok(succ),
+            timestamp: t,
+        } => Maybe {
+            data: Ok(succ.as_text().unwrap().to_string()),
+            timestamp: t,
+        },
+        Maybe {
+            data: Err(err),
+            timestamp: t,
+        } => Maybe {
+            data: Ok(err.to_string()),
+            timestamp: t,
+        },
     }
 }
 
@@ -211,8 +251,7 @@ pub fn task_meta_data(task_list: Vec<TaskItem>) -> Vec<CosmosRustBotValue> {
     let now = Utc::now().timestamp();
 
     let mut task_meta_data = task_list.iter().map(|x|
-        ( // iterate over all statuses not only resolved
-          "task_history".to_string(), x.state.to_string(), json!({"value": x.name, "timestamp": x.timestamp})))
+        ( "task_history".to_string(), x.state.to_string(), json!({"value": x.name, "timestamp": x.timestamp})))
         .chain(TaskState::iter().map(|y| {
             ("task_count".to_string(), y.to_string(), json!({"value": task_list.iter().filter(|x| x.state == y).count().to_string()}))
         }))
@@ -254,12 +293,19 @@ pub fn task_meta_data(task_list: Vec<TaskItem>) -> Vec<CosmosRustBotValue> {
     task_meta_data
 }
 
-pub async fn next_iteration_of_upcoming_tasks(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, user_settings: &UserSettings, wallet_acc_address: &Arc<SecUtf8>) -> Vec<CosmosRustBotValue> {
+pub async fn next_iteration_of_upcoming_tasks(
+    join_set: &mut JoinSet<()>,
+    maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,
+    user_settings: &UserSettings,
+    wallet_acc_address: &Arc<SecUtf8>,
+) -> Vec<CosmosRustBotValue> {
     for _ in 0..join_set.len() {
         let result = timeout(Duration::from_millis(0), join_set.join_one()).await;
         match result {
             Ok(_) => {}
-            Err(_) => { break; }
+            Err(_) => {
+                break;
+            }
         };
     }
 
@@ -273,7 +319,10 @@ pub async fn next_iteration_of_upcoming_tasks(join_set: &mut JoinSet<()>, maybes
         let state: TaskState;
         let time: i64;
         match v.lock().await[0].clone() {
-            Maybe { data: Err(err), timestamp } => {
+            Maybe {
+                data: Err(err),
+                timestamp,
+            } => {
                 time = timestamp;
                 if err.to_string() == "Error: Not yet resolved!".to_string() {
                     state = TaskState::Pending;
@@ -283,29 +332,45 @@ pub async fn next_iteration_of_upcoming_tasks(join_set: &mut JoinSet<()>, maybes
                     state = TaskState::Failed;
                 }
             }
-            Maybe { data: Ok(_), timestamp } => {
+            Maybe {
+                data: Ok(_),
+                timestamp,
+            } => {
                 time = timestamp;
                 state = TaskState::Resolved;
             }
         }
-        task_list.push(TaskItem { name: k.to_string(), state, timestamp: time });
+        task_list.push(TaskItem {
+            name: k.to_string(),
+            state,
+            timestamp: time,
+        });
     }
     for i in 0..req.len() {
         if task_list.iter().filter(|x| x.name == req[i].name).count() == 0 {
-            task_list.push(TaskItem { name: (&req[i].name).to_string(), state: TaskState::Unknown, timestamp: 0i64 });
+            task_list.push(TaskItem {
+                name: (&req[i].name).to_string(),
+                state: TaskState::Unknown,
+                timestamp: 0i64,
+            });
         }
     }
 
     for i in 0..task_list.len() {
         let mut update = false;
-        if task_list[i].state == TaskState::Reserved {} else if task_list[i].state == TaskState::Unknown {
+        if task_list[i].state == TaskState::Reserved {
+        } else if task_list[i].state == TaskState::Unknown {
             update = true;
         } else if task_list[i].state == TaskState::Unknown {
             if req.iter().filter(|x| x.name == task_list[i].name).count() == 1 {
                 update = true;
             }
         } else if task_list[i].state == TaskState::Resolved {
-            let period: Vec<i64> = req.iter().filter(|x| x.name == task_list[i].name).map(|x| x.refresh_rate as i64).collect();
+            let period: Vec<i64> = req
+                .iter()
+                .filter(|x| x.name == task_list[i].name)
+                .map(|x| x.refresh_rate as i64)
+                .collect();
             if period.len() == 1 {
                 if (now - task_list[i].timestamp) > period[0] {
                     update = true;
@@ -313,36 +378,62 @@ pub async fn next_iteration_of_upcoming_tasks(join_set: &mut JoinSet<()>, maybes
             }
         }
         if update {
-            task_list.push(TaskItem { name: task_list[i].name.to_owned(), state: TaskState::Upcoming, timestamp: task_list[i].timestamp });
+            task_list.push(TaskItem {
+                name: task_list[i].name.to_owned(),
+                state: TaskState::Upcoming,
+                timestamp: task_list[i].timestamp,
+            });
         }
     }
     task_list.sort_by_key(|k| k.timestamp);
 
-    let upcoming_task_name_list: Vec<String> = task_list.iter().filter(|x| x.state == TaskState::Upcoming).map(|x| x.name.to_string()).collect();
-    let upcoming_task_spec_list: Vec<TaskSpec> = req.into_iter().filter(|x| upcoming_task_name_list.contains(&x.name)).collect();
+    let upcoming_task_name_list: Vec<String> = task_list
+        .iter()
+        .filter(|x| x.state == TaskState::Upcoming)
+        .map(|x| x.name.to_string())
+        .collect();
+    let upcoming_task_spec_list: Vec<TaskSpec> = req
+        .into_iter()
+        .filter(|x| upcoming_task_name_list.contains(&x.name))
+        .collect();
 
-    spawn_tasks(join_set, maybes, &user_settings, &wallet_acc_address, upcoming_task_spec_list).await;
+    spawn_tasks(
+        join_set,
+        maybes,
+        &user_settings,
+        &wallet_acc_address,
+        upcoming_task_spec_list,
+    )
+    .await;
     task_meta_data(task_list)
 }
 
 /*
  * Preparing entries so that they can be used without the need to mutate the hashmap later on.
  */
-pub async fn setup_required_keys(maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>) {
-    let list: Vec<&str> = vec![];/*
-        "anchor_auto_stake",
-        "anchor_auto_farm",
-        "anchor_auto_repay",
-        "anchor_auto_borrow",
-        "latest_transaction",
-        "anchor_auto_stake_airdrops",
-        "anchor_borrow_and_deposit_stable",
-        "anchor_redeem_and_repay_stable",
-        "anchor_governance_claim_and_farm",
-        "anchor_governance_claim_and_stake"*/
+pub async fn setup_required_keys(
+    maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,
+) {
+    let list: Vec<&str> = vec![]; /*
+                                  "anchor_auto_stake",
+                                  "anchor_auto_farm",
+                                  "anchor_auto_repay",
+                                  "anchor_auto_borrow",
+                                  "latest_transaction",
+                                  "anchor_auto_stake_airdrops",
+                                  "anchor_borrow_and_deposit_stable",
+                                  "anchor_redeem_and_repay_stable",
+                                  "anchor_governance_claim_and_farm",
+                                  "anchor_governance_claim_and_stake"*/
 
     for key in list {
-        maybes.insert(key.to_string(), Arc::new(Mutex::new(vec![Maybe { data: Err(anyhow::anyhow!("Error: Entry reserved!")), timestamp: Utc::now().timestamp() }])));
+        maybes.insert(
+            key.to_string(),
+            Arc::new(Mutex::new(vec![Maybe {
+                data: Err(anyhow::anyhow!("Error: Entry reserved!")),
+                timestamp: Utc::now().timestamp(),
+            }])),
+        );
     }
 }
 
@@ -352,204 +443,63 @@ pub async fn setup_required_keys(maybes: &mut HashMap<String, Arc<Mutex<Vec<Mayb
 * retrieve the value when it is needed: "data.get_mut(String).unwrap().await"
 * use try_join!, join! or select! macros to optimise retrieval of multiple values.
 */
-async fn spawn_tasks(join_set: &mut JoinSet<()>, maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>, user_settings: &UserSettings, wallet_acc_address: &Arc<SecUtf8>, to_update: Vec<TaskSpec>) {
+async fn spawn_tasks(
+    join_set: &mut JoinSet<()>,
+    maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,
+    user_settings: &UserSettings,
+    wallet_acc_address: &Arc<SecUtf8>,
+    to_update: Vec<TaskSpec>,
+) {
     for req in to_update {
         let contains_key = maybes.contains_key(&req.name);
         if !contains_key {
-            maybes.insert(req.name.clone(), Arc::new(Mutex::new(vec![Maybe { data: Err(anyhow::anyhow!("Error: Not yet resolved!")), timestamp: Utc::now().timestamp() }])));
+            maybes.insert(
+                req.name.clone(),
+                Arc::new(Mutex::new(vec![Maybe {
+                    data: Err(anyhow::anyhow!("Error: Not yet resolved!")),
+                    timestamp: Utc::now().timestamp(),
+                }])),
+            );
         }
         let pointer = maybes.get(&req.name).unwrap().clone();
 
         if contains_key {
-            add_item(&pointer, Maybe { data: Err(anyhow::anyhow!("Error: Not yet resolved!")), timestamp: Utc::now().timestamp() }).await;
+            add_item(
+                &pointer,
+                Maybe {
+                    data: Err(anyhow::anyhow!("Error: Not yet resolved!")),
+                    timestamp: Utc::now().timestamp(),
+                },
+            )
+            .await;
         }
 
-        let mut f: Option<Pin<Box<dyn Future<Output=anyhow::Result<ResponseResult>> + Send + 'static>>> = None;
+        let mut f: Option<
+            Pin<Box<dyn Future<Output = anyhow::Result<ResponseResult>> + Send + 'static>>,
+        > = None;
 
         let wallet_acc_address = wallet_acc_address.clone();
 
         match req.kind {
             TaskType::GovernanceProposals => {
                 let status = ProposalStatus::new(req.args["proposal_status"].as_str().unwrap());
-                let blockchain = channels::get_supported_blockchains().get(req.args["blockchain"].as_str().unwrap()).unwrap().clone();
+                let blockchain = channels::get_supported_blockchains()
+                    .get(req.args["blockchain"].as_str().unwrap())
+                    .unwrap()
+                    .clone();
                 f = Some(Box::pin(get_proposals(blockchain, status)));
             }
             _ => {}
         }
 
-        /*
-
-        if length == 1 {
-            match vec[0] {
-                "governance_proposals_terra" => {
-                    f = Some(Box::pin(get_proposals("terra")));
-                }
-                "governance_proposals_osmosis" => {
-                    f = Some(Box::pin(get_proposals("osmosis")));
-                }
-                /*"terra_money_assets_cw20_tokens" => {
-                    f = Some(Box::pin(query_terra_money_assets_cw20_tokens()));
-                }*/
-                "anchor_protocol_whitelist" => {
-                    f = Some(Box::pin(anchor_protocol_whitelist(asset_whitelist)));
-                }
-                "earn_apy" => {
-                    f = Some(Box::pin(get_block_txs_deposit_stable_apy()));
-                }
-                "blocks_per_year" => {
-                    f = Some(Box::pin(blocks_per_year_query()));
-                }
-                "anchor_airdrops" => {
-                    f = Some(Box::pin(query_anchor_airdrops(asset_whitelist, wallet_acc_address)));
-                }
-                "borrow_limit" => {
-                    f = Some(Box::pin(anchor_protocol_borrower_limit(asset_whitelist, wallet_acc_address)));
-                }
-                "borrow_info" => {
-                    f = Some(Box::pin(anchor_protocol_borrower_info(asset_whitelist, wallet_acc_address)));
-                }
-                "balance" => {
-                    f = Some(Box::pin(anchor_protocol_balance(asset_whitelist, wallet_acc_address)));
-                }
-                "terra_balances" => {
-                    f = Some(Box::pin(terra_balances(wallet_acc_address)));
-                }
-                "anc_balance" => {
-                    f = Some(Box::pin(anchor_protocol_anc_balance(asset_whitelist, wallet_acc_address)));
-                }
-                "staker" => {
-                    f = Some(Box::pin(anchor_protocol_staker(asset_whitelist, wallet_acc_address)));
-                }
-                "api/v2/distribution-apy" => {
-                    f = Some(Box::pin(query_api_distribution_apy()));
-                }
-                "api/data?type=lpVault" => {
-                    f = Some(Box::pin(query_api_spec_anc_ust_lp_reward()));
-                }
-                "api/v2/ust-lp-reward" => {
-                    f = Some(Box::pin(query_api_anc_ust_lp_reward()));
-                }
-                "api/v2/gov-reward" => {
-                    f = Some(Box::pin(query_api_gov_reward()));
-                }
-                "anchor_protocol_txs_claim_rewards" => {
-                    f = Some(Box::pin(get_block_txs_fee_data("claim_rewards", asset_whitelist)));
-                }
-                "anchor_protocol_txs_staking" => {
-                    f = Some(Box::pin(get_block_txs_fee_data("staking", asset_whitelist)));
-                }
-                "anchor_protocol_txs_redeem_stable" => {
-                    f = Some(Box::pin(get_block_txs_fee_data("redeem_stable", asset_whitelist)));
-                }
-                "anchor_protocol_txs_deposit_stable" => {
-                    f = Some(Box::pin(get_block_txs_fee_data("deposit_stable", asset_whitelist)));
-                }
-                "anchor_protocol_txs_borrow_stable" => {
-                    f = Some(Box::pin(get_block_txs_fee_data("borrow_stable", asset_whitelist)));
-                }
-                "anchor_protocol_txs_repay_stable" => {
-                    f = Some(Box::pin(get_block_txs_fee_data("repay_stable", asset_whitelist)));
-                }
-                "anchor_protocol_txs_provide_liquidity" => {
-                    f = Some(Box::pin(get_block_txs_fee_data("provide_liquidity", asset_whitelist)));
-                }
-                "txs_provide_to_spec_anc_ust_vault" => {
-                    f = Some(Box::pin(get_block_txs_fee_data("provide_to_spec_anc_ust_vault", asset_whitelist)));
-                }
-                "anchor_protocol_txs_staking_lp" => {
-                    f = Some(Box::pin(get_block_txs_fee_data("staking_lp", asset_whitelist)));
-                }
-                "tax_rate" => {
-                    f = Some(Box::pin(get_tax_rate()));
-                }
-                "tax_caps" => {
-                    f = Some(Box::pin(get_tax_caps()));
-                }
-                "gas_fees_uusd" => {
-                    let mut gas_prices = get_gas_price();
-                    match fetch_gas_price().await {
-                        Ok(res) => { gas_prices = res }
-                        Err(err) => {
-                            println!("{}", err.to_string());
-                            println!("Info: Failed to query gas price. Fallback to static gas prices.");
-                        }
-                    };
-                    let result: Maybe<ResponseResult> = Maybe { data: Ok(ResponseResult::Text(gas_prices.uusd.to_string().to_owned())), timestamp: Utc::now().timestamp() };
-                    add_item(&pointer, result).await;
-                }
-                "trigger_percentage" => {
-                    let result: Maybe<ResponseResult> = Maybe { data: Ok(ResponseResult::Text(user_settings.trigger_percentage.to_string().to_owned())), timestamp: Utc::now().timestamp() };
-                    add_item(&pointer, result).await;
-                }
-                "borrow_percentage" => {
-                    let result: Maybe<ResponseResult> = Maybe { data: Ok(ResponseResult::Text(user_settings.borrow_percentage.to_string().to_owned())), timestamp: Utc::now().timestamp() };
-                    add_item(&pointer, result).await;
-                }
-                "target_percentage" => {
-                    let result: Maybe<ResponseResult> = Maybe { data: Ok(ResponseResult::Text(user_settings.target_percentage.to_string().to_owned())), timestamp: Utc::now().timestamp() };
-                    add_item(&pointer, result).await;
-                }
-                "gas_adjustment_preference" => {
-                    let result: Maybe<ResponseResult> = Maybe { data: Ok(ResponseResult::Text(user_settings.gas_adjustment_preference.to_string().to_owned())), timestamp: Utc::now().timestamp() };
-                    add_item(&pointer, result).await;
-                }
-                "min_ust_balance" => {
-                    let result: Maybe<ResponseResult> = Maybe { data: Ok(ResponseResult::Text(user_settings.min_ust_balance.to_string().to_owned())), timestamp: Utc::now().timestamp() };
-                    add_item(&pointer, result).await;
-                }
-                "ust_balance_preference" => {
-                    let result: Maybe<ResponseResult> = Maybe { data: Ok(ResponseResult::Text(user_settings.ust_balance_preference.to_string().to_owned())), timestamp: Utc::now().timestamp() };
-                    add_item(&pointer, result).await;
-                }
-                "max_tx_fee" => {
-                    let result: Maybe<ResponseResult> = Maybe { data: Ok(ResponseResult::Text(user_settings.max_tx_fee.to_string().to_owned())), timestamp: Utc::now().timestamp() };
-                    add_item(&pointer, result).await;
-                }
-                &_ => {}
-            };
-        } else if length == 3 {
-            match vec[0] {
-                "state" => {
-                    f = Some(Box::pin(state_query_msg(asset_whitelist, vec[1].to_owned(), vec[2].to_owned())));
-                }
-                "epoch_state" => {
-                    f = Some(Box::pin(epoch_state_query_msg(asset_whitelist, vec[1].to_owned(), vec[2].to_owned())));
-                }
-                "config" => {
-                    f = Some(Box::pin(config_query_msg(asset_whitelist, vec[1].to_owned(), vec[2].to_owned())));
-                }
-                "core_swap" => {
-                    f = Some(Box::pin(native_token_core_swap(vec[1].to_owned(), vec[2].to_owned())));
-                }
-                &_ => {}
-            }
-        } else if length == 6 {
-            match vec[0] {
-                "simulate_swap" => {
-                    f = Some(Box::pin(simulate_swap(asset_whitelist,
-                                                    vec[1].to_owned(),
-                                                    match vec[2] {
-                                                        "none" => { None }
-                                                        protocol => { Some(protocol.to_string()) }
-                                                    },
-                                                    vec[3].to_owned(),
-                                                    match vec[4] {
-                                                        "none" => { None }
-                                                        protocol => { Some(protocol.to_string()) }
-                                                    },
-                                                    vec[5].to_owned())));
-                }
-                &_ => {}
-            }
-        }
-
-        */
-
         if let Some(m) = f {
             join_set.spawn(async move {
                 {
                     let result = m.await;
-                    let result: Maybe<ResponseResult> = Maybe { data: result, timestamp: Utc::now().timestamp() };
+                    let result: Maybe<ResponseResult> = Maybe {
+                        data: result,
+                        timestamp: Utc::now().timestamp(),
+                    };
                     add_item(&pointer, result).await;
                 }
             });
