@@ -1,10 +1,10 @@
 #!/bin/bash
 cd "$(dirname "$0")"
 
-if [ -f ./terra-rust-signal-bot.pid ]; then
-    cat ./terra-rust-signal-bot.pid
-    kill `cat ./terra-rust-signal-bot.pid`
-    rm ./terra-rust-signal-bot.pid
+if [ -f ./cosmos-rust-signal-bot.pid ]; then
+    cat ./cosmos-rust-signal-bot.pid
+    kill `cat ./cosmos-rust-signal-bot.pid`
+    rm ./cosmos-rust-signal-bot.pid
     echo "always-run.sh process stopped"
 else 
     echo "always-run.sh process not running"

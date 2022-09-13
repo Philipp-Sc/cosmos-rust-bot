@@ -2,7 +2,7 @@
 cd "$(dirname "$0")"
 
 args=("$@")
-nohup ./terra-rust-signal-bot $@ &
+nohup ./cosmos-rust-signal-bot $@ &
 
 echo $! > ./signal-bot.pid
 
