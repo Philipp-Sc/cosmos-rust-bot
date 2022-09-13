@@ -1,19 +1,19 @@
-//use bot_library::*;
-// to get control over the settings
-use cosmos_rust_interface::utils::entry::db::{notification::notify_sled_db, query::socket::*};
+use chrono::Utc;
+use cosmos_rust_interface::utils::entry::{
+    db::{notification::notify_sled_db, query::socket::*},
+    CosmosRustServerValue, Notify,
+};
 use regex::Regex;
 
 use heck::ToTitleCase;
-//use heck::ToUpperCamelCase;
 use std::collections::HashMap;
 
 pub async fn handle_message(msg: String, db: &sled::Db) {
-    let blockchain_regex = "(terra|osmosis|juno)";
-    let state_regex = "(pending|resolved|upcoming|failed|unknown|reserved)";
-    let sub_regex = "(subscribe|unsubscribe)";
-
     let msg = msg.to_lowercase();
 
+    let blockchain_regex = "(terra2|osmosis|juno)";
+    let state_regex = "(pending|resolved|upcoming|failed|unknown|reserved)";
+    let sub_regex = "(subscribe|unsubscribe)";
     let task_info_regex = Regex::new(
         format!(
             "task (count|list|history)(?: {})?(?: ([0-9]+))?(?: {})?(?:\\s|$)",
@@ -22,19 +22,107 @@ pub async fn handle_message(msg: String, db: &sled::Db) {
         .as_str(),
     )
     .unwrap();
-
-    let lookup_proposals_regex = Regex::new(format!("lookup proposals(?: {})?(?: #([0-9]+))?(?: (nil|passed|failed|rejected|deposit period|voting period))?(?: (text|community pool spend|parameter change|software upgrade|client update|update pool incentives|store code|unknown))?(?: (latest|submit|deposit end|voting start|voting end))?(?: ([0-9]+))?(?: {})?(?:\\s|$)", blockchain_regex, sub_regex).as_str()).unwrap();
-
-    // TODO: add help_regex, returns an explaination for each command (basically parses the regex and returns it in a human readable format)
+    let lookup_proposals_regex = Regex::new(format!("proposals(?: {})?(?: #([0-9]+))?(?: (nil|passed|failed|rejected|deposit period|voting period))?(?: (text|community pool spend|parameter change|software upgrade|client update|update pool incentives|store code|unknown))?(?: (latest|submit|deposit end|voting start|voting end))?(?: ([0-9]+))?(?: {})?(?:\\s|$)", blockchain_regex, sub_regex).as_str()).unwrap();
     let log_error_debug_regex = Regex::new(
         format!(
-            "task (logs|errors|debug)(?: ([0-9]+))?(?: {})?(?:\\s|$)",
+            "results (logs|errors|debug)(?: ([0-9]+))?(?: {})?(?:\\s|$)",
             sub_regex
         )
         .as_str(),
     )
     .unwrap();
-    if log_error_debug_regex.is_match(&msg) {
+    let help_regex = Regex::new("help(?:\\s|$)").unwrap();
+    let help_examples_regex = Regex::new("help examples(?:\\s|$)").unwrap();
+    let mut request = serde_json::Value::Null;
+
+    if help_examples_regex.is_match(&msg) {
+        notify_sled_db(
+            db,
+            CosmosRustServerValue::Notify(Notify {
+                timestamp: Utc::now().timestamp(),
+                msg: vec![
+                    r#"🔭 Monitor Tasks🔭
+=================
+🤖 EXAMPLES
+task count
+task count resolved
+task count failed
+task list
+task history failed subscribe"#
+                        .to_string(),
+                    r#"🔭 Monitor Results🔭 
+==================
+🤖 EXAMPLES
+results logs 
+results errors subscribe
+results errors 1"#
+                        .to_string(),
+                    r#"🛰️ Lookup Governance Proposals 🛰️
+===============================
+🤖 EXAMPLES
+governance proposals osmosis #1
+governance proposals osmosis 3
+governance proposals terra2 voting period subscribe
+governance proposals juno rejected 5"#
+                        .to_string(),
+                ],
+            }),
+        );
+    } else if help_regex.is_match(&msg) {
+        notify_sled_db(
+            db,
+            CosmosRustServerValue::Notify(Notify {
+                timestamp: Utc::now().timestamp(),
+                msg: vec![r#"💫 Help
+=======
+🤖 COMMAND
+help <subcommand>
+📣 SUBCOMMAND
+['examples']"#.to_string(),
+                    r#"🔭️ Monitor Tasks🔭
+=================
+🤖 COMMAND
+task <subcommand> <state> <limit> <option>
+📣 SUBCOMMAND
+['count', 'list', 'history']
+✅ STATE
+['pending', 'resolved', 'upcoming', 'failed', 'unknown', 'reserved']
+📜 LIMIT
+e.g. 1,2,..
+🔔 OPTION
+['subscribe', 'unsubscibe']"#.to_string(),
+                    r#"🔭️ Monitor Results🔭 
+==================
+🤖 COMMAND
+results <subcommand> <limit> <option>
+📣 SUBCOMMAND
+['logs', 'errors', 'debug']
+📜 LIMIT
+e.g. 1,2,..
+🔔 OPTION
+['subscribe', 'unsubscribe']"#.to_string(),
+                    r#"🛰️ Lookup Governance Proposals 🛰️
+===============================
+🤖 COMMAND
+governance proposals <blockchain> <proposal_id> <proposal_status> <proposal_type> <order_byproposal_time> <limit> <option>
+🌐 BLOCKCHAIN
+['terra2', 'osmosis', 'juno']
+🔎 PROPOSAL_ID
+e.g. #1,#2,..
+✅ PROPOSAL_STATUS
+['nil', 'passed', 'failed', 'rejected', 'deposit period', 'voting period']
+📝️ PROPOSAL_TYPE
+['text', 'community pool spend', 'parameter change', 'software proposal', 'client update', 'update pool incentives', 'store code', 'unknown']
+⏱️ ORDER_BY_PROPOSAL_TIME
+['latest', 'submit', 'deposit end', 'voting start', 'voting end']
+📜 LIMIT
+e.g. 1,2,..
+🔔 OPTION
+['subscribe', 'unsubscribe']"#.to_string()
+                ],
+            }),
+        );
+    } else if log_error_debug_regex.is_match(&msg) {
         let caps = log_error_debug_regex.captures(&msg).unwrap();
         let k = caps.get(1).map(|t| t.as_str()).unwrap();
         let limit = match caps.get(2) {
@@ -60,12 +148,8 @@ pub async fn handle_message(msg: String, db: &sled::Db) {
             }
         };
 
-        let request = serde_json::json!({"fields":fields,"indices":vec![format!("task_meta_data_{}",k).as_str()],"filter": filter, "order_by": "timestamp", "limit":limit, "subscribe": subscribe, "unsubscribe": unsubscribe});
-        //println!("{:?}", &request);
-        let response = client_send_request(request).unwrap();
-        notify_sled_db(db, response);
-    }
-    if task_info_regex.is_match(&msg) {
+        request = serde_json::json!({"fields":fields,"indices":vec![format!("task_meta_data_{}",k).as_str()],"filter": filter, "order_by": "timestamp", "limit":limit, "subscribe": subscribe, "unsubscribe": unsubscribe});
+    } else if task_info_regex.is_match(&msg) {
         let caps = task_info_regex.captures(&msg).unwrap();
         let mut filter: HashMap<String, String> = HashMap::new();
         let k = caps.get(1).map(|t| t.as_str());
@@ -98,10 +182,7 @@ pub async fn handle_message(msg: String, db: &sled::Db) {
             .get(4)
             .map(|x| x.as_str() == "unsubscribe")
             .unwrap_or(false);
-        let response = client_send_request(
-            serde_json::json!({"fields":vec!["summary"],"indices":vec!["task_meta_data"],"filter": filter, "order_by": order_by, "limit":limit, "subscribe": subscribe, "unsubscribe": unsubscribe}),
-        ).unwrap();
-        notify_sled_db(db, response);
+        request = serde_json::json!({"fields":vec!["summary"],"indices":vec!["task_meta_data"],"filter": filter, "order_by": order_by, "limit":limit, "subscribe": subscribe, "unsubscribe": unsubscribe});
     } else if lookup_proposals_regex.is_match(&msg) {
         let caps = lookup_proposals_regex.captures(&msg).unwrap();
         let mut filter: HashMap<String, String> = HashMap::new();
@@ -181,9 +262,10 @@ pub async fn handle_message(msg: String, db: &sled::Db) {
             .map(|x| x.as_str() == "unsubscribe")
             .unwrap_or(false);
 
-        let response = client_send_request(
-            serde_json::json!({"fields":vec!["summary"],"indices":vec!["proposal_id"],"filter": filter, "order_by": order_by, "limit":limit, "subscribe": subscribe, "unsubscribe": unsubscribe}),
-        ).unwrap();
+        request = serde_json::json!({"fields":vec!["summary"],"indices":vec!["proposal_id"],"filter": filter, "order_by": order_by, "limit":limit, "subscribe": subscribe, "unsubscribe": unsubscribe});
+    }
+    if !request.is_null() {
+        let response = client_send_request(request).unwrap();
         notify_sled_db(db, response);
     }
     // TODO \subscriptions list  (lists subs)

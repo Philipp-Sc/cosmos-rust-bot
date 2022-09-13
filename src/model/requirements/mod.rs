@@ -1,18 +1,17 @@
-use std::collections::HashMap;
-use serde_json::json;
 use bot_library::shared::UserSettings as UserSettingsImported;
+use serde::{Deserialize, Serialize};
+use serde_json::json;
+use std::collections::HashMap;
 use std::fs;
-use serde::{Serialize, Deserialize};
 
 pub type UserSettings = UserSettingsImported;
-
 
 // around every 5s a new block is generated
 const fast: i32 = 10;
 // 10s
 const medium: i32 = 60;
 // 1m
-const slow: i32 = 60 * 10;   // 10m
+const slow: i32 = 60 * 10; // 10m
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum TaskType {
@@ -35,18 +34,15 @@ pub struct TaskSpec {
 }
 
 pub fn feature_list() -> Vec<Feature> {
-    let feature_list: Vec<Feature> = match fs::read_to_string("./cosmos-rust-bot-feature-list.json") {
-        Ok(file) => {
-            match serde_json::from_str(&file) {
-                Ok(res) => {
-                    res
-                }
-                Err(err) => {
-                    println!("{:?}", err);
-                    Default::default()
-                }
+    let feature_list: Vec<Feature> = match fs::read_to_string("./cosmos-rust-bot-feature-list.json")
+    {
+        Ok(file) => match serde_json::from_str(&file) {
+            Ok(res) => res,
+            Err(err) => {
+                println!("{:?}", err);
+                Default::default()
             }
-        }
+        },
         Err(err) => {
             println!("{:?}", err);
             Default::default()
@@ -59,8 +55,15 @@ pub fn feature_list_to_file() -> anyhow::Result<()> {
     let mut feature_list: Vec<Feature> = Vec::new();
 
     let mut governance_proposals: Vec<TaskSpec> = Vec::new();
-    let proposal_status_list = vec!["voting_period", "deposit_period", "failed", "passed", "rejected", "nil"];
-    let blockchain_list = vec!["osmosis", "terra", "juno"];
+    let proposal_status_list = vec![
+        "voting_period",
+        "deposit_period",
+        "failed",
+        "passed",
+        "rejected",
+        "nil",
+    ];
+    let blockchain_list = vec!["osmosis", /*"terra1",*/ "terra2", "juno"];
     for blockchain in &blockchain_list {
         for proposal_status in &proposal_status_list {
             let task = TaskSpec {
@@ -96,7 +99,10 @@ fn feature_name_list(user_settings: &UserSettings) -> Vec<String> {
 pub fn get_feature_list(user_settings: &UserSettings) -> Vec<Feature> {
     let args = feature_name_list(user_settings);
     let mut features = feature_list();
-    features = features.into_iter().filter(|x| args.contains(&x.name)).collect();
+    features = features
+        .into_iter()
+        .filter(|x| args.contains(&x.name))
+        .collect();
     features
 }
 
@@ -104,12 +110,15 @@ pub fn get_requirements(user_settings: &UserSettings) -> Vec<TaskSpec> {
     let mut features: Vec<Feature> = get_feature_list(user_settings);
     let mut req: Vec<TaskSpec> = Vec::new();
     for mut f in features {
-        let mut no_duplicates = f.requirements.into_iter().filter(|x| req.iter().filter(|y| y.name == x.name).count() == 0).collect();
+        let mut no_duplicates = f
+            .requirements
+            .into_iter()
+            .filter(|x| req.iter().filter(|y| y.name == x.name).count() == 0)
+            .collect();
         req.append(&mut no_duplicates);
     }
     req
 }
-
 
 #[cfg(test)]
 mod test {

@@ -71,86 +71,22 @@ pub async fn run_cosmos_rust_signal_bot<C: ConfigStore>(
     // sled db to store notifications and user meta data.
     let tree = load_sled_db("cosmos_rust_signal_bot_sled_db");
     spawn_socket_notification_server(&tree);
-    let tree_2 = tree.clone();
+    /*    let tree_2 = tree.clone();
 
     let _thread = tokio::spawn(async move {
         let mut subscriber = tree_2.watch_prefix(Notification::get_prefix());
         while let Some(event) = (&mut subscriber).await {
             match event {
+                sled::Event::Remove { key } => {}
                 sled::Event::Insert { key, value } => {
                     match CosmosRustServerValue::from(value.to_vec()) {
-                        CosmosRustServerValue::Notification(n) => {
-                            let fields: Option<Option<Vec<String>>> =
-                                n.get_query().get("fields").map(|x| {
-                                    x.as_array().map(|yy| {
-                                        yy.iter()
-                                            .map(|y| y.as_str().unwrap_or("").to_string())
-                                            .collect::<Vec<String>>()
-                                    })
-                                });
-
-                            match fields {
-                                Some(Some(fields)) => {
-                                    let mut field_list: Vec<HashMap<String, String>> = Vec::new();
-
-                                    for i in 0..n.entries.len() {
-                                        let mut m: HashMap<String, String> = HashMap::new();
-                                        for field in fields.iter() {
-                                            if let Some(val) = n.entries[i].try_get(field) {
-                                                if let Some(summary_text) = val.as_str() {
-                                                    m.insert(
-                                                        field.to_string(),
-                                                        summary_text.to_string(),
-                                                    );
-                                                }
-                                            }
-                                        }
-                                        field_list.push(m);
-                                    }
-                                    let mut msg_1: Vec<String> = field_list
-                                        .iter()
-                                        .map(|x| x.get("summary"))
-                                        .filter(|x| x.is_some())
-                                        .map(|x| x.unwrap().to_owned())
-                                        .collect();
-                                    let mut msg_2 = field_list
-                                        .iter()
-                                        .map(|x| {
-                                            match (x.get("key"), x.get("value")) {
-                                                (Some(key), Some(value)) => {
-                                                    return Some((key, value));
-                                                }
-                                                _ => {
-                                                    return None;
-                                                }
-                                            };
-                                        })
-                                        .filter(|x| x.is_some())
-                                        .map(|x| x.unwrap())
-                                        .map(|y| format!("Key: {}\nValue: {}", y.0, y.1))
-                                        .collect();
-
-                                    let mut msg: Vec<String> = Vec::new();
-                                    msg.append(&mut msg_1);
-                                    msg.append(&mut msg_2);
-
-                                    let notify = CosmosRustServerValue::Notify(Notify {
-                                        timestamp: Utc::now().timestamp(),
-                                        msg: msg,
-                                    });
-                                    tree_2.insert(notify.key(), notify.value()).ok();
-                                    tree_2.remove(key).ok();
-                                }
-                                _ => {}
-                            };
-                        }
+                        CosmosRustServerValue::Notification(n) => {}
                         _ => {}
-                    };
+                    }
                 }
-                _ => {}
             }
         }
-    });
+    });*/
 
     match manager_option {
         // current architecture suboptimal: recieving messages has a higher priority than sending results.
