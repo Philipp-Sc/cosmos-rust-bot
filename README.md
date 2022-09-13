@@ -111,6 +111,14 @@ In short it's purpose is to have a bot on your side:
 - [ ] Manage Collateral / Loans
 - [ ] Balance Wallet
 
+## Install CheatSheet
+
+- `cd cosmos-rust-bot`
+- `./install.sh test` creates new `cosmos-rust-bot-feature-list.json`
+- `./install.sh dev` builds **cosmos-rust-bot** `./my-bot`
+- `./my-bot` to simply run **cosmos-rust-bot**
+- see [cosmos-rust-signal-bot](https://github.com/Philipp-Sc/cosmos-rust-bot/tree/development/packages/cosmos-rust-signal-bot) to enable signal notifications.
+
 ## Summary
 
 - I created this bot to learn about smart contracts, the Terra blockchain and to get to know the Rust programming
