@@ -85,7 +85,7 @@ In short it's purpose is to have a bot on your side:
 ### Notifications
 - [x] Monitor Cosmos-Rust-Bot
 - [x] Lookup Governance Proposals
-- [ ] Subscribe to Governance Proposal Notifications
+- [x] Subscribe to Governance Proposal Notifications
 - [ ] Telegram Chat Bot 
 - [ ] Lookup Protocol Governance Proposals
 - [ ] Scam Detection/Classification for Governance Proposals
