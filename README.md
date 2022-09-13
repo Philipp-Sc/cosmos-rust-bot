@@ -97,6 +97,7 @@ In short it's purpose is to have a bot on your side:
 - [ ] Validator Profile (name, comission, votes)
 - [ ] Impermanent Loss tracking
 - [ ] Lookup Airdrops
+- [ ] Watch Wallet Networth 
 
 ### Actions
 - [ ] Send
@@ -108,6 +109,7 @@ In short it's purpose is to have a bot on your side:
 - [ ] Transfer IBC tokens Cross-Chain
 - [ ] Swap in/out Stablecoin
 - [ ] Manage Collateral / Loans
+- [ ] Balance Wallet
 
 ## Summary
 
@@ -135,3 +137,6 @@ In short it's purpose is to have a bot on your side:
   optional)
 
 - [cosmos-rust-interface](https://github.com/Philipp-Sc/cosmos-rust-interface)
+
+## Similar Projects
+- [Cosmos Gov](https://github.com/shifty11/cosmos-gov)
