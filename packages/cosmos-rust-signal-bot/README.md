@@ -46,7 +46,11 @@ Note: **cosmos-rust-bot** issues notifications either directly after a request o
 *The signal client is still experimental.  
 The following script is configured to restart the signal-bot in case it crashes unexpectedly.*
 
-* `./run.sh` (run the signal-bot)
+* `./run.sh` (run the signal-bot)    
+* run `cat nohup.out` to view the QR code to link device. The configuration is stored safely in-memory as long as **cosmos-rust-signal-bot** runs.    
+Note: if you want a persistent device linkage edit `./run.sh` and:
+  - remove `--volatile`
+  - add `--try-use-linked-device` after `cosmos-rust-bot` (this will re-use your existing configuration)
 * `./stop.sh` (stop the signal-bot)
 
 
