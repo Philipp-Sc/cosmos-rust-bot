@@ -2,11 +2,10 @@
 use chrono::Utc;
 use cosmos_rust_interface::utils::entry::db::load_sled_db;
 use cosmos_rust_interface::utils::entry::db::notification::socket::spawn_socket_notification_server;
-use cosmos_rust_interface::utils::entry::{CosmosRustServerValue, Notification};
+use cosmos_rust_interface::utils::entry::{CosmosRustServerValue, Notification, Notify};
 use log::info;
 use tokio::time::timeout;
 
-use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use anyhow::Context as _;
@@ -52,34 +51,18 @@ pub async fn process_message_from_self<C: ConfigStore>(
     sender_uuid: Uuid,
     send_message: Vec<String>,
     manager: &Manager<C, Registered>,
-) {
+) -> anyhow::Result<()> {
     info!(
         "Status: Processing Message From Myself - {}\n ({:?})",
         Utc::now(),
         sender_uuid
     );
-    send_message_to_self(manager, send_message.clone(), sender_uuid)
-        .await
-        .ok();
-    /*
-    let mut msg_sent: u64 = 1;
-    while msg_sent > 0 && msg_sent < 5 {
-        msg_sent = match send_message_to_self(manager, send_message.clone(), sender_uuid).await {
-            Ok(()) => 0,
-            Err(e) => {
-                info!(
-                    "Status: Processing Message From Myself Error (Trying again..) - {},\n{:?}",
-                    Utc::now(),
-                    e
-                );
-                msg_sent + 1
-            }
-        };
-    }*/
+    let res = send_message_to_self(manager, send_message.clone(), sender_uuid).await;
     info!(
         "Status: Processing Message From Myself Done - {}",
         Utc::now()
     );
+    res
 }
 
 pub async fn run_cosmos_rust_signal_bot<C: ConfigStore>(
@@ -90,91 +73,78 @@ pub async fn run_cosmos_rust_signal_bot<C: ConfigStore>(
     spawn_socket_notification_server(&tree);
     let tree_2 = tree.clone();
 
-    // instead of HashMap use sled-db.
-    // _thread creates entries with prefix "notify"
-    // notify task uses scan_prefix to process current notifiy requests.
-    // notify removes entry.
-    // to prevent conflicts add timestamp into hash.
-    // Advantage over HashMap, it's not blocking the whole hashmap.
-    // Advamtage state can be saved. e.g stop start continue.
-    let notify_stack: Arc<Mutex<HashMap<u64, Vec<String>>>> = Arc::new(Mutex::new(HashMap::new()));
-    let notify_stack_2 = notify_stack.clone();
     let _thread = tokio::spawn(async move {
         let mut subscriber = tree_2.watch_prefix(Notification::get_prefix());
         while let Some(event) = (&mut subscriber).await {
             match event {
                 sled::Event::Insert { key, value } => {
-                    let notification = CosmosRustServerValue::from(value.to_vec());
-                    match notification {
-                        // TODO optimize: no reason to use serde_json here
+                    match CosmosRustServerValue::from(value.to_vec()) {
                         CosmosRustServerValue::Notification(n) => {
-                            let empty: Vec<serde_json::Value> = Vec::new();
-                            let fields = n
-                                .get_query()
-                                .get("fields")
-                                .map(|x| x.as_array().unwrap_or(&empty))
-                                .unwrap_or(&empty)
-                                .iter()
-                                .map(|x| x.as_str().unwrap_or("").to_string())
-                                .collect::<Vec<String>>();
+                            let fields: Option<Option<Vec<String>>> =
+                                n.get_query().get("fields").map(|x| {
+                                    x.as_array().map(|yy| {
+                                        yy.iter()
+                                            .map(|y| y.as_str().unwrap_or("").to_string())
+                                            .collect::<Vec<String>>()
+                                    })
+                                });
 
-                            let mut field_list: Vec<serde_json::Value> = Vec::new();
+                            match fields {
+                                Some(Some(fields)) => {
+                                    let mut field_list: Vec<HashMap<String, String>> = Vec::new();
 
-                            for i in 0..n.entries.len() {
-                                let mut m = serde_json::json!({});
-                                for field in fields.iter() {
-                                    if let Some(val) = n.entries[i].try_get(field) {
-                                        if let Some(summary_text) = val.as_str() {
-                                            m.as_object_mut().unwrap().insert(
-                                                field.to_string(),
-                                                serde_json::json!(summary_text.to_string()),
-                                            );
-                                        }
-                                    }
-                                }
-                                field_list.push(m);
-                            }
-                            let mut msg_1: Vec<String> = field_list
-                                .iter()
-                                .filter(|x| x.as_object().is_some())
-                                .map(|x| x.as_object().unwrap())
-                                .filter(|x| x.get("summary").is_some())
-                                .map(|x| x.get("summary").unwrap())
-                                .filter(|x| x.as_str().is_some())
-                                .map(|x| x.as_str().unwrap().to_string())
-                                .collect();
-                            let mut msg_2 = field_list
-                                .iter()
-                                .map(|x| {
-                                    if let Some(obj) = x.as_object() {
-                                        match (obj.get("key"), obj.get("value")) {
-                                            (Some(key), Some(value)) => {
-                                                match (key.as_str(), value.as_str()) {
-                                                    (Some(k), Some(v)) => {
-                                                        return Some((k, v));
-                                                    }
-                                                    _ => {}
-                                                };
+                                    for i in 0..n.entries.len() {
+                                        let mut m: HashMap<String, String> = HashMap::new();
+                                        for field in fields.iter() {
+                                            if let Some(val) = n.entries[i].try_get(field) {
+                                                if let Some(summary_text) = val.as_str() {
+                                                    m.insert(
+                                                        field.to_string(),
+                                                        summary_text.to_string(),
+                                                    );
+                                                }
                                             }
-                                            _ => {}
-                                        };
+                                        }
+                                        field_list.push(m);
                                     }
-                                    return None;
-                                })
-                                .map(|x| x.map(|y| format!("Key: {}\nValue: {}", y.0, y.1)))
-                                .filter(|x| x.is_some())
-                                .map(|x| x.unwrap())
-                                .collect();
+                                    let mut msg_1: Vec<String> = field_list
+                                        .iter()
+                                        .map(|x| x.get("summary"))
+                                        .filter(|x| x.is_some())
+                                        .map(|x| x.unwrap().to_owned())
+                                        .collect();
+                                    let mut msg_2 = field_list
+                                        .iter()
+                                        .map(|x| {
+                                            match (x.get("key"), x.get("value")) {
+                                                (Some(key), Some(value)) => {
+                                                    return Some((key, value));
+                                                }
+                                                _ => {
+                                                    return None;
+                                                }
+                                            };
+                                        })
+                                        .filter(|x| x.is_some())
+                                        .map(|x| x.unwrap())
+                                        .map(|y| format!("Key: {}\nValue: {}", y.0, y.1))
+                                        .collect();
 
-                            let mut msg: Vec<String> = Vec::new();
-                            msg.append(&mut msg_1);
-                            msg.append(&mut msg_2);
-                            notify_stack_2
-                                .lock()
-                                .unwrap()
-                                .insert(n.calculate_hash(), msg);
-                            tree_2.remove(key).ok();
+                                    let mut msg: Vec<String> = Vec::new();
+                                    msg.append(&mut msg_1);
+                                    msg.append(&mut msg_2);
+
+                                    let notify = CosmosRustServerValue::Notify(Notify {
+                                        timestamp: Utc::now().timestamp(),
+                                        msg: msg,
+                                    });
+                                    tree_2.insert(notify.key(), notify.value()).ok();
+                                    tree_2.remove(key).ok();
+                                }
+                                _ => {}
+                            };
                         }
+                        _ => {}
                     };
                 }
                 _ => {}
@@ -281,13 +251,22 @@ pub async fn run_cosmos_rust_signal_bot<C: ConfigStore>(
                             // timeout: message stream empty
                             // send notifications
                             info!("Status: Notification Check - {}", Utc::now());
-                            let mut lock = notify_stack.try_lock();
-                            if let Ok(ref mut mutex) = lock {
+                            let mut r = tree.scan_prefix(Notify::get_prefix());
+                            if let Some(Ok((key, val))) = r.next() {
                                 info!("Status: Notifications Available - {}", Utc::now());
-                                let key = mutex.iter().map(|x| x.0.clone()).next();
-                                if let Some(k) = key {
-                                    let v = mutex.remove(&k).unwrap();
-                                    process_message_from_self(my_uuid, v, &manager).await;
+                                if let CosmosRustServerValue::Notify(notify) =
+                                    CosmosRustServerValue::from(val.to_vec())
+                                {
+                                    match process_message_from_self(my_uuid, notify.msg, &manager)
+                                        .await
+                                    {
+                                        Ok(_) => {
+                                            tree.remove(key).ok();
+                                        }
+                                        Err(_) => {
+                                            // do not remove entry
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -296,16 +275,24 @@ pub async fn run_cosmos_rust_signal_bot<C: ConfigStore>(
             }
         }
         None => {
-            let notify_stack_3 = notify_stack.clone();
+            let tree_2 = tree.clone();
             let _thread = std::thread::spawn(move || loop {
-                let millis = Duration::from_millis(1000);
-                thread::sleep(millis);
-                let mut lock = notify_stack_3.try_lock();
-                if let Ok(ref mut mutex) = lock {
-                    print!("\x1B[2J");
-                    for n in mutex.drain() {
-                        for msg in n.1 {
-                            println!("{}", msg);
+                let r = tree_2.scan_prefix(Notify::get_prefix());
+                let mut once = true;
+                for item in r {
+                    if once {
+                        print!("\x1B[2J");
+                        once = false;
+                    }
+                    if let Ok((key, val)) = item {
+                        info!("Status: Notifications Available - {}", Utc::now());
+                        if let CosmosRustServerValue::Notify(notify) =
+                            CosmosRustServerValue::from(val.to_vec())
+                        {
+                            for msg in notify.msg {
+                                println!("{}", msg);
+                            }
+                            tree_2.remove(key).ok();
                         }
                     }
                 }
