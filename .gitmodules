@@ -1,6 +1,3 @@
-[submodule "packages/terra-rust-signal-bot/packages/terra-rust-signal-bot/packages/presage"]
-	path = packages/terra-rust-signal-bot/packages/terra-rust-signal-bot/packages/presage
-	url = https://github.com/Philipp-Sc/presage.git
 [submodule "packages/chain-registry"]
 	path = packages/chain-registry
 	url = https://github.com/cosmos/chain-registry.git
