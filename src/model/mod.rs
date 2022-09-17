@@ -298,9 +298,10 @@ pub async fn next_iteration_of_upcoming_tasks(
     maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,
     user_settings: &UserSettings,
     wallet_acc_address: &Arc<SecUtf8>,
+    supported_blockchains: &HashMap<String, SupportedBlockchain>,
 ) -> Vec<CosmosRustBotValue> {
     for _ in 0..join_set.len() {
-        let result = timeout(Duration::from_millis(0), join_set.join_one()).await;
+        let result = timeout(Duration::from_millis(0), join_set.join_next()).await;
         match result {
             Ok(_) => {}
             Err(_) => {
@@ -403,6 +404,7 @@ pub async fn next_iteration_of_upcoming_tasks(
         &user_settings,
         &wallet_acc_address,
         upcoming_task_spec_list,
+        supported_blockchains,
     )
     .await;
     task_meta_data(task_list)
@@ -449,6 +451,7 @@ async fn spawn_tasks(
     user_settings: &UserSettings,
     wallet_acc_address: &Arc<SecUtf8>,
     to_update: Vec<TaskSpec>,
+    supported_blockchains: &HashMap<String, SupportedBlockchain>,
 ) {
     for req in to_update {
         let contains_key = maybes.contains_key(&req.name);
@@ -473,20 +476,18 @@ async fn spawn_tasks(
             )
             .await;
         }
-
         let mut f: Option<
             Pin<Box<dyn Future<Output = anyhow::Result<ResponseResult>> + Send + 'static>>,
         > = None;
 
         let wallet_acc_address = wallet_acc_address.clone();
-
         match req.kind {
             TaskType::GovernanceProposals => {
                 let status = ProposalStatus::new(req.args["proposal_status"].as_str().unwrap());
-                let blockchain = channels::get_supported_blockchains()
-                    .get(req.args["blockchain"].as_str().unwrap())
+                let blockchain = supported_blockchains.get(req.args["blockchain"].as_str().unwrap())
                     .unwrap()
                     .clone();
+
                 f = Some(Box::pin(get_proposals(blockchain, status)));
             }
             _ => {}

@@ -24,9 +24,9 @@
 * **cosmos-rust-bot** writes the current data (via cosmos-rust-interface) to an embedded database.    
 * Using UNIX Sockets **cosmos-rust-bot** communicates with **cosmos-rust-signal-bot**:
   - **cosmos-rust-bot**: request notification(s) for a given query
-  - **cosmos-rust-signal-bot**: recieve notification(s)   
+  - **cosmos-rust-signal-bot**: receive notification(s)   
 Note: **cosmos-rust-bot** issues notifications either directly after a request or when the data related to a subscription was updated.
-* cosmos-rust-signal-bot manages it's notification in its own embedded database.
+* cosmos-rust-signal-bot manages its notification in its own embedded database.
 
 ## Install
 
@@ -39,7 +39,7 @@ Note: **cosmos-rust-bot** issues notifications either directly after a request o
 
 ### Run cosmos-rust-signal-bot
 
-* If you already started the cosmos-rust-bot then you can use the terra-rust-signal-bot.
+* If you already started the cosmos-rust-bot then you can use the cosmos-rust-signal-bot.
 
 * `cd ./packages/cosmos-rust-signal-bot`
 

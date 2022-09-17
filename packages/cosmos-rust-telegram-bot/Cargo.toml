@@ -1,0 +1,30 @@
+[package]
+name = "cosmos-rust-telegram-bot"
+version = "0.4.0"
+edition = "2021"
+
+
+[dependencies]
+teloxide = { version = "0.10", features = ["macros", "auto-send"] }
+pretty_env_logger = "0.4"
+tokio = { version =  "1.21.1", features = ["full","rt-multi-thread", "macros"] }
+
+cosmos-rust-bot = { path = "../../." } # loads the bot_library
+cosmos-rust-interface = { path = "../../../cosmos-rust-interface", default-features = false, features = ["db"] } # only loads the db functionality
+anyhow = "1.0"
+chrono = "0.4"
+directories = "3.0"
+env_logger = "0.7"
+futures = "0.3"
+hex = "0.4"
+log = "0.4"
+mime_guess = "2.0"
+rand = "0.7"
+serde_json = "1.0"
+structopt = "0.3"
+tempfile = "3.3"
+url = "2.2.2"
+qr2term = { version = "0.2.2" }
+regex = "1.6.0"
+heck = "0.4.0"
+sled = { version = "0.34.7", features = ["compression"] }

@@ -115,6 +115,8 @@ async fn main() -> anyhow::Result<()> {
         }
     });
 
+    let supported_blockchains = channels::get_supported_blockchains_from_chain_registry("./packages/chain-registry".to_string(),true,Some(10*60)).await;
+
     loop {
         setup_required_keys(&mut maybes).await;
 
@@ -137,6 +139,7 @@ async fn main() -> anyhow::Result<()> {
                 &mut maybes,
                 &user_settings,
                 &wallet_acc_address,
+                &supported_blockchains
             )
             .await;
             entries.append(&mut task_meta_data);
@@ -219,8 +222,8 @@ async fn get_wallet_details(user_settings: &UserSettings) -> (Arc<SecUtf8>, Arc<
             wallet_acc_address = SecUtf8::from(
                 account_from_seed_phrase(
                     decrypt_text_with_secret(&wallet_seed_phrase),
-                    channels::get_supported_blockchains()
-                        .get("terra")
+                    channels::get_supported_blockchains_from_chain_registry("./packages/chain-registry".to_string(),true,None)
+                        .await.get("terra2")
                         .unwrap()
                         .clone(),
                 )

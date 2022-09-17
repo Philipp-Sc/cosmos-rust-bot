@@ -1,0 +1,1 @@
+pub mod cosmos_rust_bot;
