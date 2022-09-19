@@ -14,40 +14,27 @@
 > :warning: The bot needs your **seed phrase** to create and sign transactions.  
 > :arrow_right_hook: You can use Cosmos-rust-bot without a seed phrase in view mode. Test this first.
 
-> :warning: No security audit has been performed. (*See Disclaimer: This may steal your money. Do your own research.
-Take a look at the code.*)
+> :warning: No security audit has been performed. (*[See Disclaimer: This may steal your money. Do your own research.
+Take a look at the code.](https://github.com/Philipp-Sc/cosmos-rust-bot/blob/0ecae398c80192822090598947ba7c0ee5cba562/DISCLAIMER.txt)*)
 
 ##
 
-## Disclaimer
-
-This software is for educational purposes only. Do not risk money which you are afraid to lose.
-USE THE SOFTWARE AT YOUR OWN RISK. THE AUTHOR ASSUMES NO RESPONSIBILITY FOR YOUR USE OF Cosmos-Rust-Bot.
-
-Always start by running with a dedicated test wallet and do not engage money before you understand how it works
-and what results you should expect.
-
-I strongly recommend you to have coding and Rust knowledge. Do not hesitate to read the source code and understand the
-mechanism of this bot.
-
-##
-
-### [Install](#install) · [Config](#config) · [Usage](#usage) · [Summary](#summary)
+### [About](#about) · [Features](#features) · [Install](#install) · [Summary](#summary)
 
 ## About
 
-## Use Case #1
+### Use Case #1
 
 - Lookup on-chain information and subscribe to get notified on state changes.
 - Easy access via Telegram bot.
 
-## Use Case #2
+### Use Case #2
 
 - Set notifications (events) to trigger/execute on-chain actions. (Send, Execute Contract,..)
 - Requires: You to manage a (Linux) Server and provide a wallet seed phrase.
 - Secure acces via Signal Messenger.
 
-## Description
+### Description
 
 **CRB** is intended to be used by **coders, developers and technically-skilled users** to make use of automation.    
 At the same time **CRB** can be compiled to a single executable that is easy to use with few dependencies. Making it
@@ -101,7 +88,7 @@ In short it's purpose is to have a bot on your side:
 - [ ] Manage Collateral / Loans
 - [ ] Balance Wallet
 
-## Install CheatSheet
+## Install
 
 - `cd cosmos-rust-bot`
 - `./install.sh test` creates new `cosmos-rust-bot-feature-list.json`
