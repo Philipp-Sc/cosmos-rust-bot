@@ -15,6 +15,8 @@
   <img src="https://github.com/Philipp-Sc/media/blob/main/cosmos-rust-bot/cosmos_rust_bot_telegram_start.jpeg" height="250"> 
   <img src="https://github.com/Philipp-Sc/media/blob/main/cosmos-rust-bot/cosmos_rust_bot_telegram_shortcuts_new.jpeg" height="250"> 
   <img src="https://github.com/Philipp-Sc/media/blob/main/cosmos-rust-bot/cosmos_rust_bot_telegram_help_sub.jpeg" height="250">  
+  <img src="https://github.com/Philipp-Sc/media/blob/main/cosmos-rust-bot/cosmos_rust_bot_telegram_osmosis_id_333.jpeg" height="250">  
+  <img src="https://github.com/Philipp-Sc/media/blob/main/cosmos-rust-bot/cosmos_rust_bot_telegram_terra2_passed.jpeg" height="125"> 
   </div>
 
 
