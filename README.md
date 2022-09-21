@@ -9,46 +9,44 @@
     <img src="https://img.shields.io/github/license/Philipp-Sc/cosmos-rust-bot">
     <a href="https://twitter.com/cosmosrustbot"><img src="https://img.shields.io/twitter/follow/CosmosRustBot?style=social"></a>
   </div>
-<br/>
+<br/>  
 <div align="center">
-  <img src="https://github.com/Philipp-Sc/media/raw/main/cosmos-rust-bot/cosmos-rust-bot-output/gallery/terminal_output_auto_stake.png" height="250">
-  <img src="https://github.com/Philipp-Sc/media/raw/main/cosmos-rust-bot/cosmos-rust-bot-output/gallery/terminal_output_market.png" height="250">
 
-  <img src="https://github.com/Philipp-Sc/media/raw/main/cosmos-rust-bot/cosmos-rust-signal-bot/gallery/signal_bot_auto_stake.png" height="250">
-  <img src="https://github.com/Philipp-Sc/media/raw/main/cosmos-rust-bot/cosmos-rust-signal-bot/gallery/signal_bot_help.png" height="250">
-  <img src="https://github.com/Philipp-Sc/media/raw/main/cosmos-rust-bot/cosmos-rust-signal-bot/gallery/signal_messenger.png" height="250">
-</div>
+  <img src="https://github.com/Philipp-Sc/media/blob/main/cosmos-rust-bot/cosmos_rust_bot_telegram_start.jpeg" height="250"> 
+  <img src="https://github.com/Philipp-Sc/media/blob/main/cosmos-rust-bot/cosmos_rust_bot_telegram_shortcuts_new.jpeg" height="250"> 
+  <img src="https://github.com/Philipp-Sc/media/blob/main/cosmos-rust-bot/cosmos_rust_bot_telegram_help_sub.jpeg" height="250">  
+  <img src="https://github.com/Philipp-Sc/media/blob/main/cosmos-rust-bot/cosmos_rust_bot_telegram_osmosis_id_333.jpeg" height="250">  
+  <img src="https://github.com/Philipp-Sc/media/blob/main/cosmos-rust-bot/cosmos_rust_bot_telegram_terra2_passed.jpeg" height="125"> 
+  </div>
 
-##
+
 
 > :warning: The bot needs your **seed phrase** to create and sign transactions.  
 > :arrow_right_hook: You can use Cosmos-rust-bot without a seed phrase in view mode. Test this first.
 
-> :warning: No security audit has been performed. (*See Disclaimer: This may steal your money. Do your own research.
-Take a look at the code.*)
+> :warning: No security audit has been performed. (*[See Disclaimer: This may steal your money. Do your own research.
+Take a look at the code.](https://github.com/Philipp-Sc/cosmos-rust-bot/blob/0ecae398c80192822090598947ba7c0ee5cba562/DISCLAIMER.txt)*)
 
 ##
 
-## Disclaimer
-
-This software is for educational purposes only. Do not risk money which you are afraid to lose.
-USE THE SOFTWARE AT YOUR OWN RISK. THE AUTHOR ASSUMES NO RESPONSIBILITY FOR YOUR USE OF Cosmos-Rust-Bot.
-
-Always start by running with a dedicated test wallet and do not engage money before you understand how it works
-and what results you should expect.
-
-I strongly recommend you to have coding and Rust knowledge. Do not hesitate to read the source code and understand the
-mechanism of this bot.
-
-##
-
-### [Install](#install) · [Config](#config) · [Usage](#usage) · [Summary](#summary)
+### [About](#about) · [Features](#features) · [Install](#install) · [Summary](#summary)
 
 ## About
 
-**CRB** is currently undergoing a rewrite. Available functionality will be described here shortly.
+### Use Case #1
 
-It is intended to be used by **coders, developers and technically-skilled users** to make use of automation.    
+- Lookup on-chain information and subscribe to get notified on state changes.
+- Easy access via Telegram bot.
+
+### Use Case #2
+
+- Set notifications (events) to trigger/execute on-chain actions. (Send, Execute Contract,..)
+- Requires: You to manage a (Linux) Server and provide a wallet seed phrase.
+- Secure acces via Signal Messenger.
+
+### Description
+
+**CRB** is intended to be used by **coders, developers and technically-skilled users** to make use of automation.    
 At the same time **CRB** can be compiled to a single executable that is easy to use with few dependencies. Making it
 easy to deploy and use right away.
 
@@ -68,17 +66,6 @@ In short it's purpose is to have a bot on your side:
 - Showcase how to use [cosmos-rust](https://github.com/cosmos/cosmos-rust/)
 - Rust
 
-## Use Case #1
-
-- Lookup on-chain information and subscribe to get notified on state changes.
-- Easy access via Telegram bot.
-
-## Use Case #2
-
-- Set notifications (events) to trigger/execute on-chain actions. (Send, Execute Contract,..)
-- Requires: You to manage a (Linux) Server and provide a wallet seed phrase.
-- Secure acces via Signal Messenger.
-
 ## Features
 > This roadmap is intended to outline the general direction for CRB. It does not represent a commitment, guarantee, obligation, or promise to deliver any feature.
 
@@ -86,7 +73,7 @@ In short it's purpose is to have a bot on your side:
 - [x] Monitor Cosmos-Rust-Bot
 - [x] Lookup Governance Proposals
 - [x] Subscribe to Governance Proposal Notifications
-- [ ] Telegram Chat Bot 
+- [x] Telegram Chat Bot 
 - [ ] Lookup Protocol Governance Proposals
 - [ ] Scam Detection/Classification for Governance Proposals
 - [ ] Lookup Prices (Osmosiszone)
@@ -111,7 +98,7 @@ In short it's purpose is to have a bot on your side:
 - [ ] Manage Collateral / Loans
 - [ ] Balance Wallet
 
-## Install CheatSheet
+## Install
 
 - `cd cosmos-rust-bot`
 - `./install.sh test` creates new `cosmos-rust-bot-feature-list.json`
