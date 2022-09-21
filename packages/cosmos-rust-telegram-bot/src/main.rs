@@ -10,6 +10,7 @@ use cosmos_rust_interface::utils::entry::db::notification::notify_sled_db;
 use cosmos_rust_interface::utils::entry::*;
 use cosmos_rust_interface::utils::entry::{CosmosRustServerValue, Notification, Notify};
 use std::sync::Arc;
+use teloxide::types::ParseMode;
 use tokio::task::JoinSet;
 
 // RUST_LOG=error,debug,info
@@ -23,7 +24,7 @@ async fn main() {
     pretty_env_logger::init();
     log::info!("Starting shared state bot...");
 
-    let bot = Bot::from_env().auto_send();
+    let bot = Bot::from_env();
 
     // task that sends the messages.
     let tree_2 = tree.clone();
@@ -53,7 +54,9 @@ async fn main() {
                                         id
                                     );
                                     for msg in notify.msg {
-                                        bot_clone.send_message(ChatId(id), msg).await.ok();
+                                        bot_clone.send_message(ChatId(id), msg)
+                                            .disable_web_page_preview(true)
+                                            .send().await.ok();
                                     }
                                     // TODO: remove user if not subscribed and has no pending notifications/notify
                                 }
@@ -71,8 +74,8 @@ async fn main() {
     // task that receives the messages
     join_set.spawn(async move {
         let handler = Update::filter_message().endpoint(
-            |msg: Message, bot: AutoSend<Bot>, tree: Arc<sled::Db>| async move {
-                receive(tree, bot, msg).await;
+            |msg: Message, bot: Bot, tree: Arc<sled::Db>| async move {
+                receive(tree, bot, msg).await.ok();
                 respond(())
             },
         );
@@ -90,7 +93,7 @@ async fn main() {
 
 async fn receive(
     tree: Arc<sled::Db>,
-    bot: AutoSend<Bot>,
+    bot: Bot,
     message: Message,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
     match message.kind {

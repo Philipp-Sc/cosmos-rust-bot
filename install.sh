@@ -18,12 +18,14 @@ case $1 in
 	echo "development build"
 	RUSTFLAGS="--cfg tokio_unstable" cargo build --features build-binary
 	mv ./target/debug/cosmos-rust-bot my-bot
+	mv ../target/debug/cosmos-rust-bot my-bot
 	;;
 
 	"native")
 	echo "optimized release build"
 	RUSTFLAGS="--cfg tokio_unstable -C target-cpu=native" cargo build --features build-binary --release
 	mv ./target/release/cosmos-rust-bot my-bot
+	mv ../target/release/cosmos-rust-bot my-bot
 	;;
 	
 	"")

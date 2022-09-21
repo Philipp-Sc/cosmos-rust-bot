@@ -34,7 +34,7 @@ use std::hash::{Hash, Hasher};
 
 use cosmos_rust_interface::utils::entry::db::load_sled_db;
 use cosmos_rust_interface::utils::entry::db::notification::socket::client_send_request;
-use cosmos_rust_interface::utils::entry::db::query::query_sled_db;
+use cosmos_rust_interface::utils::entry::db::query::{query_entries_sled_db};
 use cosmos_rust_interface::utils::entry::db::query::socket::spawn_socket_query_server;
 use cosmos_rust_interface::utils::entry::postproc::blockchain::cosmos::gov::governance_proposal_notifications;
 use cosmos_rust_interface::utils::entry::postproc::meta_data::debug::debug;
@@ -95,7 +95,7 @@ async fn main() -> anyhow::Result<()> {
                                             });
                                             let notification = Notification {
                                                 query: s.query,
-                                                entries: query_sled_db(&tree_2, query),
+                                                entries: query_entries_sled_db(&tree_2, query),
                                                 user_list: s.user_list,
                                             };
                                             // notify
