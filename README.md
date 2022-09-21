@@ -10,6 +10,14 @@
     <a href="https://twitter.com/cosmosrustbot"><img src="https://img.shields.io/twitter/follow/CosmosRustBot?style=social"></a>
   </div>
 <br/>  
+<div align="center">
+
+  <img src="https://github.com/Philipp-Sc/media/blob/main/cosmos-rust-bot/cosmos_rust_bot_telegram_start.jpeg" height="250"> 
+  <img src="https://github.com/Philipp-Sc/media/blob/main/cosmos-rust-bot/cosmos_rust_bot_telegram_shortcuts_new.jpeg" height="250"> 
+  <img src="https://github.com/Philipp-Sc/media/blob/main/cosmos-rust-bot/cosmos_rust_bot_telegram_help_sub.jpeg" height="250">  
+  </div>
+
+
 
 > :warning: The bot needs your **seed phrase** to create and sign transactions.  
 > :arrow_right_hook: You can use Cosmos-rust-bot without a seed phrase in view mode. Test this first.
