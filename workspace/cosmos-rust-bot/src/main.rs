@@ -117,7 +117,7 @@ async fn main() -> anyhow::Result<()> {
         }
     });
 
-    let supported_blockchains = channels::get_supported_blockchains_from_chain_registry("./packages/chain-registry".to_string(),true,Some(10*60)).await;
+    let supported_blockchains = channels::get_supported_blockchains_from_chain_registry("../chain-registry".to_string(),true,Some(10*60)).await;
 
     loop {
         setup_required_keys(&mut maybes).await;
