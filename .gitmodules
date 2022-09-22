@@ -1,3 +1,6 @@
-[submodule "packages/chain-registry"]
-	path = packages/chain-registry
-	url = https://github.com/cosmos/chain-registry.git
+[submodule "workspace/cosmos-rust-bot/packages/chain-registry"]
+	path = workspace/cosmos-rust-bot/packages/chain-registry
+	url = https://github.com/cosmos/chain-registry.git 
+[submodule "workspace/cosmos-rust-interface"]
+	path = workspace/cosmos-rust-interface
+	url = https://github.com/Philipp-Sc/cosmos-rust-interface.git

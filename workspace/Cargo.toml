@@ -1,0 +1,35 @@
+[workspace]
+members = [
+    "cosmos-rust-bot",
+    "cosmos-rust-interface",
+    "cosmos-rust-package",
+    "cosmos-rust-bot/packages/cosmos-rust-telegram-bot",
+]
+resolver = "2"
+#"cosmos-rust-bot/packages/cosmos-rust-signal-bot"
+
+
+
+
+#[patch.crates-io]
+#"curve25519-dalek" = { git = 'https://github.com/signalapp/curve25519-dalek', branch = 'lizard2' }
+
+[profile.release]
+# Enable link-time optimization, eliminates more code and inlines across crate boundaries.
+# Default: false
+lto = true
+
+# codegen-units of 1 gives best optimization, but disables parallel building.
+# Default: 16
+codegen-units = 1
+
+# Includes debug information in release builds. Necessary for profiling. Does not
+# slow down the executable.
+debug = true
+
+# The default optimization level is 3 for release mode builds.
+# 0 means disable optimization and is the default for debug mode buids.
+# (Setting opt-level=1 for debug builds is a good way of speeding them up a bit.)
+# "s" means optimize for size, "z" reduces size even more.
+opt-level = 3
+

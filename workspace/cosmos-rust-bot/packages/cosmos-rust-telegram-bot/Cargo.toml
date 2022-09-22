@@ -10,8 +10,8 @@ pretty_env_logger = "0.4"
 tokio = { version =  "1.21.1", features = ["full","rt-multi-thread", "macros"] }
 
 cosmos-rust-bot = { path = "../../." } # loads the bot_library
-
-cosmos-rust-interface = { git = "https://github.com/Philipp-Sc/cosmos-rust-interface.git", default-features = false, features = ["db"] } # only loads the db functionality
+cosmos-rust-interface = { path = "../../../cosmos-rust-interface", default-features = false, features = ["db"] } # only loads the db functionality
+#cosmos-rust-interface = { git = "https://github.com/Philipp-Sc/cosmos-rust-interface.git", default-features = false, features = ["db"] } # only loads the db functionality
 anyhow = "1.0"
 chrono = "0.4"
 directories = "3.0"

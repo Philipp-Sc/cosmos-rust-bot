@@ -21,9 +21,10 @@ build-binary = ["cosmos-rust-interface", "cosmos-rust-package"]
 # reason: bot_library is used by cosmos-rust-signal-bot, reduces the size of that package.
 
 [dependencies]
-
-cosmos-rust-interface = { git = "https://github.com/Philipp-Sc/cosmos-rust-interface.git", optional = true }
-cosmos-rust-package = { git = "https://github.com/Philipp-Sc/cosmos-rust-package.git", optional = true }
+"cosmos-rust-interface" = { path = '../cosmos-rust-interface', optional = true }
+"cosmos-rust-package" = { path = '../cosmos-rust-package', optional = true }
+#cosmos-rust-interface = { git = "https://github.com/Philipp-Sc/cosmos-rust-interface.git", optional = true }
+#cosmos-rust-package = { git = "https://github.com/Philipp-Sc/cosmos-rust-package.git", optional = true }
 tokio = { version = "1.21.1", features = ["full"] }
 anyhow = "1.0"
 serde = { version = "1.0", features = ["derive"] }
