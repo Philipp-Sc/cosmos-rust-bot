@@ -14,3 +14,6 @@
 	path = workspace/cosmos-rust-development
 	url = https://github.com/Philipp-Sc/cosmos-rust-development.git
 	branch = main
+[submodule "workspace/chain-registry"]
+	path = workspace/chain-registry
+	url = https://github.com/cosmos/chain-registry.git
