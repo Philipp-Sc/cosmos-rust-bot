@@ -1,12 +1,16 @@
 [submodule "workspace/cosmos-rust-bot/packages/chain-registry"]
 	path = workspace/cosmos-rust-bot/packages/chain-registry
 	url = https://github.com/cosmos/chain-registry.git 
+	branch = master
 [submodule "workspace/cosmos-rust-interface"]
 	path = workspace/cosmos-rust-interface
 	url = https://github.com/Philipp-Sc/cosmos-rust-interface.git
+	branch = main
 [submodule "workspace/cosmos-rust-package"]
 	path = workspace/cosmos-rust-package
 	url = https://github.com/Philipp-Sc/cosmos-rust-package.git
+	branch = main
 [submodule "workspace/cosmos-rust-development"]
 	path = workspace/cosmos-rust-development
 	url = https://github.com/Philipp-Sc/cosmos-rust-development.git
+	branch = main
