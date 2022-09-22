@@ -34,7 +34,7 @@ use std::hash::{Hash, Hasher};
 
 use cosmos_rust_interface::utils::entry::db::load_sled_db;
 use cosmos_rust_interface::utils::entry::db::notification::socket::client_send_request;
-use cosmos_rust_interface::utils::entry::db::query::{query_entries_sled_db};
+use cosmos_rust_interface::utils::entry::db::query::{handle_query_sled_db, query_entries_sled_db};
 use cosmos_rust_interface::utils::entry::db::query::socket::spawn_socket_query_server;
 use cosmos_rust_interface::utils::entry::postproc::blockchain::cosmos::gov::governance_proposal_notifications;
 use cosmos_rust_interface::utils::entry::postproc::meta_data::debug::debug;
@@ -68,7 +68,7 @@ async fn main() -> anyhow::Result<()> {
         .watch("./cosmos-rust-bot.json", RecursiveMode::Recursive)
         .unwrap();
 
-    let tree = load_sled_db("cosmos-rust-bot-sled-db");
+    let tree = load_sled_db("cosmos_rust_bot_sled_db");
     spawn_socket_query_server(&tree);
 
     let tree_2 = tree.clone();
@@ -85,23 +85,25 @@ async fn main() -> anyhow::Result<()> {
                                 match entry {
                                     CosmosRustBotValue::Subscription(s) => {
                                         if s.list.contains(&key.to_vec()) {
-                                            // if it contains the key
-                                            let mut query = s.get_query();
-                                            query.as_object_mut().map(|x| {
-                                                x.insert(
-                                                    "update_subscription".to_string(),
-                                                    serde_json::json!(true),
-                                                )
-                                            });
+                                            let query: UserQuery = UserQuery {
+                                                query_part: s.query,
+                                                settings_part: SettingsPart{
+                                                    subscribe: None,
+                                                    unsubscribe: None,
+                                                    update_subscription: Some(true),
+                                                    user_hash: None,
+                                                }
+                                            };
+                                            let entries = handle_query_sled_db(&tree_2, &query);
                                             let notification = Notification {
-                                                query: s.query,
-                                                entries: query_entries_sled_db(&tree_2, query),
+                                                query,
+                                                entries,
                                                 user_list: s.user_list,
                                             };
                                             // notify
                                             client_send_request(
                                                 CosmosRustServerValue::Notification(notification),
-                                            );
+                                            ).ok();
                                         }
                                     }
                                     _ => {}

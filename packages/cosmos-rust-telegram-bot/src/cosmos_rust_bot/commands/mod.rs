@@ -1,14 +1,11 @@
 use chrono::Utc;
-use cosmos_rust_interface::utils::entry::{
-    db::{notification::notify_sled_db, query::socket::*},
-    CosmosRustServerValue, Notify,
-};
+use cosmos_rust_interface::utils::entry::{db::{notification::notify_sled_db, query::socket::*}, CosmosRustServerValue, Notify, EntriesQueryPart, SettingsPart, QueryPart, SubscriptionsQueryPart};
 use regex::Regex;
 
 use heck::ToTitleCase;
 use std::collections::HashMap;
 
-use cosmos_rust_interface::utils::entry::UserMetaData;
+use cosmos_rust_interface::utils::entry::*;
 
 const TASK_STATES: &str = "(pending|resolved|upcoming|failed|unknown|reserved)";
 const SUB_UNSUB: &str = "(subscribe|unsubscribe)";
@@ -57,7 +54,21 @@ pub fn handle_tasks_count_list_history(user_hash: u64, msg: &str, msg_for_query:
                 .get(4)
                 .map(|x| x.as_str() == "unsubscribe")
                 .unwrap_or(false);
-            let request = serde_json::json!({"message": msg_for_query, "handler":"query_entries", "fields":vec!["summary"],"indices":vec!["task_meta_data"],"filter": filter, "order_by": order_by, "limit":limit, "subscribe": subscribe, "unsubscribe": unsubscribe, "user_hash": user_hash});
+
+            let request: UserQuery = UserQuery{ query_part: QueryPart::EntriesQueryPart(EntriesQueryPart{
+                message: msg_for_query.to_string(),
+                fields: vec!["summary".to_string()],
+                indices: vec!["task_meta_data".to_string()],
+                filter,
+                order_by,
+                limit,
+            }), settings_part: SettingsPart {
+                subscribe: Some(subscribe),
+                unsubscribe: Some(unsubscribe),
+                update_subscription: Some(false),
+                user_hash: Some(user_hash)
+            } };
+
             let response = client_send_request(request).unwrap();
             notify_sled_db(db, response);
             return Ok(());
@@ -93,14 +104,26 @@ pub fn handle_tasks_logs_errors_debug(user_hash: u64, msg: &str, msg_for_query: 
             let filter: HashMap<String, String> = HashMap::new();
             let fields = match k {
                 "logs" | "errors" => {
-                    vec!["summary"]
+                    vec!["summary".to_string()]
                 }
                 "debug" | _ => {
-                    vec!["key", "value"]
+                    vec!["key".to_string(), "value".to_string()]
                 }
             };
+            let request: UserQuery = UserQuery{ query_part: QueryPart::EntriesQueryPart(EntriesQueryPart{
+                message: msg_for_query.to_string(),
+                fields,
+                indices: vec![format!("task_meta_data_{}",k)],
+                filter,
+                order_by: "timestamp".to_string(),
+                limit,
+            }), settings_part: SettingsPart {
+                subscribe: Some(subscribe),
+                unsubscribe: Some(unsubscribe),
+                update_subscription: Some(false),
+                user_hash: Some(user_hash)
+            } };
 
-            let request = serde_json::json!({"message": msg_for_query, "handler":"query_entries", "fields":fields,"indices":vec![format!("task_meta_data_{}",k).as_str()],"filter": filter, "order_by": "timestamp", "limit":limit, "subscribe": subscribe, "unsubscribe": unsubscribe, "user_hash": user_hash});
             let response = client_send_request(request).unwrap();
             notify_sled_db(db, response);
             return Ok(());
@@ -109,19 +132,25 @@ pub fn handle_tasks_logs_errors_debug(user_hash: u64, msg: &str, msg_for_query: 
 }
 
 pub fn handle_subscribe_unsubscribe(user_hash: u64, msg: &str, msg_for_query: &str, db: &sled::Db) -> anyhow::Result<()>  {
-    let subscribe_option: Option<bool> = if msg == "unsubscribe all" {
-            Some(false)
+    let unsubscribe: bool = if msg == "unsubscribe all" {
+            true
         } else if msg == "subscriptions" {
-            Some(true)
+            false
         } else {
-            None
+            return Err(anyhow::anyhow!("Error: Unknown Command!"));
     };
-    subscribe_option.map(|x| {
-        let request = serde_json::json!({"message": msg_for_query, "handler":"query_subscriptions", "unsubscribe": x, "user_hash": user_hash});
-        let response = client_send_request(request).unwrap();
-        notify_sled_db(db, response);
-        return Ok(());
-    }).unwrap_or(Err(anyhow::anyhow!("Error: Unknown Command!")))
+    let request: UserQuery = UserQuery{ query_part: QueryPart::SubscriptionsQueryPart(SubscriptionsQueryPart{
+        message: msg_for_query.to_string(),
+    }), settings_part: SettingsPart {
+        subscribe: None,
+        unsubscribe: Some(unsubscribe),
+        update_subscription: None,
+        user_hash: Some(user_hash)
+    } };
+
+    let response = client_send_request(request).unwrap();
+    notify_sled_db(db, response);
+    Ok(())
 }
 
 
@@ -205,7 +234,20 @@ pub fn handle_gov_prpsl(user_hash: u64, msg: &str, msg_for_query: &str, db: &sle
             .map(|x| x.as_str() == "unsubscribe")
             .unwrap_or(false);
 
-        let request = serde_json::json!({"message": msg_for_query, "handler":"query_entries","fields":vec!["summary"],"indices":vec!["proposal_id"],"filter": filter, "order_by": order_by, "limit":limit, "subscribe": subscribe, "unsubscribe": unsubscribe, "user_hash": user_hash});
+        let request: UserQuery = UserQuery{ query_part: QueryPart::EntriesQueryPart(EntriesQueryPart{
+            message: msg_for_query.to_string(),
+            fields: vec!["summary".to_string()],
+            indices: vec!["proposal_id".to_string()],
+            filter,
+            order_by,
+            limit,
+        }), settings_part: SettingsPart {
+            subscribe: Some(subscribe),
+            unsubscribe: Some(unsubscribe),
+            update_subscription: Some(false),
+            user_hash: Some(user_hash)
+        } };
+
         let response = client_send_request(request).unwrap();
         notify_sled_db(db, response);
         return Ok(());
