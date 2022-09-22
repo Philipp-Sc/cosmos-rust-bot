@@ -4,3 +4,9 @@
 [submodule "workspace/cosmos-rust-interface"]
 	path = workspace/cosmos-rust-interface
 	url = https://github.com/Philipp-Sc/cosmos-rust-interface.git
+[submodule "workspace/cosmos-rust-package"]
+	path = workspace/cosmos-rust-interface
+	url = https://github.com/Philipp-Sc/cosmos-rust-package.git
+[submodule "workspace/cosmos-rust-development"]
+	path = workspace/cosmos-rust-development
+	url = https://github.com/Philipp-Sc/cosmos-rust-development.git
