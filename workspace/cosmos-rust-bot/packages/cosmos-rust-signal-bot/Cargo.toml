@@ -8,7 +8,7 @@ edition = "2021"
 
 cosmos-rust-bot = { path = "../../." } # loads the bot_library
 
-cosmos-rust-interface = { path = "../../../cosmos-rust-interface", default-features = false, features = ["db"] } # only loads the db functionality
+cosmos-rust-interface = { workspace = true, default-features = false, features = ["db"] } # only loads the db functionality
 presage = { git = "https://github.com/whisperfish/presage" }
 anyhow = "1.0"
 chrono = "0.4"

@@ -3,7 +3,7 @@ name = "cosmos-rust-bot"
 authors = ["Philipp Schlütermann <philipp.schluetermann@udo.edu>"]
 description = ""
 repository = "https://github.com/Philipp-Sc/cosmos-rust-bot"
-version = "0.4.0"
+version = "2.0.0"
 edition = "2021"
 
 [lib]
@@ -16,33 +16,27 @@ required-features = ["build-binary"]
 
 
 [features]
-build-binary = ["cosmos-rust-interface", "cosmos-rust-package"]
-# todo: further remove dependencies, that are not in the lib
-# reason: bot_library is used by cosmos-rust-signal-bot, reduces the size of that package.
+build-binary = ["cosmos-rust-interface", "cosmos-rust-package", "anyhow", "bincode", "chrono", "enum-as-inner", "heck","litcrypt","notify","regex","secstr","sled","strum","strum_macros","tokio"]
 
 [dependencies]
-cosmos-rust-interface = { path = '../cosmos-rust-interface', optional = true }
-cosmos-rust-package = { path = '../cosmos-rust-package', optional = true }
+cosmos-rust-interface = { workspace = true, optional = true }
+cosmos-rust-package = { workspace = true, optional = true }
 #cosmos-rust-interface = { git = "https://github.com/Philipp-Sc/cosmos-rust-interface.git", optional = true }
 #cosmos-rust-package = { git = "https://github.com/Philipp-Sc/cosmos-rust-package.git", optional = true }
-tokio = { version = "1.21.1", features = ["full"] }
-anyhow = "1.0"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-rust_decimal = "1.12.2"
-chrono = "0.4"
-secstr = "0.4.0"
-colored = "2"
-num_cpus = "1.13.1"
-rust_decimal_macros = "1.12.2"
-enum-as-inner = "0.3.3"
-num-format = "0.4.0"
-litcrypt = "0.3"
-crossbeam-channel = "0.4.0"
-notify = "4.0.17"
-heck = "0.4.0"
-regex = "1.6.0"
-strum = "0.24"
-strum_macros = "0.24"
-sled = { version = "0.34.7", features = ["compression"] }
-bincode = "1.3.3"
+tokio = { workspace = true, features = ["full"], optional = true  }
+anyhow  = { workspace = true, optional = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+rust_decimal.workspace = true
+chrono = { workspace = true, optional = true }
+enum-as-inner = { workspace = true, optional = true }
+heck = { workspace = true, optional = true }
+regex = { workspace = true, optional = true }
+strum = { workspace = true, optional = true }
+strum_macros = { workspace = true, optional = true }
+sled = { workspace = true, features = ["compression"], optional = true }
+bincode = { workspace = true, optional = true }
+
+secstr = { version = "0.5.0", optional = true }
+litcrypt = { version = "0.3", optional = true }
+notify  = { version = "4.0.17", optional = true }

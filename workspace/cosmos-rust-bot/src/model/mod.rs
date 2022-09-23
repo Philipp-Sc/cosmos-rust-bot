@@ -293,27 +293,76 @@ pub fn task_meta_data(task_list: Vec<TaskItem>) -> Vec<CosmosRustBotValue> {
     task_meta_data
 }
 
-pub async fn next_iteration_of_upcoming_tasks(
-    join_set: &mut JoinSet<()>,
-    maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,
-    user_settings: &UserSettings,
-    wallet_acc_address: &Arc<SecUtf8>,
-    supported_blockchains: &HashMap<String, SupportedBlockchain>,
-) -> Vec<CosmosRustBotValue> {
+pub async fn poll_resolved_tasks(join_set: &mut JoinSet<()>) -> usize {
+    let mut counter: usize = 0;
+    // The following removes all completed tasks from the set.
+    // Unresolved tasks are unaffected.
     for _ in 0..join_set.len() {
         let result = timeout(Duration::from_millis(0), join_set.join_next()).await;
+        // join_set.join_next()
+        // If this returns `Poll::Ready(Some(_))`, then the task that completed is removed from the set.
         match result {
-            Ok(_) => {}
+            Ok(_) => {
+                counter+=1;
+            }
             Err(_) => {
+                // timeout returned an error
+                // currently all tasks pending
                 break;
             }
         };
     }
+    counter
+}
 
-    let req = get_requirements(&user_settings);
+
+pub async fn try_spawn_upcoming_tasks(
+    join_set: &mut JoinSet<()>,
+    maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,
+    req: &Vec<TaskSpec>,
+    user_settings: &UserSettings,
+    wallet_acc_address: &Arc<SecUtf8>,
+    supported_blockchains: &HashMap<String, SupportedBlockchain>,
+) -> usize {
+
+    let task_list: Vec<TaskItem> = get_task_list(maybes,req).await;
+
+    let upcoming_task_spec_list: Vec<&TaskSpec> = req
+        .iter()
+        .filter(|x| task_list
+            .iter()
+            .filter(|x| x.state == TaskState::Upcoming)
+            .map(|x| x.name.to_string())
+            .collect::<Vec<String>>().contains(&x.name))
+        .collect();
+
+    let number_of_tasks_added =
+        spawn_tasks(
+            join_set,
+            maybes,
+            &user_settings,
+            &wallet_acc_address,
+            upcoming_task_spec_list,
+            supported_blockchains,
+        )
+        .await;
+    number_of_tasks_added
+}
+
+pub async fn get_task_meta_data(maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,
+                                req: &Vec<TaskSpec>
+                                ) -> Vec<CosmosRustBotValue>{
+
+    let task_list = get_task_list(maybes,req).await;
+    task_meta_data(task_list)
+}
+
+pub async fn get_task_list(
+    maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,
+    req: &Vec<TaskSpec>,
+) -> Vec<TaskItem> {
 
     let mut task_list: Vec<TaskItem> = Vec::new();
-    //Vec<(String, String, i64)> = Vec::new();
 
     let now = Utc::now().timestamp();
     for (k, v) in maybes.iter() {
@@ -387,32 +436,13 @@ pub async fn next_iteration_of_upcoming_tasks(
         }
     }
     task_list.sort_by_key(|k| k.timestamp);
-
-    let upcoming_task_name_list: Vec<String> = task_list
-        .iter()
-        .filter(|x| x.state == TaskState::Upcoming)
-        .map(|x| x.name.to_string())
-        .collect();
-    let upcoming_task_spec_list: Vec<TaskSpec> = req
-        .into_iter()
-        .filter(|x| upcoming_task_name_list.contains(&x.name))
-        .collect();
-
-    spawn_tasks(
-        join_set,
-        maybes,
-        &user_settings,
-        &wallet_acc_address,
-        upcoming_task_spec_list,
-        supported_blockchains,
-    )
-    .await;
-    task_meta_data(task_list)
+    task_list
 }
 
 /*
  * Preparing entries so that they can be used without the need to mutate the hashmap later on.
  */
+/*
 pub async fn setup_required_keys(
     maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,
 ) {
@@ -437,7 +467,7 @@ pub async fn setup_required_keys(
             }])),
         );
     }
-}
+}*/
 
 /*
 * all required queries are triggered here in async fashion
@@ -450,9 +480,10 @@ async fn spawn_tasks(
     maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,
     user_settings: &UserSettings,
     wallet_acc_address: &Arc<SecUtf8>,
-    to_update: Vec<TaskSpec>,
+    to_update: Vec<&TaskSpec>,
     supported_blockchains: &HashMap<String, SupportedBlockchain>,
-) {
+) -> usize {
+    let mut count: usize = 0;
     for req in to_update {
         let contains_key = maybes.contains_key(&req.name);
         if !contains_key {
@@ -504,6 +535,8 @@ async fn spawn_tasks(
                     add_item(&pointer, result).await;
                 }
             });
+            count +=1;
         }
     }
+    count
 }

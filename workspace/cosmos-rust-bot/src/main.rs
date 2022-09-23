@@ -12,7 +12,7 @@ mod model;
 use account::wallet::{decrypt_text_with_secret, encrypt_text_with_secret};
 use control::try_run_function;
 use model::requirements::UserSettings;
-use model::{access_maybes, next_iteration_of_upcoming_tasks, setup_required_keys};
+use model::{access_maybes};
 
 use chrono::Utc;
 use core::future::Future;
@@ -31,6 +31,7 @@ use std::sync::mpsc::channel;
 use cosmos_rust_interface::blockchain::account_from_seed_phrase;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
+use std::{thread, time};
 
 use cosmos_rust_interface::utils::entry::db::load_sled_db;
 use cosmos_rust_interface::utils::entry::db::notification::socket::client_send_request;
@@ -45,6 +46,8 @@ use cosmos_rust_interface::utils::response::ResponseResult;
 use cosmos_rust_package::api::core::cosmos::channels;
 
 use cosmos_rust_package::api::core::cosmos::channels::SupportedBlockchain;
+use crate::model::{get_task_meta_data, poll_resolved_tasks, try_spawn_upcoming_tasks};
+use crate::model::requirements::get_requirements;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -118,9 +121,10 @@ async fn main() -> anyhow::Result<()> {
     });
 
     let supported_blockchains = channels::get_supported_blockchains_from_chain_registry("../chain-registry".to_string(),true,Some(10*60)).await;
-
+    // TODO: if transport error until no transport errors refresh this
     loop {
-        setup_required_keys(&mut maybes).await;
+        /*setup_required_keys(&mut maybes).await;*/
+        let req = get_requirements(&user_settings);
 
         while !user_settings.pause_requested {
             if user_settings.hot_reload {
@@ -135,65 +139,77 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
 
-            let mut entries: Vec<CosmosRustBotValue> = Vec::new();
-            let mut task_meta_data: Vec<CosmosRustBotValue> = next_iteration_of_upcoming_tasks(
+            let number_of_tasks_resolved = poll_resolved_tasks(&mut join_set).await;
+
+            let _number_of_tasks_added = try_spawn_upcoming_tasks(
                 &mut join_set,
                 &mut maybes,
+                &req,
                 &user_settings,
                 &wallet_acc_address,
                 &supported_blockchains
-            )
-            .await;
-            entries.append(&mut task_meta_data);
+            ).await;
 
-            // ensures the display tasks operates on the same snapshot
-            // since the processing of the ResponseResults is blazing fast, it makes no sense to hope for a value to be refreshed
-            // so potentially reduces function calls
-            // also post processing does not need to deal with Arc<Mutex>
-            let snapshot_of_maybes = access_maybes(&maybes).await;
+            if number_of_tasks_resolved > 0 {
 
-            if user_settings.governance_proposal_notifications {
-                entries.append(&mut governance_proposal_notifications(&snapshot_of_maybes));
-            }
+                // ensures the display tasks operates on the same snapshot
+                // since the processing of the ResponseResults is blazing fast, it makes no sense to hope for a value to be refreshed
+                // so potentially reduces function calls
+                // also post processing does not need to deal with Arc<Mutex>
+                let snapshot_of_maybes = access_maybes(&maybes).await;
 
-            let mut task_meta_data: Vec<CosmosRustBotValue> = Vec::new();
-            let mut debug: Vec<CosmosRustBotValue> = debug(&snapshot_of_maybes);
-            let mut logs: Vec<CosmosRustBotValue> = logs(&snapshot_of_maybes);
-            let mut errors: Vec<CosmosRustBotValue> = errors(&snapshot_of_maybes);
-            task_meta_data.append(&mut debug);
-            task_meta_data.append(&mut logs);
-            task_meta_data.append(&mut errors);
-            entries.append(&mut task_meta_data);
+                let mut entries: Vec<CosmosRustBotValue> = Vec::new();
 
-            CosmosRustBotValue::add_index(&mut entries, "timestamp", "timestamp");
+                let mut task_meta_data: Vec<CosmosRustBotValue> = get_task_meta_data(&mut maybes, &req).await;
+                entries.append(&mut task_meta_data);
 
-            let entry_keys = entries
-                .iter()
-                .map(|x| sled::IVec::from(x.key()))
-                .collect::<Vec<sled::IVec>>();
-
-            let mut batch = sled::Batch::default();
-            // remove all, those that are not part of the current batch
-            // except subscriptions, they are left untouched.
-            let sub_prefix = Subscription::get_prefix();
-
-            for k in tree.iter().keys() {
-                let key = k?;
-                if !entry_keys.contains(&key) && key.subslice(0, sub_prefix.len()) != &sub_prefix {
-                    // remove outdated entries / indices
-                    batch.remove(key);
+                if user_settings.governance_proposal_notifications {
+                    entries.append(&mut governance_proposal_notifications(&snapshot_of_maybes));
                 }
-            }
-            // keep all, those that are already inserted
-            // insert new
-            for x in 0..entries.len() {
-                if !tree.contains_key(&entry_keys[x]).unwrap() {
-                    // no-op in case key exists
-                    batch.insert(&entry_keys[x], entries[x].value());
+
+                let mut task_meta_data: Vec<CosmosRustBotValue> = Vec::new();
+                let mut debug: Vec<CosmosRustBotValue> = debug(&snapshot_of_maybes);
+                let mut logs: Vec<CosmosRustBotValue> = logs(&snapshot_of_maybes);
+                let mut errors: Vec<CosmosRustBotValue> = errors(&snapshot_of_maybes);
+                task_meta_data.append(&mut debug);
+                task_meta_data.append(&mut logs);
+                task_meta_data.append(&mut errors);
+                entries.append(&mut task_meta_data);
+
+                CosmosRustBotValue::add_index(&mut entries, "timestamp", "timestamp");
+
+                let entry_keys = entries
+                    .iter()
+                    .map(|x| sled::IVec::from(x.key()))
+                    .collect::<Vec<sled::IVec>>();
+
+                let mut batch = sled::Batch::default();
+                // remove all, those that are not part of the current batch
+                // except subscriptions, they are left untouched.
+                let sub_prefix = Subscription::get_prefix();
+
+                for k in tree.iter().keys() {
+                    let key = k?;
+                    if !entry_keys.contains(&key) && key.subslice(0, sub_prefix.len()) != &sub_prefix {
+                        // remove outdated entries / indices
+                        batch.remove(key);
+                    }
                 }
+                // keep all, those that are already inserted
+                // insert new
+                for x in 0..entries.len() {
+                    if !tree.contains_key(&entry_keys[x]).unwrap() {
+                        // no-op in case key exists
+                        batch.insert(&entry_keys[x], entries[x].value());
+                    }
+                }
+                // watch_prefix(..) allows to receive events when the entry gets updated.
+                tree.apply_batch(batch)?;
+
+            }else{
+                let millis = time::Duration::from_millis(500);
+                thread::sleep(millis);
             }
-            // watch_prefix(..) allows to recieve events when the entry gets updated.
-            tree.apply_batch(batch)?;
         }
         join_set.shutdown().await;
         if user_settings.hot_reload {
