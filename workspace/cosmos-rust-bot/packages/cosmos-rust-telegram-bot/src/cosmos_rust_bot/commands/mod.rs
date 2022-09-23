@@ -65,7 +65,6 @@ pub fn handle_tasks_count_list_history(user_hash: u64, msg: &str, msg_for_query:
             }), settings_part: SettingsPart {
                 subscribe: Some(subscribe),
                 unsubscribe: Some(unsubscribe),
-                update_subscription: Some(false),
                 user_hash: Some(user_hash)
             } };
 
@@ -120,7 +119,6 @@ pub fn handle_tasks_logs_errors_debug(user_hash: u64, msg: &str, msg_for_query: 
             }), settings_part: SettingsPart {
                 subscribe: Some(subscribe),
                 unsubscribe: Some(unsubscribe),
-                update_subscription: Some(false),
                 user_hash: Some(user_hash)
             } };
 
@@ -144,7 +142,6 @@ pub fn handle_subscribe_unsubscribe(user_hash: u64, msg: &str, msg_for_query: &s
     }), settings_part: SettingsPart {
         subscribe: None,
         unsubscribe: Some(unsubscribe),
-        update_subscription: None,
         user_hash: Some(user_hash)
     } };
 
@@ -244,7 +241,6 @@ pub fn handle_gov_prpsl(user_hash: u64, msg: &str, msg_for_query: &str, db: &sle
         }), settings_part: SettingsPart {
             subscribe: Some(subscribe),
             unsubscribe: Some(unsubscribe),
-            update_subscription: Some(false),
             user_hash: Some(user_hash)
         } };
 

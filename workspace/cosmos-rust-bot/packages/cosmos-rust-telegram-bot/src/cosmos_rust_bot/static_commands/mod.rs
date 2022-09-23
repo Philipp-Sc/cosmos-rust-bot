@@ -53,7 +53,7 @@ pub fn handle_help(user_hash: u64, msg: &str, db: &sled::Db)  -> anyhow::Result<
             CosmosRustServerValue::Notify(Notify {
                 timestamp: Utc::now().timestamp(),
                 msg: vec![
-                    "🤖💬I am happy to help.\nDo you want to lean how to lookup proposals?\n/help_governance_proposals\n\nIn case you want to subscribe/unsubscribe\n/help_subscriptions".to_string(),
+                    "🤖💬I am happy to help.\nDo you want to learn how to lookup proposals?\n/help_governance_proposals\n\nIn case you want to subscribe/unsubscribe\n/help_subscriptions".to_string(),
                 ],
                 user_hash: user_hash,
             }),

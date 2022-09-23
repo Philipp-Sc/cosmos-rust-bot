@@ -35,7 +35,7 @@ use std::{thread, time};
 
 use cosmos_rust_interface::utils::entry::db::load_sled_db;
 use cosmos_rust_interface::utils::entry::db::notification::socket::client_send_request;
-use cosmos_rust_interface::utils::entry::db::query::{handle_query_sled_db, query_entries_sled_db};
+use cosmos_rust_interface::utils::entry::db::query::{handle_query_sled_db, query_entries_sled_db, update_subscription};
 use cosmos_rust_interface::utils::entry::db::query::socket::spawn_socket_query_server;
 use cosmos_rust_interface::utils::entry::postproc::blockchain::cosmos::gov::governance_proposal_notifications;
 use cosmos_rust_interface::utils::entry::postproc::meta_data::debug::debug;
@@ -75,45 +75,36 @@ async fn main() -> anyhow::Result<()> {
     spawn_socket_query_server(&tree);
 
     let tree_2 = tree.clone();
-    let thread = tokio::spawn(async move {
-        let mut subscriber = tree_2.watch_prefix(Entry::get_prefix());
+    let _thread = tokio::spawn(async move {
+        let mut subscriber = tree_2.watch_prefix(Subscription::get_prefix());
+        // for each updated subscription
         while let Some(event) = (&mut subscriber).await {
             match event {
-                sled::Event::Insert { key, .. } | sled::Event::Remove { key } => {
-                    // iterate over each subscription
-                    for sub in tree_2.scan_prefix(Subscription::get_prefix()) {
-                        match sub {
-                            Ok((k, v)) => {
-                                let entry = CosmosRustBotValue::from(v.to_vec());
-                                match entry {
-                                    CosmosRustBotValue::Subscription(s) => {
-                                        if s.list.contains(&key.to_vec()) {
-                                            let query: UserQuery = UserQuery {
-                                                query_part: s.query,
-                                                settings_part: SettingsPart{
-                                                    subscribe: None,
-                                                    unsubscribe: None,
-                                                    update_subscription: Some(true),
-                                                    user_hash: None,
-                                                }
-                                            };
-                                            let entries = handle_query_sled_db(&tree_2, &query);
-                                            let notification = Notification {
-                                                query,
-                                                entries,
-                                                user_list: s.user_list,
-                                            };
-                                            // notify
-                                            client_send_request(
-                                                CosmosRustServerValue::Notification(notification),
-                                            ).ok();
-                                        }
-                                    }
-                                    _ => {}
+                    sled::Event::Remove { key } => {},
+                    sled::Event::Insert { key, value } => {
+
+                    match CosmosRustBotValue::from(value.to_vec()) {
+                        CosmosRustBotValue::Subscription(s) => {
+                            let query: UserQuery = UserQuery {
+                                query_part: s.query,
+                                settings_part: SettingsPart{
+                                    subscribe: None,
+                                    unsubscribe: None,
+                                    user_hash: None,
                                 }
-                            }
-                            Err(e) => {}
+                            };
+                            let entries = handle_query_sled_db(&tree_2, &query);
+                            let notification = Notification {
+                                query,
+                                entries,
+                                user_list: s.user_list,
+                            };
+                            // notify
+                            client_send_request(
+                                CosmosRustServerValue::Notification(notification),
+                            ).ok();
                         }
+                        _ => {}
                     }
                 }
             }
@@ -200,7 +191,23 @@ async fn main() -> anyhow::Result<()> {
                         batch.insert(&entry_keys[x], entries[x].value());
                     }
                 }
-                // watch_prefix(..) allows to receive events when the entry gets updated.
+                // now refreshing subscriptions by updating them if their content changed.
+                for sub in tree.scan_prefix(Subscription::get_prefix()) {
+                    match sub {
+                        Ok((k, v)) => {
+                            let mut value = CosmosRustBotValue::from(v.to_vec());
+                            match value {
+                                CosmosRustBotValue::Subscription(ref mut s) => {
+                                    if let Ok(_) = update_subscription(&entries, s){
+                                        batch.insert(k,value.value());
+                                    }
+                                }
+                                _ => {}
+                            }
+                        }
+                        Err(e) => {}
+                    }
+                }
                 tree.apply_batch(batch)?;
 
             }else{
