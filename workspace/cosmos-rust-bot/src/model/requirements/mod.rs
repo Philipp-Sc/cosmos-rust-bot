@@ -11,10 +11,11 @@ const fast: i32 = 10;
 // 10s
 const medium: i32 = 60;
 // 1m
-const slow: i32 = 60 * 10; // 10m
+const slow: i32 = 60 * 5; // 5m
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize,PartialEq)]
 pub enum TaskType {
+    ChainRegistry,
     GovernanceProposals,
     None,
 }
@@ -83,6 +84,22 @@ pub fn feature_list_to_file() -> anyhow::Result<()> {
         requirements: governance_proposals,
     });
 
+    let mut chain_registry: Vec<TaskSpec> = Vec::new();
+    let task = TaskSpec {
+        kind: TaskType::ChainRegistry,
+        name: format!("chain_registry"),
+        args: json!({
+                    "path": "../chain-registry",
+                }),
+        refresh_rate: slow,
+    };
+    chain_registry.push(task);
+
+    feature_list.push(Feature {
+        name: "chain_registry".to_string(),
+        requirements: chain_registry,
+    });
+
     let line = format!("{}", serde_json::to_string(&feature_list).unwrap());
     fs::write("./cosmos-rust-bot-feature-list.json", &line).ok();
     Ok(())
@@ -93,6 +110,7 @@ fn feature_name_list(user_settings: &UserSettings) -> Vec<String> {
     if user_settings.governance_proposal_notifications {
         args.push("governance_proposal_notifications".to_string());
     }
+    args.push("chain_registry".to_string());
     args
 }
 

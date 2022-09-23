@@ -120,8 +120,6 @@ async fn main() -> anyhow::Result<()> {
         }
     });
 
-    let supported_blockchains = channels::get_supported_blockchains_from_chain_registry("../chain-registry".to_string(),true,Some(10*60)).await;
-    // TODO: if transport error until no transport errors refresh this
     loop {
         /*setup_required_keys(&mut maybes).await;*/
         let req = get_requirements(&user_settings);
@@ -146,8 +144,7 @@ async fn main() -> anyhow::Result<()> {
                 &mut maybes,
                 &req,
                 &user_settings,
-                &wallet_acc_address,
-                &supported_blockchains
+                &wallet_acc_address
             ).await;
 
             if number_of_tasks_resolved > 0 {

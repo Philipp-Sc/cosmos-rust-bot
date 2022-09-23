@@ -40,6 +40,7 @@ use std::string::ToString;
 use strum::IntoEnumIterator;
 use strum_macros;
 use strum_macros::EnumIter;
+use cosmos_rust_interface::blockchain::cosmos::chain_registry::get_supported_blockchains_from_chain_registry;
 
 #[derive(strum_macros::ToString, Debug, EnumIter, PartialEq)]
 pub enum TaskState {
@@ -322,7 +323,6 @@ pub async fn try_spawn_upcoming_tasks(
     req: &Vec<TaskSpec>,
     user_settings: &UserSettings,
     wallet_acc_address: &Arc<SecUtf8>,
-    supported_blockchains: &HashMap<String, SupportedBlockchain>,
 ) -> usize {
 
     let task_list: Vec<TaskItem> = get_task_list(maybes,req).await;
@@ -343,7 +343,6 @@ pub async fn try_spawn_upcoming_tasks(
             &user_settings,
             &wallet_acc_address,
             upcoming_task_spec_list,
-            supported_blockchains,
         )
         .await;
     number_of_tasks_added
@@ -481,61 +480,77 @@ async fn spawn_tasks(
     user_settings: &UserSettings,
     wallet_acc_address: &Arc<SecUtf8>,
     to_update: Vec<&TaskSpec>,
-    supported_blockchains: &HashMap<String, SupportedBlockchain>,
 ) -> usize {
+
+    let supported_blockchains = match access_maybe(maybes,"chain_registry").await {
+        Maybe{data: Ok(ResponseResult::ChainRegistry(chain_registry)), timestamp: t } => {
+            Some(chain_registry)
+        },
+        Maybe{ .. } => {
+            None
+        },
+    };
+
     let mut count: usize = 0;
     for req in to_update {
-        let contains_key = maybes.contains_key(&req.name);
-        if !contains_key {
-            maybes.insert(
-                req.name.clone(),
-                Arc::new(Mutex::new(vec![Maybe {
-                    data: Err(anyhow::anyhow!("Error: Not yet resolved!")),
-                    timestamp: Utc::now().timestamp(),
-                }])),
-            );
-        }
-        let pointer = maybes.get(&req.name).unwrap().clone();
-
-        if contains_key {
-            add_item(
-                &pointer,
-                Maybe {
-                    data: Err(anyhow::anyhow!("Error: Not yet resolved!")),
-                    timestamp: Utc::now().timestamp(),
-                },
-            )
-            .await;
-        }
-        let mut f: Option<
-            Pin<Box<dyn Future<Output = anyhow::Result<ResponseResult>> + Send + 'static>>,
-        > = None;
-
-        let wallet_acc_address = wallet_acc_address.clone();
-        match req.kind {
-            TaskType::GovernanceProposals => {
-                let status = ProposalStatus::new(req.args["proposal_status"].as_str().unwrap());
-                let blockchain = supported_blockchains.get(req.args["blockchain"].as_str().unwrap())
-                    .unwrap()
-                    .clone();
-
-                f = Some(Box::pin(get_proposals(blockchain, status)));
-            }
-            _ => {}
-        }
-
-        if let Some(m) = f {
-            join_set.spawn(async move {
-                {
-                    let result = m.await;
-                    let result: Maybe<ResponseResult> = Maybe {
-                        data: result,
+        if supported_blockchains.is_some() || req.kind == TaskType::ChainRegistry {
+            let contains_key = maybes.contains_key(&req.name);
+            if !contains_key {
+                maybes.insert(
+                    req.name.clone(),
+                    Arc::new(Mutex::new(vec![Maybe {
+                        data: Err(anyhow::anyhow!("Error: Not yet resolved!")),
                         timestamp: Utc::now().timestamp(),
-                    };
-                    add_item(&pointer, result).await;
+                    }])),
+                );
+            }
+            let pointer = maybes.get(&req.name).unwrap().clone();
+
+            if contains_key {
+                add_item(
+                    &pointer,
+                    Maybe {
+                        data: Err(anyhow::anyhow!("Error: Not yet resolved!")),
+                        timestamp: Utc::now().timestamp(),
+                    },
+                )
+                    .await;
+            }
+            let mut f: Option<
+                Pin<Box<dyn Future<Output=anyhow::Result<ResponseResult>> + Send + 'static>>,
+            > = None;
+
+            let wallet_acc_address = wallet_acc_address.clone();
+            match req.kind {
+                TaskType::ChainRegistry => {
+                    let path = req.args["path"].as_str().unwrap().to_string();
+
+                    f = Some(Box::pin(get_supported_blockchains_from_chain_registry(path)));
                 }
-            });
-            count +=1;
+                TaskType::GovernanceProposals => {
+                    let status = ProposalStatus::new(req.args["proposal_status"].as_str().unwrap());
+                    let blockchain = supported_blockchains.as_ref().unwrap().get(req.args["blockchain"].as_str().unwrap())
+                        .unwrap()
+                        .clone();
+
+                    f = Some(Box::pin(get_proposals(blockchain, status)));
+                }
+                _ => {}
+            }
+
+            if let Some(m) = f {
+                join_set.spawn(async move {
+                    {
+                        let result = m.await;
+                        let result: Maybe<ResponseResult> = Maybe {
+                            data: result,
+                            timestamp: Utc::now().timestamp(),
+                        };
+                        add_item(&pointer, result).await;
+                    }
+                });
+                count += 1;
+            }
         }
     }
     count
