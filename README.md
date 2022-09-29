@@ -27,3 +27,17 @@ cd workspace/cosmos-rust-bot
 ```
 nohup ./my-bot &
 ```
+
+# Build Cosmos-Rust-Telegram-Bot
+```
+cd workspace/cosmos-rust-bot/packages/cosmos-rust-telegram-bot
+
+RUSTFLAGS="--cfg tokio_unstable -C target-cpu=native" cargo build --release
+```
+
+# Run Cosmos-Rust-Telegram-Bot 
+```
+export TELOXIDE_TOKEN=<your_telegram_access_token>
+nohup ../../../target/release/cosmos-rust-telegram-bot &
+```
+
