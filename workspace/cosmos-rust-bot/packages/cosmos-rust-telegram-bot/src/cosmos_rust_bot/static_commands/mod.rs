@@ -185,7 +185,7 @@ pub fn handle_governance_proposals(user_hash: u64, msg: &str, db: &sled::Db) -> 
 🤖 COMMAND
 /gov_prpsl_Blockchain_ProposalId_ProposalStatus_ProposalType_ProposalTime_Limit
 Blockchain
-['terra2', 'osmosis', 'juno', 'cosmoshub']
+['terra2', 'osmosis', 'juno', 'cosmos_hub']
 ProposalId
 e.g. id1,id2,..
 ProposalStatus
@@ -260,8 +260,8 @@ pub fn handle_proposal_by_id(user_hash: u64, msg: &str, db: &sled::Db)  -> anyho
                 msg: vec![
                     r#"🤖💬 Get proposal by id:
 
-/gov_prpsl_cosmoshub_id1
-- lookup proposal on Cosmos-Hub with id 1 (options are terra2, osmosis, juno or cosmoshub)"#
+/gov_prpsl_cosmos_hub_id1
+- lookup proposal on Cosmos-Hub with id 1 (options are terra2, osmosis, juno or cosmos_hub)"#
                         .to_string(),
                 ],
                 user_hash,
@@ -284,7 +284,7 @@ pub fn handle_latest_proposals(user_hash: u64, msg: &str, db: &sled::Db) -> anyh
 - lookup latest 3 proposals (any supported blockchain)
 
 /gov_prpsl_terra2_latest_3
-- lookup latest 3 proposals on Terra (options are terra2, osmosis, juno or cosmoshub)
+- lookup latest 3 proposals on Terra (options are terra2, osmosis, juno or cosmos_hub)
 
 /gov_prpsl_juno_osmosis_latest_1
 - lookup latest proposals on Juno or Osmosis (you can specify multiple blockchains)
