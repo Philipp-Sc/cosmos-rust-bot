@@ -7,11 +7,10 @@ use std::fs;
 pub type UserSettings = UserSettingsImported;
 
 // around every 5s a new block is generated
-const fast: i32 = 10;
-// 10s
-const medium: i32 = 60;
-// 1m
-const slow: i32 = 60 * 5; // 5m
+
+const MINUTES_1: i32 = 60 * 1;
+const MINUTES_5: i32 = 60 * 5;
+const MINUTES_10: i32 = 60 * 10;
 
 #[derive(Debug, Serialize, Deserialize,PartialEq)]
 pub enum TaskType {
@@ -74,7 +73,7 @@ pub fn feature_list_to_file() -> anyhow::Result<()> {
                     "blockchain": blockchain,
                     "proposal_status": proposal_status
                 }),
-                refresh_rate: medium,
+                refresh_rate: MINUTES_5,
             };
             governance_proposals.push(task);
         }
@@ -91,7 +90,7 @@ pub fn feature_list_to_file() -> anyhow::Result<()> {
         args: json!({
                     "path": "../chain-registry",
                 }),
-        refresh_rate: slow,
+        refresh_rate: MINUTES_10,
     };
     chain_registry.push(task);
 

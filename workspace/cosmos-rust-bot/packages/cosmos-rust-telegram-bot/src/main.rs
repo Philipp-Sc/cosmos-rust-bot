@@ -8,9 +8,8 @@ use cosmos_rust_interface::utils::entry::db::load_sled_db;
 use cosmos_rust_interface::utils::entry::db::notification::socket::spawn_socket_notification_server;
 use cosmos_rust_interface::utils::entry::db::notification::notify_sled_db;
 use cosmos_rust_interface::utils::entry::*;
-use cosmos_rust_interface::utils::entry::{CosmosRustServerValue, Notification, Notify};
+use cosmos_rust_interface::utils::entry::{CosmosRustServerValue, Notify};
 use std::sync::Arc;
-use teloxide::types::ParseMode;
 use tokio::task::JoinSet;
 
 // RUST_LOG=error,debug,info
@@ -66,7 +65,7 @@ async fn main() {
                         tree_2.remove(key).ok();
                     }
                 }
-                sled::Event::Remove { key } => {}
+                sled::Event::Remove { .. } => {}
             }
         }
     });
@@ -74,8 +73,8 @@ async fn main() {
     // task that receives the messages
     join_set.spawn(async move {
         let handler = Update::filter_message().endpoint(
-            |msg: Message, bot: Bot, tree: Arc<sled::Db>| async move {
-                receive(tree, bot, msg).await.ok();
+            |msg: Message, tree: Arc<sled::Db>| async move {
+                receive(tree,msg).await.ok();
                 respond(())
             },
         );
@@ -93,7 +92,6 @@ async fn main() {
 
 async fn receive(
     tree: Arc<sled::Db>,
-    bot: Bot,
     message: Message,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
     match message.kind {

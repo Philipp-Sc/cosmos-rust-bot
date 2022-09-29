@@ -329,11 +329,11 @@ pub async fn try_spawn_upcoming_tasks(
 
     let upcoming_task_spec_list: Vec<&TaskSpec> = req
         .iter()
-        .filter(|x| task_list
+        .filter(|&x| task_list
             .iter()
-            .filter(|x| x.state == TaskState::Upcoming)
-            .map(|x| x.name.to_string())
-            .collect::<Vec<String>>().contains(&x.name))
+            .filter(|y| y.state == TaskState::Upcoming)
+            .map(|y| &y.name)
+            .collect::<Vec<&String>>().contains(&&x.name))
         .collect();
 
     let number_of_tasks_added =
@@ -409,11 +409,11 @@ pub async fn get_task_list(
         let mut update = false;
         if task_list[i].state == TaskState::Reserved {
         } else if task_list[i].state == TaskState::Unknown {
-            update = true;
-        } else if task_list[i].state == TaskState::Unknown {
             if req.iter().filter(|x| x.name == task_list[i].name).count() == 1 {
                 update = true;
             }
+        } else if task_list[i].state == TaskState::Failed {
+            update = true;
         } else if task_list[i].state == TaskState::Resolved {
             let period: Vec<i64> = req
                 .iter()
@@ -477,7 +477,7 @@ pub async fn setup_required_keys(
 async fn spawn_tasks(
     join_set: &mut JoinSet<()>,
     maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,
-    user_settings: &UserSettings,
+    _user_settings: &UserSettings,
     wallet_acc_address: &Arc<SecUtf8>,
     to_update: Vec<&TaskSpec>,
 ) -> usize {

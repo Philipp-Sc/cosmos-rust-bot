@@ -1,41 +1,44 @@
-use chrono::Utc;
-use cosmos_rust_interface::utils::entry::{db::{notification::notify_sled_db, query::socket::*}, CosmosRustServerValue, Notify, EntriesQueryPart, SettingsPart, QueryPart, SubscriptionsQueryPart};
-use regex::Regex;
+use cosmos_rust_interface::utils::entry::{db::{notification::notify_sled_db, query::socket::*}, EntriesQueryPart, SettingsPart, QueryPart, SubscriptionsQueryPart};
+use regex::{Match, Regex};
 
-use heck::ToTitleCase;
+use heck::{ToTitleCase, ToUpperCamelCase};
 use std::collections::HashMap;
+use chrono::TimeZone;
 
 use cosmos_rust_interface::utils::entry::*;
 
-const TASK_STATES: &str = "(pending|resolved|upcoming|failed|unknown|reserved)";
 const SUB_UNSUB: &str = "(subscribe|unsubscribe)";
-const BLOCKCHAINS: &str = "(terra2|osmosis|juno|cosmoshub)";
 
+const LIST_TASK_STATES: [&str;6] = ["pending","resolved","upcoming","failed","unknown","reserved"];
+
+const LIST_BLOCKCHAINS: [&str;4] = ["terra2","osmosis","juno","cosmoshub"];
+const LIST_PROPOSAL_STATUS: [&str;6] = ["nil","passed","failed","rejected","deposit period","voting period"];
+const LIST_PROPOSAL_TYPE: [&str;8] = ["text","community pool spend","parameter change","software upgrade","client update","update pool incentives","store code","unknown"];
+const LIST_PROPOSAL_TIME: [&str;5] = ["latest","submit","deposit end","voting start","voting end"];
 
 pub fn handle_tasks_count_list_history(user_hash: u64, msg: &str, msg_for_query: &str, db: &sled::Db) -> anyhow::Result<()>  {
         let task_info_regex = Regex::new(
             format!(
-                "tasks (count|list|history)(?: {})?(?: ([0-9]+))?(?: {})?(?:\\s|$)",
-                TASK_STATES, SUB_UNSUB
+                "tasks (count|list|history)({})?(?: ([0-9]+))?(?: {})?(?:\\s|$)",
+                format!("[{}]+",LIST_TASK_STATES.map(|x| " ".to_string()+x).join("|")), SUB_UNSUB
             )
                 .as_str(),
         )
             .unwrap();
         if task_info_regex.is_match(&msg) {
             let caps = task_info_regex.captures(&msg).unwrap();
-            let mut filter: HashMap<String, String> = HashMap::new();
+            let mut filter: Vec<(String, String)> = Vec::new();
             let k = caps.get(1).map(|t| t.as_str());
-            filter.insert(
+            filter.push((
                 "kind".to_string(),
                 k.map(|t| format!("task_{}", t))
                     .unwrap_or("any".to_string()),
-            );
-            filter.insert(
-                "state".to_string(),
-                caps.get(2)
-                    .map(|t| t.as_str().to_string().to_title_case())
-                    .unwrap_or("any".to_string()),
-            );
+            ));
+            let mut filter_list: Vec<Vec<(String, String)>> = Vec::new();
+            filter_list.push(filter);
+
+            filter_list = add_filter(filter_list,caps.get(2),LIST_TASK_STATES.to_vec(),"state",("",""));
+
 
             let order_by = match k {
                 Some("history") => "timestamp".to_string(),
@@ -59,7 +62,7 @@ pub fn handle_tasks_count_list_history(user_hash: u64, msg: &str, msg_for_query:
                 message: msg_for_query.to_string(),
                 fields: vec!["summary".to_string()],
                 indices: vec!["task_meta_data".to_string()],
-                filter,
+                filter: filter_list,
                 order_by,
                 limit,
             }), settings_part: SettingsPart {
@@ -100,7 +103,7 @@ pub fn handle_tasks_logs_errors_debug(user_hash: u64, msg: &str, msg_for_query: 
                 .map(|x| x.as_str() == "unsubscribe")
                 .unwrap_or(false);
 
-            let filter: HashMap<String, String> = HashMap::new();
+            let mut filter: Vec<(String, String)> = Vec::new();
             let fields = match k {
                 "logs" | "errors" => {
                     vec!["summary".to_string()]
@@ -113,7 +116,7 @@ pub fn handle_tasks_logs_errors_debug(user_hash: u64, msg: &str, msg_for_query: 
                 message: msg_for_query.to_string(),
                 fields,
                 indices: vec![format!("task_meta_data_{}",k)],
-                filter,
+                filter: vec![filter],
                 order_by: "timestamp".to_string(),
                 limit,
             }), settings_part: SettingsPart {
@@ -152,66 +155,48 @@ pub fn handle_subscribe_unsubscribe(user_hash: u64, msg: &str, msg_for_query: &s
 
 
 pub fn handle_gov_prpsl(user_hash: u64, msg: &str, msg_for_query: &str, db: &sled::Db) -> anyhow::Result<()> {
-    let lookup_proposals_regex = Regex::new(format!("gov prpsl(?: {})?(?: #([0-9]+))?(?: (nil|passed|failed|rejected|deposit period|voting period))?(?: (text|community pool spend|parameter change|software upgrade|client update|update pool incentives|store code|unknown))?(?: (latest|submit|deposit end|voting start|voting end))?(?: ([0-9]+))?(?: {})?(?:\\s|$)", BLOCKCHAINS, SUB_UNSUB).as_str()).unwrap();
+    let lookup_proposals_regex = Regex::new(format!("gov prpsl({})?(?: id([0-9]+))?({})?({})?({})?(?: ([0-9]+))?(?: {})?(?:\\s|$)",
+                                                    format!("[{}]+",LIST_BLOCKCHAINS.map(|x| " ".to_string()+x).join("|")),
+                                                    format!("[{}]+",LIST_PROPOSAL_STATUS.map(|x| " ".to_string()+x).join("|")),
+                                                    format!("[{}]+",LIST_PROPOSAL_TYPE.map(|x| " ".to_string()+x).join("|")),
+                                                    format!("[{}]+",LIST_PROPOSAL_TIME.map(|x| " ".to_string()+x).join("|")),
+                                                    SUB_UNSUB).as_str()).unwrap();
 
     if lookup_proposals_regex.is_match(&msg) {
         let caps = lookup_proposals_regex.captures(&msg).unwrap();
-        let mut filter: HashMap<String, String> = HashMap::new();
-        filter.insert(
-            "proposal_blockchain".to_string(),
-            caps.get(1)
-                .map(|t| format!("{}", t.as_str()))
-                .unwrap_or("any".to_string()),
-        );
-        filter.insert(
+        let mut filter: Vec<(String, String)> = Vec::new();
+        filter.push((
             "proposal_id".to_string(),
             caps.get(2)
                 .map(|t| format!("{}", t.as_str()))
                 .unwrap_or("any".to_string()),
-        );
-        filter.insert(
-            "proposal_status".to_string(),
-            caps.get(3)
-                .map(|t| {
-                    format!(
-                        "{}",
-                        format!(
-                            "status{}",
-                            t.as_str()
-                                .chars()
-                                .filter(|c| !c.is_whitespace())
-                                .collect::<String>()
-                        )
-                    )
-                })
-                .unwrap_or("any".to_string()),
-        );
-        filter.insert(
-            "proposal_type".to_string(),
-            caps.get(4)
-                .map(|t| {
-                    format!(
-                        "{}",
-                        format!(
-                            "{}proposal",
-                            t.as_str()
-                                .chars()
-                                .filter(|c| !c.is_whitespace())
-                                .collect::<String>()
-                        )
-                    )
-                })
-                .unwrap_or("any".to_string()),
-        );
+        ));/*
+        filter.push((
+            "proposal_VotingEndTime".to_string(),
+            format!("lt {}",chrono::Utc::now().timestamp()+60*60*48),
+        ));*/
+
+        let mut filter_list: Vec<Vec<(String, String)>> = Vec::new();
+        filter_list.push(filter);
+
+        filter_list= add_filter(filter_list,caps.get(1),LIST_BLOCKCHAINS.to_vec(),"proposal_blockchain",("",""));
+
+        filter_list= add_filter(filter_list,caps.get(0),LIST_PROPOSAL_STATUS.to_vec(),"proposal_status",("Status",""));
+
+        filter_list= add_filter(filter_list,caps.get(0),LIST_PROPOSAL_TYPE.to_vec(),"proposal_type",("","Proposal"));
+
 
         let order_by =
-            caps.get(5)
-                .map(|x| format!(
-                    "proposal_{}time", x
-                        .as_str()
-                        .chars()
-                        .filter(|c| !c.is_whitespace())
-                        .collect::<String>()))
+            caps.get(0)
+                .map(|x| {
+                    let text = x.as_str();
+                    for time in LIST_PROPOSAL_TIME {
+                        if text.contains(time) {
+                            return format!("proposal_{}Time", time.to_upper_camel_case());
+                        }
+                    }
+                    "proposal_id".to_string()
+                })
                 .unwrap_or("proposal_id".to_string())
                 .to_owned()
                 .to_lowercase();
@@ -235,7 +220,7 @@ pub fn handle_gov_prpsl(user_hash: u64, msg: &str, msg_for_query: &str, db: &sle
             message: msg_for_query.to_string(),
             fields: vec!["summary".to_string()],
             indices: vec!["proposal_id".to_string()],
-            filter,
+            filter: filter_list,
             order_by,
             limit,
         }), settings_part: SettingsPart {
@@ -249,4 +234,57 @@ pub fn handle_gov_prpsl(user_hash: u64, msg: &str, msg_for_query: &str, db: &sle
         return Ok(());
     }
     Err(anyhow::anyhow!("Error: Unknown Command!"))
+}
+
+fn add_filter(filter_list: Vec<Vec<(String, String)>>, regex_match: Option<Match>, list: Vec<&str>, name: &str, format_str: (&str,&str)) -> Vec<Vec<(String, String)>> {
+    let mut new_filter_list: Vec<Vec<(String, String)>> = Vec::new();
+    match regex_match {
+        Some(t) => {
+            let text = t.as_str().to_string();
+            for item in list {
+                if text.contains(item) {
+                    let mut filter_list_copy = filter_list.clone();
+                    if filter_list_copy.is_empty() {
+                        let mut filter: Vec<(String, String)> = Vec::new();
+                        filter.push((
+                            name.to_string(),
+                            format!("{}{}{}",
+                                    format_str.0,
+                                    item.to_upper_camel_case(),
+                                    format_str.1,
+                            )
+                        ));
+                        new_filter_list.push(filter);
+                    }else {
+                        for i in 0..filter_list_copy.len() {
+                            filter_list_copy[i].push((
+                                name.to_string(),
+                                format!("{}{}{}",
+                                        format_str.0,
+                                        item.to_upper_camel_case(),
+                                        format_str.1,
+                                )
+                            ));
+                        }
+                    }
+                    new_filter_list.append(&mut filter_list_copy);
+                }
+            }
+            if !new_filter_list.is_empty() {
+                return new_filter_list;
+            }
+        },
+        None => {
+        }
+    };
+
+    let mut filter_list_copy = filter_list.clone();
+    for i in 0..filter_list_copy.len() {
+        filter_list_copy[i].push((
+            name.to_string(),
+            "any".to_string()
+        ));
+    }
+    new_filter_list.append(&mut filter_list_copy);
+    new_filter_list
 }

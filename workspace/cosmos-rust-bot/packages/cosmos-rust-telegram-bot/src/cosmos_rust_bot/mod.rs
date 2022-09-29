@@ -1,13 +1,3 @@
-use chrono::Utc;
-use cosmos_rust_interface::utils::entry::{
-    db::{notification::notify_sled_db, query::socket::*},
-    CosmosRustServerValue, Notify,
-};
-use regex::Regex;
-
-use heck::ToTitleCase;
-use std::collections::HashMap;
-
 use cosmos_rust_interface::utils::entry::UserMetaData;
 
 mod static_commands;
@@ -38,18 +28,15 @@ pub async fn handle_message(user_id: u64, message: String, db: &sled::Db) {
         .map_err(|_|handle_help_governance_proposals(user_hash,&msg,db)
         .map_err(|_|handle_help_subscriptions(user_hash,&msg,db)
         .map_err(|_|handle_common_subs(user_hash,&msg,db)
+        .map_err(|_|handle_tasks(user_hash,&msg,db)
         .map_err(|_|handle_governance_proposals(user_hash,&msg,db)
         .map_err(|_|handle_proposal_by_id(user_hash,&msg,db)
         .map_err(|_|handle_latest_proposals(user_hash,&msg,db)
-        .map_err(|_|handle_proposals_voting_period(user_hash,&msg,db)
-        .map_err(|_|handle_proposals_deposit_period(user_hash,&msg,db)
-        .map_err(|_|handle_proposals_rejected(user_hash,&msg,db)
-        .map_err(|_|handle_proposals_passed(user_hash,&msg,db)
-        .map_err(|_|handle_proposals_failed(user_hash,&msg,db)
+        .map_err(|_|handle_proposals_by_status(user_hash,&msg,db)
         .map_err(|_|handle_tasks_logs_errors_debug(user_hash,&msg, &msg_for_query,db)
         .map_err(|_|handle_tasks_count_list_history(user_hash,&msg, &msg_for_query,db)
         .map_err(|_|handle_subscribe_unsubscribe(user_hash,&msg, &msg_for_query,db)
         .map_err(|_|handle_gov_prpsl(user_hash,&msg, &msg_for_query,db)
-        .map_err(|_|handle_unknown_command(user_hash,db).ok()))))))))))))))))))).ok();
+        .map_err(|_|handle_unknown_command(user_hash,db).ok())))))))))))))))).ok();
 
 }
