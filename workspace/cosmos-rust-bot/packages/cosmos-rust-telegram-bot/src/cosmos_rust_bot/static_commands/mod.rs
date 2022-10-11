@@ -13,7 +13,7 @@ pub fn handle_start(user_hash: u64, msg: &str, db: &sled::Db) -> anyhow::Result<
             CosmosRustServerValue::Notify(Notify {
                 timestamp: Utc::now().timestamp(),
                 msg: vec![
-                    r#"🤖💬 Welcome! To get started just type /help or learn more about my development on github via /about."#
+                    r#"🤖💬 Welcome! To get started just type /help or learn more about me via /about."#
                         .to_string(),
                 ],
                 user_hash,
@@ -92,7 +92,7 @@ pub fn handle_help(user_hash: u64, msg: &str, db: &sled::Db)  -> anyhow::Result<
             CosmosRustServerValue::Notify(Notify {
                 timestamp: Utc::now().timestamp(),
                 msg: vec![
-                    "🤖💬I am happy to help.\n\nDo you want to learn how to lookup proposals?\n/help_governance_proposals\n\nIn case you want to subscribe/unsubscribe\n/help_subscriptions\n\nYou can read about why I was created here\n/about\n".to_string(),
+                    "🤖💬\nSubscribe to Governance Notifications\n\n/gov_prpsl_terra2_subscribe\n\n/gov_prpsl_osmosis_subscribe\n\n/gov_prpsl_juno_subscribe\n\n/gov_prpsl_cosmos_hub_subscribe\n\n\nLookup Governance Proposals\n\n/help_governance_proposals\n\nManage Subscriptions\n\n/help_subscriptions\n\n".to_string(),
                 ],
                 user_hash,
             }),
@@ -152,7 +152,7 @@ pub fn handle_help_governance_proposals(user_hash: u64, msg: &str, db: &sled::Db
             CosmosRustServerValue::Notify(Notify {
                 timestamp: Utc::now().timestamp(),
                 msg: vec![
-                    r#"🤖💬 Shortcuts to get you started:
+                    r#"🤖💬 Shortcuts
 
 /latest_proposals
 -  lookup the most recent proposals (by blockchain)
@@ -280,13 +280,10 @@ pub fn handle_latest_proposals(user_hash: u64, msg: &str, db: &sled::Db) -> anyh
                 msg: vec![
                     r#"🤖💬 Get the latest proposals:
 
-/gov_prpsl_latest_3
-- lookup latest 3 proposals (any supported blockchain)
-
-/gov_prpsl_terra2_latest_3
+/gov_prpsl_terra2_3
 - lookup latest 3 proposals on Terra (options are terra2, osmosis, juno or cosmos_hub)
 
-/gov_prpsl_juno_osmosis_latest_1
+/gov_prpsl_juno_osmosis
 - lookup latest proposals on Juno or Osmosis (you can specify multiple blockchains)
 
 "#
@@ -310,16 +307,13 @@ pub fn handle_proposals_by_status(user_hash: u64, msg: &str, db: &sled::Db)  -> 
                 msg: vec![
                     r#"🤖💬 Get proposals by status:
 
-/gov_prpsl_voting_period_latest_3
-- lookup latest 3 proposals in voting period  (options are voting_period, deposit_period, rejected, passed or failed)
+/gov_prpsl_terra2_deposit_period_3
+- lookup latest 3 proposals in deposit period on Terra (options are voting_period, deposit_period, rejected, passed or failed)
 
-/gov_prpsl_terra2_deposit_period_latest_3
-- lookup latest 3 proposals in deposit period on Terra
-
-/gov_prpsl_terra2_voting_period_deposit_period_latest_3
+/gov_prpsl_terra2_voting_period_deposit_period_3
 - lookup latest 3 proposals in voting or deposit period on Terra (you can specify multiple statuses)
 
-/gov_prpsl_terra2_passed_rejected_latest_3
+/gov_prpsl_terra2_passed_rejected_3
 - lookup latest 3 passed or rejected proposals on Terra
 
 "#
@@ -340,7 +334,7 @@ pub fn handle_common_subs(user_hash: u64, msg: &str, db: &sled::Db)  -> anyhow::
             CosmosRustServerValue::Notify(Notify {
                 timestamp: Utc::now().timestamp(),
                 msg: vec![
-                    "🤖💬 Get notified:\n\n/gov_prpsl_latest_1_subscribe\n- a proposal was created or updated\n\n/gov_prpsl_voting_period_latest_1_subscribe\n- a proposal enters the voting period\n\n/gov_prpsl_deposit_period_latest_1_subscribe\n- a proposal enters the deposit period\n\n/gov_prpsl_voting_period_deposit_period_latest_1_subscribe\n- a proposal enters the voting or deposit period".to_string(),
+                    "🤖💬 Get notified:\n\n/gov_prpsl_osmosis_subscribe\n- a proposal was created or updated\n\n/gov_prpsl_osmosis_voting_period_subscribe\n- a proposal enters the voting period\n\n/gov_prpsl_osmosis_deposit_period_subscribe\n- a proposal enters the deposit period\n\n/gov_prpsl_osmosis_voting_period_deposit_period_subscribe\n- a proposal enters the voting or deposit period".to_string(),
                     "🤖💬 You have more control over the selection by specifying parameters, to learn more check:\n/help_governance_proposals".to_string(),
                 ],
                 user_hash,

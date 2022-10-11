@@ -208,12 +208,12 @@ pub fn handle_gov_prpsl(user_hash: u64, msg: &str, msg_for_query: &str, db: &sle
             .parse::<usize>()
             .unwrap();
         let subscribe = caps
-            .get(7)
-            .map(|x| x.as_str() == "subscribe")
+            .get(0)
+            .map(|x| x.as_str().contains("subscribe") && !x.as_str().contains("unsubscribe") )
             .unwrap_or(false);
         let unsubscribe = caps
-            .get(7)
-            .map(|x| x.as_str() == "unsubscribe")
+            .get(0)
+            .map(|x| x.as_str().contains("unsubscribe"))
             .unwrap_or(false);
 
         let request: UserQuery = UserQuery{ query_part: QueryPart::EntriesQueryPart(EntriesQueryPart{
