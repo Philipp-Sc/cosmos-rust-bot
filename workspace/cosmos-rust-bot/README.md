@@ -74,8 +74,12 @@ In short it's purpose is to have a bot on your side:
 - [x] Lookup Governance Proposals
 - [x] Subscribe to Governance Proposal Notifications
 - [x] Telegram Chat Bot 
-- [ ] Lookup Protocol Governance Proposals
 - [ ] Scam Detection/Classification for Governance Proposals
+- [ ] Generate Summaries for Governance Proposals
+- [ ] Generate Insights: Extract Topics from Governance Proposals
+- [ ] Predict Governance Proposal Tally Outcome
+- [ ] Analyse Content of Links/URLs within a Governance Proposal (Spam Detection|Summary|Topics|Sentiment)
+- [ ] Lookup **Protocol** Governance Proposals
 - [ ] Lookup Prices (Osmosiszone)
 - [ ] Subscribe to Price Alerts
 - [ ] Token Listings/Pools (Add/Remove/Update)
