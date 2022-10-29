@@ -11,7 +11,7 @@ const SUB_UNSUB: &str = "(subscribe|unsubscribe)";
 
 const LIST_TASK_STATES: [&str;6] = ["pending","resolved","upcoming","failed","unknown","reserved"];
 
-const LIST_BLOCKCHAINS: [&str;4] = ["terra2","osmosis","juno","cosmos hub"];
+const LIST_BLOCKCHAINS: [&str;5] = ["terra","terra2","osmosis","juno","cosmos hub"];
 const LIST_PROPOSAL_STATUS: [&str;6] = ["nil","passed","failed","rejected","deposit period","voting period"];
 const LIST_PROPOSAL_TYPE: [&str;8] = ["text","community pool spend","parameter change","software upgrade","client update","update pool incentives","store code","unknown"];
 const LIST_PROPOSAL_TIME: [&str;5] = ["latest","submit","deposit end","voting start","voting end"];

@@ -49,6 +49,9 @@ use cosmos_rust_package::api::core::cosmos::channels::SupportedBlockchain;
 use crate::model::{get_task_meta_data, poll_resolved_tasks, try_spawn_upcoming_tasks};
 use crate::model::requirements::get_requirements;
 
+use cosmos_rust_interface::utils::entry::db::*;
+
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     // stores all requirements either as task or the resolved value.
@@ -74,42 +77,9 @@ async fn main() -> anyhow::Result<()> {
     let tree = load_sled_db("cosmos_rust_bot_sled_db");
     spawn_socket_query_server(&tree);
 
-    let tree_2 = tree.clone();
-    let _thread = tokio::spawn(async move {
-        let mut subscriber = tree_2.watch_prefix(Subscription::get_prefix());
-        // for each updated subscription
-        while let Some(event) = (&mut subscriber).await {
-            match event {
-                    sled::Event::Remove { key } => {},
-                    sled::Event::Insert { key, value } => {
+    let mut cosmos_rust_bot_store = CosmosRustBotStore::new(&tree);
+    let _thread = cosmos_rust_bot_store.spawn_thread_notify_on_subscription_update();
 
-                    match CosmosRustBotValue::from(value.to_vec()) {
-                        CosmosRustBotValue::Subscription(s) => {
-                            let query: UserQuery = UserQuery {
-                                query_part: s.query,
-                                settings_part: SettingsPart{
-                                    subscribe: None,
-                                    unsubscribe: None,
-                                    user_hash: None,
-                                }
-                            };
-                            let entries = handle_query_sled_db(&tree_2, &query);
-                            let notification = Notification {
-                                query,
-                                entries,
-                                user_list: s.user_list,
-                            };
-                            // notify
-                            client_send_request(
-                                CosmosRustServerValue::Notification(notification),
-                            ).ok();
-                        }
-                        _ => {}
-                    }
-                }
-            }
-        }
-    });
 
     loop {
         /*setup_required_keys(&mut maybes).await;*/
@@ -166,49 +136,7 @@ async fn main() -> anyhow::Result<()> {
 
                 CosmosRustBotValue::add_index(&mut entries, "timestamp", "timestamp");
 
-                let entry_keys = entries
-                    .iter()
-                    .map(|x| sled::IVec::from(x.key()))
-                    .collect::<Vec<sled::IVec>>();
-
-                let mut batch = sled::Batch::default();
-                // remove all, those that are not part of the current batch
-                // except subscriptions, they are left untouched.
-                let sub_prefix = Subscription::get_prefix();
-
-                for k in tree.iter().keys() {
-                    let key = k?;
-                    if !entry_keys.contains(&key) && key.subslice(0, sub_prefix.len()) != &sub_prefix {
-                        // remove outdated entries / indices
-                        batch.remove(key);
-                    }
-                }
-                // keep all, those that are already inserted
-                // insert new
-                for x in 0..entries.len() {
-                    if !tree.contains_key(&entry_keys[x]).unwrap() {
-                        // no-op in case key exists
-                        batch.insert(&entry_keys[x], entries[x].value());
-                    }
-                }
-                // now refreshing subscriptions by updating them if their content changed.
-                for sub in tree.scan_prefix(Subscription::get_prefix()) {
-                    match sub {
-                        Ok((k, v)) => {
-                            let mut value = CosmosRustBotValue::from(v.to_vec());
-                            match value {
-                                CosmosRustBotValue::Subscription(ref mut s) => {
-                                    if let Ok(_) = update_subscription(&entries, s){
-                                        batch.insert(k,value.value());
-                                    }
-                                }
-                                _ => {}
-                            }
-                        }
-                        Err(e) => {}
-                    }
-                }
-                tree.apply_batch(batch)?;
+                cosmos_rust_bot_store.update_items(entries);
 
             }else{
                 let millis = time::Duration::from_millis(500);

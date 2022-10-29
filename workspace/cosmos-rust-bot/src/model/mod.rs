@@ -522,6 +522,29 @@ async fn spawn_tasks(
 
             let wallet_acc_address = wallet_acc_address.clone();
             match req.kind {
+
+                /*
+                TaskType::GovernanceProposalsSpamDetection => {
+                    // TODO: access the maybes to get all governance proposals
+                    let mut proposals: Vec<(&ProposalExt,String,i64)> = Vec::new();
+                    let mut spam_classification: Vec<(&serde_json::Value,String,i64)> = Vec::new();
+                    maybes.iter().for_each(|(key, y)| {
+                        match y {
+                            Maybe { data: Ok(ResponseResult::Blockchain(BlockchainQuery::GovProposals(gov_proposals))), timestamp } => {
+                                proposals.append(&mut gov_proposals.into_iter().map(|x| (x,key.to_string(),timestamp.to_owned())).collect());
+                            },
+                            Maybe { data: Ok(ResponseResult::Blockchain(BlockchainQuery::SpamClassification(val))), timestamp } => {
+                                proposals.append((val,key.to_string(),timestamp.to_owned()));
+                            },
+                        }
+                    });
+                    // TODO: identify governance proposals that have not yet been checked for spam.
+
+                    // TODO: run rustbert-spam-detection (maybe only on most recent proposals)
+                    // TODO: write/insert new entry, with relevant information.
+                }
+                */
+
                 TaskType::ChainRegistry => {
                     let path = req.args["path"].as_str().unwrap().to_string();
 

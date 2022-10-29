@@ -5,6 +5,10 @@ members = [
     "cosmos-rust-package",
     "cosmos-rust-bot/packages/cosmos-rust-telegram-bot",
 ]
+exclude = [
+    "rust-scam-detection",
+]
+
 resolver = "2"
 
 [workspace.dependencies]

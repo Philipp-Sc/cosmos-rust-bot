@@ -63,7 +63,7 @@ pub fn feature_list_to_file() -> anyhow::Result<()> {
         "rejected",
         /*"nil",*/ // TODO query only if no other states of that proposal exist.
     ];
-    let blockchain_list = vec!["osmosis", /*"terra",*/ "terra2", "juno", "cosmoshub"];
+    let blockchain_list = vec!["osmosis", "terra", "terra2", "juno", "cosmoshub"];
     for blockchain in &blockchain_list {
         for proposal_status in &proposal_status_list {
             let task = TaskSpec {
