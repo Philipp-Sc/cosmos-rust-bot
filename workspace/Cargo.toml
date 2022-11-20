@@ -6,7 +6,7 @@ members = [
     "cosmos-rust-bot/packages/cosmos-rust-telegram-bot",
 ]
 exclude = [
-    "rust-scam-detection",
+    "rustbert-spam-detection",
 ]
 
 resolver = "2"

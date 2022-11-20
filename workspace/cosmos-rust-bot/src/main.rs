@@ -57,6 +57,7 @@ async fn main() -> anyhow::Result<()> {
     // stores all requirements either as task or the resolved value.
     let mut join_set: JoinSet<()> = JoinSet::new();
     let mut maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>> = HashMap::new();
+    let task_store: TaskMemoryStore = TaskMemoryStore::new().unwrap();
 
     let mut user_settings: UserSettings = load_user_settings("./cosmos-rust-bot.json");
     //println!("{}", serde_json::to_string_pretty(&user_settings)?);
@@ -103,6 +104,7 @@ async fn main() -> anyhow::Result<()> {
             let _number_of_tasks_added = try_spawn_upcoming_tasks(
                 &mut join_set,
                 &mut maybes,
+                &task_store,
                 &req,
                 &user_settings,
                 &wallet_acc_address
@@ -118,7 +120,7 @@ async fn main() -> anyhow::Result<()> {
 
                 let mut entries: Vec<CosmosRustBotValue> = Vec::new();
 
-                let mut task_meta_data: Vec<CosmosRustBotValue> = get_task_meta_data(&mut maybes, &req).await;
+                let mut task_meta_data: Vec<CosmosRustBotValue> = get_task_meta_data(&mut maybes,&task_store, &req).await;
                 entries.append(&mut task_meta_data);
 
                 if user_settings.governance_proposal_notifications {
@@ -172,7 +174,7 @@ async fn get_wallet_details(user_settings: &UserSettings) -> (Arc<SecUtf8>, Arc<
             wallet_acc_address = SecUtf8::from(
                 account_from_seed_phrase(
                     decrypt_text_with_secret(&wallet_seed_phrase),
-                    channels::get_supported_blockchains_from_chain_registry("./packages/chain-registry".to_string(),true,None)
+                    channels::get_supported_blockchains_from_chain_registry("./chain-registry".to_string(),true,None)
                         .await.get("terra2")
                         .unwrap()
                         .clone(),

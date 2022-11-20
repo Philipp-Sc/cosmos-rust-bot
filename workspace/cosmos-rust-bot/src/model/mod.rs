@@ -41,6 +41,7 @@ use strum::IntoEnumIterator;
 use strum_macros;
 use strum_macros::EnumIter;
 use cosmos_rust_interface::blockchain::cosmos::chain_registry::get_supported_blockchains_from_chain_registry;
+use cosmos_rust_interface::utils::entry::db::TaskMemoryStore;
 
 #[derive(strum_macros::ToString, Debug, EnumIter, PartialEq)]
 pub enum TaskState {
@@ -75,7 +76,7 @@ pub async fn get_item(pointer: &Arc<Mutex<Vec<Maybe<ResponseResult>>>>) -> Maybe
     for i in 0..lock.len() {
         match &lock[i] {
             Maybe { data: Err(err), .. } => {
-                if err.to_string() != "Error: Not yet resolved!".to_string() {
+                if let MaybeError::NotYetResolved(_key) = err {
                     result = Some(lock[i].clone());
                     break;
                 }
@@ -105,7 +106,7 @@ pub async fn access_maybe(
     match maybes.get(key.to_string().as_str()) {
         Some(pointer) => get_item(pointer).await,
         None => Maybe {
-            data: Err(anyhow!("Error: key does not exist")),
+            data: Err(MaybeError::KeyDoesNotExist(key.to_string())),
             timestamp: Utc::now().timestamp(),
         },
     }
@@ -119,7 +120,7 @@ pub async fn access_maybes(
         let value = match maybes.get(key.as_str()) {
             Some(pointer) => get_item(pointer).await,
             None => Maybe {
-                data: Err(anyhow!("Error: key does not exist")),
+                data: Err(MaybeError::KeyDoesNotExist(key.to_string())),
                 timestamp: Utc::now().timestamp(),
             },
         };
@@ -172,12 +173,16 @@ pub async fn try_register_function(
                 timestamp: t,
             } => {
                 timestamp = t;
-                if err.to_string() == "Error: Not yet resolved!".to_string() {
-                    state = TaskState::Pending;
-                } else if err.to_string() == "Error: Entry reserved!".to_string() {
-                    state = TaskState::Reserved;
-                } else {
-                    state = TaskState::Failed;
+                match err {
+                    MaybeError::NotYetResolved(_key) => {
+                        state = TaskState::Pending;
+                    },
+                    MaybeError::EntryReserved(_key) => {
+                        state = TaskState::Reserved;
+                    },
+                    _ => {
+                        state = TaskState::Failed;
+                    },
                 }
             }
             Maybe {
@@ -320,12 +325,13 @@ pub async fn poll_resolved_tasks(join_set: &mut JoinSet<()>) -> usize {
 pub async fn try_spawn_upcoming_tasks(
     join_set: &mut JoinSet<()>,
     maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,
+    task_store: &TaskMemoryStore,
     req: &Vec<TaskSpec>,
     user_settings: &UserSettings,
     wallet_acc_address: &Arc<SecUtf8>,
 ) -> usize {
 
-    let task_list: Vec<TaskItem> = get_task_list(maybes,req).await;
+    let task_list: Vec<TaskItem> = get_task_list(maybes,task_store,req).await;
 
     let upcoming_task_spec_list: Vec<&TaskSpec> = req
         .iter()
@@ -340,6 +346,7 @@ pub async fn try_spawn_upcoming_tasks(
         spawn_tasks(
             join_set,
             maybes,
+            task_store,
             &user_settings,
             &wallet_acc_address,
             upcoming_task_spec_list,
@@ -349,15 +356,17 @@ pub async fn try_spawn_upcoming_tasks(
 }
 
 pub async fn get_task_meta_data(maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,
+                                task_store: &TaskMemoryStore,
                                 req: &Vec<TaskSpec>
                                 ) -> Vec<CosmosRustBotValue>{
 
-    let task_list = get_task_list(maybes,req).await;
+    let task_list = get_task_list(maybes,task_store,req).await;
     task_meta_data(task_list)
 }
 
 pub async fn get_task_list(
     maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,
+    task_store: &TaskMemoryStore,
     req: &Vec<TaskSpec>,
 ) -> Vec<TaskItem> {
 
@@ -373,12 +382,16 @@ pub async fn get_task_list(
                 timestamp,
             } => {
                 time = timestamp;
-                if err.to_string() == "Error: Not yet resolved!".to_string() {
-                    state = TaskState::Pending;
-                } else if err.to_string() == "Error: Entry reserved!".to_string() {
-                    state = TaskState::Reserved;
-                } else {
-                    state = TaskState::Failed;
+                match err {
+                    MaybeError::NotYetResolved(_key) => {
+                        state = TaskState::Pending;
+                    },
+                    MaybeError::EntryReserved(_key) => {
+                        state = TaskState::Reserved;
+                    },
+                    _ => {
+                        state = TaskState::Failed;
+                    },
                 }
             }
             Maybe {
@@ -477,10 +490,12 @@ pub async fn setup_required_keys(
 async fn spawn_tasks(
     join_set: &mut JoinSet<()>,
     maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,
+    task_store: &TaskMemoryStore,
     _user_settings: &UserSettings,
     wallet_acc_address: &Arc<SecUtf8>,
     to_update: Vec<&TaskSpec>,
 ) -> usize {
+
 
     let supported_blockchains = match access_maybe(maybes,"chain_registry").await {
         Maybe{data: Ok(ResponseResult::ChainRegistry(chain_registry)), timestamp: t } => {
@@ -499,7 +514,7 @@ async fn spawn_tasks(
                 maybes.insert(
                     req.name.clone(),
                     Arc::new(Mutex::new(vec![Maybe {
-                        data: Err(anyhow::anyhow!("Error: Not yet resolved!")),
+                        data: Err(MaybeError::NotYetResolved(req.name.clone())),
                         timestamp: Utc::now().timestamp(),
                     }])),
                 );
@@ -510,7 +525,7 @@ async fn spawn_tasks(
                 add_item(
                     &pointer,
                     Maybe {
-                        data: Err(anyhow::anyhow!("Error: Not yet resolved!")),
+                        data: Err(MaybeError::NotYetResolved(req.name.clone())),
                         timestamp: Utc::now().timestamp(),
                     },
                 )
@@ -566,7 +581,10 @@ async fn spawn_tasks(
                     {
                         let result = m.await;
                         let result: Maybe<ResponseResult> = Maybe {
-                            data: result,
+                            data: match result {
+                                Ok(data) => Ok(data),
+                                Err(err) => Err(MaybeError::AnyhowError(err.to_string())),
+                            },
                             timestamp: Utc::now().timestamp(),
                         };
                         add_item(&pointer, result).await;

@@ -1,0 +1,28 @@
+# docker container to help building cosmos_rust_bot packages.
+
+FROM rust:latest
+
+RUN apt-get update && apt-get -y install openssl
+
+WORKDIR /usr/workspace
+
+ENV RUSTFLAGS="--cfg tokio_unstable"
+ENV CARGO_HOME=/usr/cargo_home
+ENV CARGO_TARGET_DIR=/usr/target
+
+COPY ./helper_build_script.sh /usr/
+RUN chmod 755 /usr/helper_build_script.sh
+
+ENTRYPOINT ["/usr/helper_build_script.sh"]
+CMD ["test","dev","prod","native","tg-bot"]
+
+# 1. build the container.
+## sudo docker build -t crb_build -f Dockerfile_build .
+# 2. specify the volumes and build the package you want to use.
+## Package Build Options:
+## - Cosmos-Rust-Bot: dev, prod or native.
+## - Cosmos-Rust-Telegram-Bot: tg-bot
+## sudo docker run -it --rm  -v "$(pwd)/workspace":/usr/workspace -v "$(pwd)/cargo_home":/usr/cargo_home -v "$(pwd)/target":/usr/target crb_build dev
+# 3. continue with ./Dockerfile_run
+## the work of ./Dockerfile_build is done, the compiled package (binary) will be saved into the ./target directory.
+## ./target/{debug,release}/*

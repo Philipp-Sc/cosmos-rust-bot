@@ -16,28 +16,18 @@ git pull
 git submodule update
 ```
 
-# Build Cosmos-Rust-Bot
+# Build 
+- Cosmos-Rust-Bot
+- Cosmos-Rust-Telegram-Bot
 ```
-cd workspace/cosmos-rust-bot
-
-./install.sh native
-```
-
-# Run Cosmos-Rust-Bot 
-```
-nohup ./my-bot &
+check ./Dockerfile_build for instructions
 ```
 
-# Build Cosmos-Rust-Telegram-Bot
+# Run 
+- Cosmos-Rust-Bot
+- Cosmos-Rust-Telegram-Bot
 ```
-cd workspace/cosmos-rust-bot/packages/cosmos-rust-telegram-bot
-
-RUSTFLAGS="--cfg tokio_unstable -C target-cpu=native" cargo build --release
-```
-
-# Run Cosmos-Rust-Telegram-Bot 
-```
-export TELOXIDE_TOKEN=<your_telegram_access_token>
-nohup ../../../target/release/cosmos-rust-telegram-bot &
+check ./Dockerfile_run for instructions
 ```
 
+- Docker is not required, but it helps a lot to efficiently development and maintaining the package. Take a look at the dockerfiles to figure out how to build and run the packages directly without docker.

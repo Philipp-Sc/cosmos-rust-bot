@@ -104,11 +104,7 @@ In short it's purpose is to have a bot on your side:
 
 ## Install
 
-- `cd cosmos-rust-bot`
-- `./install.sh test` creates new `cosmos-rust-bot-feature-list.json`
-- `./install.sh dev` builds **cosmos-rust-bot** `./my-bot`
-- `./my-bot` to simply run **cosmos-rust-bot**
-- see [cosmos-rust-signal-bot](https://github.com/Philipp-Sc/cosmos-rust-bot/tree/development/packages/cosmos-rust-signal-bot) to enable signal notifications.
+- convenient dockerfiles available [here](https://github.com/Philipp-Sc/cosmos-rust-bot).
 
 ## Summary
 
@@ -129,13 +125,6 @@ In short it's purpose is to have a bot on your side:
 
 - Open Source
 - Apache-2.0 license
-
-## Dependencies
-
-- [cosmos-rust-signal-bot](https://github.com/Philipp-Sc/cosmos-rust-bot/tree/development/packages/cosmos-rust-signal-bot) (
-  optional)
-
-- [cosmos-rust-interface](https://github.com/Philipp-Sc/cosmos-rust-interface)
 
 ## Similar Projects
 - [Cosmos Gov](https://github.com/shifty11/cosmos-gov)

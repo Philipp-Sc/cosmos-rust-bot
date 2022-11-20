@@ -88,7 +88,7 @@ pub fn feature_list_to_file() -> anyhow::Result<()> {
         kind: TaskType::ChainRegistry,
         name: format!("chain_registry"),
         args: json!({
-                    "path": "../chain-registry",
+                    "path": "./chain-registry",
                 }),
         refresh_rate: MINUTES_10,
     };
