@@ -18,5 +18,5 @@
 	path = workspace/chain-registry
 	url = https://github.com/cosmos/chain-registry.git
 [submodule "workspace/rustbert-spam-detection"]
-	path = workspace/rustbert-spam-detection
+	path = workspace/rust-bert-fraud-detection
 	url = https://github.com/Philipp-Sc/rustbert-spam-detection.git
