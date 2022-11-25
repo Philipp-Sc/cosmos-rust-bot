@@ -17,6 +17,10 @@
 [submodule "workspace/chain-registry"]
 	path = workspace/chain-registry
 	url = https://github.com/cosmos/chain-registry.git
-[submodule "workspace/rustbert-spam-detection"]
+[submodule "workspace/rust-bert-fraud-detection"]
 	path = workspace/rust-bert-fraud-detection
-	url = https://github.com/Philipp-Sc/rustbert-spam-detection.git
+	url = https://github.com/Philipp-Sc/rust-bert-fraud-detection.git
+[submodule "rust-bert-fraud-detection"]
+	update = rebase
+[submodule "rust-bert-fraud-detectiontest"]
+	update = rebase

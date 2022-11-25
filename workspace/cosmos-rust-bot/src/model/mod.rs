@@ -27,6 +27,7 @@ use chrono::{TimeZone, Utc};
 use core::future::Future;
 use core::pin::Pin;
 use std::iter;
+use std::ops::Deref;
 
 use cosmos_rust_interface::utils::entry::*;
 
@@ -41,9 +42,10 @@ use strum::IntoEnumIterator;
 use strum_macros;
 use strum_macros::EnumIter;
 use cosmos_rust_interface::blockchain::cosmos::chain_registry::get_supported_blockchains_from_chain_registry;
-use cosmos_rust_interface::utils::entry::db::TaskMemoryStore;
+use cosmos_rust_interface::utils::entry::db::{RetrievalMethod, TaskMemoryStore};
+use log::{debug, info, trace};
 
-#[derive(strum_macros::ToString, Debug, EnumIter, PartialEq)]
+#[derive(strum_macros::Display, Debug, EnumIter, PartialEq, serde::Serialize)]
 pub enum TaskState {
     Unknown,
     Pending,
@@ -53,204 +55,11 @@ pub enum TaskState {
     Upcoming,
 }
 
+#[derive(Debug, serde::Serialize)]
 pub struct TaskItem {
     pub name: String,
     pub state: TaskState,
     pub timestamp: i64,
-}
-
-pub async fn add_item(
-    pointer: &Arc<Mutex<Vec<Maybe<ResponseResult>>>>,
-    item: Maybe<ResponseResult>,
-) {
-    let mut lock = pointer.lock().await;
-    lock.insert(0, item);
-    if lock.len() > 4 {
-        lock.drain(4..);
-    }
-}
-
-pub async fn get_item(pointer: &Arc<Mutex<Vec<Maybe<ResponseResult>>>>) -> Maybe<ResponseResult> {
-    let lock = pointer.lock().await;
-    let mut result: Option<Maybe<ResponseResult>> = None;
-    for i in 0..lock.len() {
-        match &lock[i] {
-            Maybe { data: Err(err), .. } => {
-                if let MaybeError::NotYetResolved(_key) = err {
-                    result = Some(lock[i].clone());
-                    break;
-                }
-            }
-            Maybe { data: Ok(_), .. } => {
-                result = Some(lock[i].clone());
-                break;
-            }
-        };
-    }
-    if let Some(res) = result {
-        return res;
-    } else {
-        return lock[0].clone();
-    }
-}
-
-/*
- * returns the value for the given key, if the enum is of the type Maybe.
- * will not await the future if it is not yet resolved.
- * in that case it returns an error.
- */
-pub async fn access_maybe(
-    maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,
-    key: &str,
-) -> Maybe<ResponseResult> {
-    match maybes.get(key.to_string().as_str()) {
-        Some(pointer) => get_item(pointer).await,
-        None => Maybe {
-            data: Err(MaybeError::KeyDoesNotExist(key.to_string())),
-            timestamp: Utc::now().timestamp(),
-        },
-    }
-}
-
-pub async fn access_maybes(
-    maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,
-) -> HashMap<String, Maybe<ResponseResult>> {
-    let mut only_maybes: HashMap<String, Maybe<ResponseResult>> = HashMap::new();
-    for (key, val) in maybes.iter() {
-        let value = match maybes.get(key.as_str()) {
-            Some(pointer) => get_item(pointer).await,
-            None => Maybe {
-                data: Err(MaybeError::KeyDoesNotExist(key.to_string())),
-                timestamp: Utc::now().timestamp(),
-            },
-        };
-        only_maybes.insert(key.to_string(), value);
-    }
-    only_maybes
-}
-
-pub async fn get_timestamps_of_tasks(
-    maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,
-) -> Vec<(String, i64)> {
-    let mut keys: Vec<(String, i64)> = Vec::new();
-
-    for key in maybes.keys() {
-        let pointer = maybes.get(key.to_string().as_str()).unwrap();
-        let timestamp: i64 = get_item(pointer).await.timestamp;
-        keys.push((key.to_owned(), timestamp));
-    }
-    return keys;
-}
-
-pub async fn register_value(
-    maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,
-    key: String,
-    value: String,
-) {
-    let pointer = maybes.get(key.to_string().as_str()).unwrap();
-    let result: Maybe<ResponseResult> = Maybe {
-        data: Ok(ResponseResult::Text(value)),
-        timestamp: Utc::now().timestamp(),
-    };
-    add_item(pointer, result).await;
-}
-
-pub async fn try_register_function(
-    join_set: &mut JoinSet<()>,
-    maybes: &HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,
-    key: String,
-    f: Pin<Box<dyn Future<Output = Maybe<String>> + Send + 'static>>,
-    timeout_duration: u64,
-    block_duration_after_resolve: i64,
-) {
-    let timestamp;
-    let state: TaskState;
-
-    match maybes.get(&key) {
-        Some(val) => match val.lock().await[0].clone() {
-            Maybe {
-                data: Err(err),
-                timestamp: t,
-            } => {
-                timestamp = t;
-                match err {
-                    MaybeError::NotYetResolved(_key) => {
-                        state = TaskState::Pending;
-                    },
-                    MaybeError::EntryReserved(_key) => {
-                        state = TaskState::Reserved;
-                    },
-                    _ => {
-                        state = TaskState::Failed;
-                    },
-                }
-            }
-            Maybe {
-                data: Ok(_),
-                timestamp: t,
-            } => {
-                state = TaskState::Resolved;
-                timestamp = t;
-            }
-        },
-        None => {
-            state = TaskState::Unknown;
-            timestamp = 0i64;
-        }
-    }
-    let now = Utc::now().timestamp();
-
-    let spawn = match state {
-        TaskState::Unknown | TaskState::Reserved | TaskState::Failed => true,
-        TaskState::Resolved => {
-            if now - timestamp >= block_duration_after_resolve {
-                true
-            } else {
-                false
-            }
-        }
-        _ => false,
-    };
-    if spawn {
-        let pointer = maybes.get(key.to_string().as_str()).unwrap().clone();
-        join_set.spawn(async move {
-            let result = timeout(Duration::from_secs(timeout_duration), f)
-                .await
-                .unwrap_or(Maybe {
-                    data: Ok("timeout".to_string()),
-                    timestamp: Utc::now().timestamp(),
-                });
-            let result: Maybe<ResponseResult> = Maybe {
-                data: Ok(ResponseResult::Text(
-                    result.data.unwrap_or("--".to_string()),
-                )),
-                timestamp: Utc::now().timestamp(),
-            };
-            add_item(&pointer, result).await;
-        });
-    }
-}
-
-pub async fn await_function(
-    maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,
-    key: String,
-) -> Maybe<String> {
-    match access_maybe(&maybes, &key).await {
-        Maybe {
-            data: Ok(succ),
-            timestamp: t,
-        } => Maybe {
-            data: Ok(succ.as_text().unwrap().to_string()),
-            timestamp: t,
-        },
-        Maybe {
-            data: Err(err),
-            timestamp: t,
-        } => Maybe {
-            data: Ok(err.to_string()),
-            timestamp: t,
-        },
-    }
 }
 
 pub fn task_meta_data(task_list: Vec<TaskItem>) -> Vec<CosmosRustBotValue> {
@@ -300,6 +109,8 @@ pub fn task_meta_data(task_list: Vec<TaskItem>) -> Vec<CosmosRustBotValue> {
 }
 
 pub async fn poll_resolved_tasks(join_set: &mut JoinSet<()>) -> usize {
+
+    info!("poll_resolved_tasks");
     let mut counter: usize = 0;
     // The following removes all completed tasks from the set.
     // Unresolved tasks are unaffected.
@@ -324,14 +135,15 @@ pub async fn poll_resolved_tasks(join_set: &mut JoinSet<()>) -> usize {
 
 pub async fn try_spawn_upcoming_tasks(
     join_set: &mut JoinSet<()>,
-    maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,
     task_store: &TaskMemoryStore,
     req: &Vec<TaskSpec>,
     user_settings: &UserSettings,
     wallet_acc_address: &Arc<SecUtf8>,
 ) -> usize {
 
-    let task_list: Vec<TaskItem> = get_task_list(maybes,task_store,req).await;
+    let task_list: Vec<TaskItem> = get_task_list(task_store,req).await;
+
+    info!("try_spawn_upcoming_tasks: task_list: {}", serde_json::to_string_pretty(&task_list).unwrap_or("Formatting Error".to_string()));
 
     let upcoming_task_spec_list: Vec<&TaskSpec> = req
         .iter()
@@ -342,41 +154,43 @@ pub async fn try_spawn_upcoming_tasks(
             .collect::<Vec<&String>>().contains(&&x.name))
         .collect();
 
+    info!("try_spawn_upcoming_tasks: to_update: {}", serde_json::to_string_pretty(&upcoming_task_spec_list).unwrap_or("Formatting Error".to_string()));
+
     let number_of_tasks_added =
         spawn_tasks(
             join_set,
-            maybes,
             task_store,
             &user_settings,
             &wallet_acc_address,
             upcoming_task_spec_list,
         )
         .await;
+
+    info!("try_spawn_upcoming_tasks: number_of_tasks_added: {}", &number_of_tasks_added);
     number_of_tasks_added
 }
 
-pub async fn get_task_meta_data(maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,
+pub async fn get_task_meta_data(
                                 task_store: &TaskMemoryStore,
                                 req: &Vec<TaskSpec>
                                 ) -> Vec<CosmosRustBotValue>{
 
-    let task_list = get_task_list(maybes,task_store,req).await;
+    let task_list = get_task_list(task_store,req).await;
     task_meta_data(task_list)
 }
 
 pub async fn get_task_list(
-    maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,
     task_store: &TaskMemoryStore,
     req: &Vec<TaskSpec>,
-) -> Vec<TaskItem> {
+) ->Vec<TaskItem> {
 
     let mut task_list: Vec<TaskItem> = Vec::new();
 
     let now = Utc::now().timestamp();
-    for (k, v) in maybes.iter() {
+    for (k, v) in task_store.get_snapshot::<ResponseResult>(&RetrievalMethod::Get).into_iter() {
         let state: TaskState;
         let time: i64;
-        match v.lock().await[0].clone() {
+        match v {
             Maybe {
                 data: Err(err),
                 timestamp,
@@ -450,148 +264,114 @@ pub async fn get_task_list(
     task_list.sort_by_key(|k| k.timestamp);
     task_list
 }
-
-/*
- * Preparing entries so that they can be used without the need to mutate the hashmap later on.
- */
-/*
-pub async fn setup_required_keys(
-    maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,
-) {
-    let list: Vec<&str> = vec![]; /*
-                                  "anchor_auto_stake",
-                                  "anchor_auto_farm",
-                                  "anchor_auto_repay",
-                                  "anchor_auto_borrow",
-                                  "latest_transaction",
-                                  "anchor_auto_stake_airdrops",
-                                  "anchor_borrow_and_deposit_stable",
-                                  "anchor_redeem_and_repay_stable",
-                                  "anchor_governance_claim_and_farm",
-                                  "anchor_governance_claim_and_stake"*/
-
-    for key in list {
-        maybes.insert(
-            key.to_string(),
-            Arc::new(Mutex::new(vec![Maybe {
-                data: Err(anyhow::anyhow!("Error: Entry reserved!")),
-                timestamp: Utc::now().timestamp(),
-            }])),
-        );
-    }
-}*/
-
-/*
-* all required queries are triggered here in async fashion
-*
-* retrieve the value when it is needed: "data.get_mut(String).unwrap().await"
-* use try_join!, join! or select! macros to optimise retrieval of multiple values.
-*/
 async fn spawn_tasks(
     join_set: &mut JoinSet<()>,
-    maybes: &mut HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>>,
     task_store: &TaskMemoryStore,
     _user_settings: &UserSettings,
-    wallet_acc_address: &Arc<SecUtf8>,
+    _wallet_acc_address: &Arc<SecUtf8>,
     to_update: Vec<&TaskSpec>,
 ) -> usize {
 
-
-    let supported_blockchains = match access_maybe(maybes,"chain_registry").await {
-        Maybe{data: Ok(ResponseResult::ChainRegistry(chain_registry)), timestamp: t } => {
+    let supported_blockchains = match task_store.get("chain_registry",&RetrievalMethod::GetOk) {
+        Ok(Maybe{data: Ok(ResponseResult::ChainRegistry(chain_registry)), timestamp: t }) => {
+            info!("spawn_tasks: chain_registry available");
             Some(chain_registry)
         },
-        Maybe{ .. } => {
+        Err(_) | Ok(Maybe{ .. }) => {
+            info!("spawn_tasks: chain_registry unavailable");
             None
         },
     };
 
     let mut count: usize = 0;
     for req in to_update {
-        if supported_blockchains.is_some() || req.kind == TaskType::ChainRegistry {
-            let contains_key = maybes.contains_key(&req.name);
-            if !contains_key {
-                maybes.insert(
-                    req.name.clone(),
-                    Arc::new(Mutex::new(vec![Maybe {
-                        data: Err(MaybeError::NotYetResolved(req.name.clone())),
-                        timestamp: Utc::now().timestamp(),
-                    }])),
-                );
-            }
-            let pointer = maybes.get(&req.name).unwrap().clone();
 
-            if contains_key {
-                add_item(
-                    &pointer,
-                    Maybe {
-                        data: Err(MaybeError::NotYetResolved(req.name.clone())),
-                        timestamp: Utc::now().timestamp(),
-                    },
-                )
-                    .await;
-            }
-            let mut f: Option<
-                Pin<Box<dyn Future<Output=anyhow::Result<ResponseResult>> + Send + 'static>>,
-            > = None;
+        let mut f: Option<
+            Pin<Box<dyn Future<Output=anyhow::Result<ResponseResult>> + Send + 'static>>,
+        > = None;
 
-            let wallet_acc_address = wallet_acc_address.clone();
-            match req.kind {
+        match req.kind {
 
-                /*
-                TaskType::GovernanceProposalsSpamDetection => {
-                    // TODO: access the maybes to get all governance proposals
-                    let mut proposals: Vec<(&ProposalExt,String,i64)> = Vec::new();
-                    let mut spam_classification: Vec<(&serde_json::Value,String,i64)> = Vec::new();
-                    maybes.iter().for_each(|(key, y)| {
-                        match y {
-                            Maybe { data: Ok(ResponseResult::Blockchain(BlockchainQuery::GovProposals(gov_proposals))), timestamp } => {
-                                proposals.append(&mut gov_proposals.into_iter().map(|x| (x,key.to_string(),timestamp.to_owned())).collect());
-                            },
-                            Maybe { data: Ok(ResponseResult::Blockchain(BlockchainQuery::SpamClassification(val))), timestamp } => {
-                                proposals.append((val,key.to_string(),timestamp.to_owned()));
-                            },
-                        }
-                    });
-                    // TODO: identify governance proposals that have not yet been checked for spam.
 
-                    // TODO: run rustbert-spam-detection (maybe only on most recent proposals)
-                    // TODO: write/insert new entry, with relevant information.
+            /*
+            TODO: first use dummy scam detection.
+            TaskType::FraudDetection => {
+            // 1) find latest governance proposals across all ResponseResults
+            // 2) iterate over them and continue with the first where, the text hash does not exist in any FraudClassification(FraudClassification)
+            // 3) classify and save the result as FraudClassification(FraudClassification).
+            // done. task will get called again and then expand the FraudClassifications, one step at a time.
+
+            // what is bothering me?
+            // how to call the fraud classification,  via Sockets!
+            // -> send request to socket. | on rustbert-scam-detection there is a socket waiting for requests.
+            // -> does scam detection -> returns result.
+
+
+                for (key, y) in memory.iter() {
+                    // TODO: function (data ok(_)) -> Option<(Key,Value)>
+                    // TODO: check if fraud_classification already exists for key.
+
+                    // Vec<(Key,Value)> take one and do fraud_detection.
+
+                    match y {
+                        Maybe { data: Ok(ResponseResult::Blockchain(BlockchainQuery::GovProposals(gov_proposals))), timestamp } => {
+                            proposals.append(&mut gov_proposals.into_iter().map(|x| (x,key.to_string(),timestamp.to_owned())).collect());
+                        },
+                        Maybe { data: Ok(ResponseResult::Blockchain(BlockchainQuery::SpamClassification(val))), timestamp } => {
+                            proposals.append((val,key.to_string(),timestamp.to_owned()));
+                        },
+                    }
                 }
-                */
 
-                TaskType::ChainRegistry => {
-                    let path = req.args["path"].as_str().unwrap().to_string();
+                // TODO: identify governance proposals that have not yet been checked for spam.
 
-                    f = Some(Box::pin(get_supported_blockchains_from_chain_registry(path)));
-                }
-                TaskType::GovernanceProposals => {
+                // TODO: run rustbert-spam-detection (maybe only on most recent proposals)
+                // TODO: write/insert new entry, with relevant information.
+
+            }*/
+
+            TaskType::ChainRegistry => {
+                let path = req.args["path"].as_str().unwrap().to_string();
+                f = Some(Box::pin(get_supported_blockchains_from_chain_registry(path)));
+            }
+            TaskType::GovernanceProposals => {
+                if let Some(supported_blockchains) = supported_blockchains.as_ref() {
                     let status = ProposalStatus::new(req.args["proposal_status"].as_str().unwrap());
-                    let blockchain = supported_blockchains.as_ref().unwrap().get(req.args["blockchain"].as_str().unwrap())
+                    let blockchain = supported_blockchains.get(req.args["blockchain"].as_str().unwrap())
                         .unwrap()
                         .clone();
-
                     f = Some(Box::pin(get_proposals(blockchain, status)));
                 }
-                _ => {}
             }
+            _ => {}
+        }
 
-            if let Some(m) = f {
-                join_set.spawn(async move {
-                    {
-                        let result = m.await;
-                        let result: Maybe<ResponseResult> = Maybe {
-                            data: match result {
-                                Ok(data) => Ok(data),
-                                Err(err) => Err(MaybeError::AnyhowError(err.to_string())),
-                            },
-                            timestamp: Utc::now().timestamp(),
-                        };
-                        add_item(&pointer, result).await;
-                    }
-                });
-                count += 1;
-            }
+        if let Some(m) = f {
+
+            task_store.push(
+                &req.name,
+                Maybe::<ResponseResult>  {
+                    data: Err(MaybeError::NotYetResolved(req.name.clone())),
+                    timestamp: Utc::now().timestamp(),
+                }
+            ).ok();
+
+            let task_store_copy = task_store.clone();
+            let key = req.name.clone();
+            join_set.spawn(async move {
+                {
+                    let result = m.await;
+                    let result: Maybe<ResponseResult> = Maybe {
+                        data: match result {
+                            Ok(data) => Ok(data),
+                            Err(err) => Err(MaybeError::AnyhowError(err.to_string())),
+                        },
+                        timestamp: Utc::now().timestamp(),
+                    };
+                    task_store_copy.push(&key,result).ok();
+                }
+            });
+            count += 1;
         }
     }
     count

@@ -15,6 +15,7 @@ const MINUTES_10: i32 = 60 * 10;
 #[derive(Debug, Serialize, Deserialize,PartialEq)]
 pub enum TaskType {
     ChainRegistry,
+    FraudDetection,
     GovernanceProposals,
     None,
 }
@@ -97,6 +98,21 @@ pub fn feature_list_to_file() -> anyhow::Result<()> {
     feature_list.push(Feature {
         name: "chain_registry".to_string(),
         requirements: chain_registry,
+    });
+
+    let mut fraud_detection: Vec<TaskSpec> = Vec::new();
+    let task = TaskSpec {
+        kind: TaskType::FraudDetection,
+        name: format!("fraud_detection"),
+        args: json!({
+                }),
+        refresh_rate: MINUTES_1,
+    };
+    fraud_detection.push(task);
+
+    feature_list.push(Feature {
+        name: "fraud_detection".to_string(),
+        requirements: fraud_detection,
     });
 
     let line = format!("{}", serde_json::to_string(&feature_list).unwrap());

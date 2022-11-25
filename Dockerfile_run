@@ -1,6 +1,6 @@
 # docker container to help run cosmos_rust_bot packages.
 
-FROM rust:latest
+FROM rust:slim
 
 WORKDIR /usr/workspace
 
@@ -40,3 +40,9 @@ CMD ["dev","prod","native","tg-bot"]
 
 # TODO: make rust-scam-detection communicate per ICP Unix Sockets.
 # TODO: cleanup database handling.
+
+ # cheat sheet
+ #  1  sudo docker build -t crb_build -f Dockerfile_build .
+ #  2  sudo docker build -t crb_run -f Dockerfile_run .
+ #  3  sudo docker run -it --rm  -v "$(pwd)/workspace":/usr/workspace -v "$(pwd)/cargo_home":/usr/cargo_home -v "$(pwd)/target":/usr/target crb_build dev
+ #  4  sudo docker run -it --rm -v "$(pwd)/target":/usr/target:ro -v "$(pwd)/tmp":/usr/workspace/tmp crb_run dev

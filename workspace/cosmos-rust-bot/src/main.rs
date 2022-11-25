@@ -6,13 +6,12 @@ use_litcrypt!();
 use bot_library::shared::{get_input, load_user_settings};
 
 mod account;
-mod control;
+//mod control;
 mod model;
 
 use account::wallet::{decrypt_text_with_secret, encrypt_text_with_secret};
-use control::try_run_function;
+//use control::try_run_function;
 use model::requirements::UserSettings;
-use model::{access_maybes};
 
 use chrono::Utc;
 use core::future::Future;
@@ -40,7 +39,7 @@ use cosmos_rust_interface::utils::entry::db::query::socket::spawn_socket_query_s
 use cosmos_rust_interface::utils::entry::postproc::blockchain::cosmos::gov::governance_proposal_notifications;
 use cosmos_rust_interface::utils::entry::postproc::meta_data::debug::debug;
 use cosmos_rust_interface::utils::entry::postproc::meta_data::errors::errors;
-use cosmos_rust_interface::utils::entry::postproc::meta_data::logs::logs;
+//use cosmos_rust_interface::utils::entry::postproc::meta_data::logs::logs;
 use cosmos_rust_interface::utils::entry::*;
 use cosmos_rust_interface::utils::response::ResponseResult;
 use cosmos_rust_package::api::core::cosmos::channels;
@@ -54,9 +53,11 @@ use cosmos_rust_interface::utils::entry::db::*;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+
+    env_logger::init();
+
     // stores all requirements either as task or the resolved value.
     let mut join_set: JoinSet<()> = JoinSet::new();
-    let mut maybes: HashMap<String, Arc<Mutex<Vec<Maybe<ResponseResult>>>>> = HashMap::new();
     let task_store: TaskMemoryStore = TaskMemoryStore::new().unwrap();
 
     let mut user_settings: UserSettings = load_user_settings("./cosmos-rust-bot.json");
@@ -83,7 +84,6 @@ async fn main() -> anyhow::Result<()> {
 
 
     loop {
-        /*setup_required_keys(&mut maybes).await;*/
         let req = get_requirements(&user_settings);
 
         while !user_settings.pause_requested {
@@ -103,7 +103,6 @@ async fn main() -> anyhow::Result<()> {
 
             let _number_of_tasks_added = try_spawn_upcoming_tasks(
                 &mut join_set,
-                &mut maybes,
                 &task_store,
                 &req,
                 &user_settings,
@@ -116,23 +115,26 @@ async fn main() -> anyhow::Result<()> {
                 // since the processing of the ResponseResults is blazing fast, it makes no sense to hope for a value to be refreshed
                 // so potentially reduces function calls
                 // also post processing does not need to deal with Arc<Mutex>
-                let snapshot_of_maybes = access_maybes(&maybes).await;
+                let mut snapshot_of_memory = task_store.get_snapshot::<ResponseResult>(&RetrievalMethod::GetOk);
+                let mut internal_snapshot_of_memory = task_store.get_snapshot::<ResponseResult>(&RetrievalMethod::Get);
+                // TODO: use SledDb listener/events to reduce the number of get function calls.
+                // TODO: have dependencies and update trigger key lists. if trigger key was updated, then get dependencies and update.
 
                 let mut entries: Vec<CosmosRustBotValue> = Vec::new();
 
-                let mut task_meta_data: Vec<CosmosRustBotValue> = get_task_meta_data(&mut maybes,&task_store, &req).await;
+                let mut task_meta_data: Vec<CosmosRustBotValue> = get_task_meta_data(&task_store, &req).await;
                 entries.append(&mut task_meta_data);
 
                 if user_settings.governance_proposal_notifications {
-                    entries.append(&mut governance_proposal_notifications(&snapshot_of_maybes));
+                    entries.append(&mut governance_proposal_notifications(&mut snapshot_of_memory));
                 }
 
                 let mut task_meta_data: Vec<CosmosRustBotValue> = Vec::new();
-                let mut debug: Vec<CosmosRustBotValue> = debug(&snapshot_of_maybes);
-                let mut logs: Vec<CosmosRustBotValue> = logs(&snapshot_of_maybes);
-                let mut errors: Vec<CosmosRustBotValue> = errors(&snapshot_of_maybes);
+                let mut debug: Vec<CosmosRustBotValue> = debug(&internal_snapshot_of_memory);
+                //let mut logs: Vec<CosmosRustBotValue> = logs(&snapshot_of_memory);
+                let mut errors: Vec<CosmosRustBotValue> = errors(&internal_snapshot_of_memory);
                 task_meta_data.append(&mut debug);
-                task_meta_data.append(&mut logs);
+                //task_meta_data.append(&mut logs);
                 task_meta_data.append(&mut errors);
                 entries.append(&mut task_meta_data);
 
