@@ -12,13 +12,16 @@ use cosmos_rust_interface::utils::entry::{CosmosRustServerValue, Notify};
 use std::sync::Arc;
 use tokio::task::JoinSet;
 
+
+const NOTIFICATION_SOCKET: &str = "./tmp/cosmos_rust_bot_notification_socket";
+
 // RUST_LOG=error,debug,info
 #[tokio::main]
 async fn main() {
     let mut join_set: JoinSet<()> = JoinSet::new();
 
     let tree = Arc::new(load_sled_db("cosmos_rust_telegram_bot_sled_db"));
-    spawn_socket_notification_server(tree.clone().as_ref());
+    spawn_socket_notification_server(NOTIFICATION_SOCKET,tree.clone().as_ref());
 
     pretty_env_logger::init();
     log::info!("Starting shared state bot...");
@@ -34,13 +37,13 @@ async fn main() {
             match event {
                 sled::Event::Insert { key, value } => {
                     if let CosmosRustServerValue::Notify(notify) =
-                        CosmosRustServerValue::from(value.to_vec())
+                        CosmosRustServerValue::try_from(value.to_vec()).unwrap()
                     {
                         log::info!("Status: Insert Notify Event - {}", Utc::now());
                         match tree_2.get(notify.user_hash.to_ne_bytes().to_vec()) {
                             Ok(Some(value)) => {
                                 let chat_id: Option<i64> =
-                                    match CosmosRustServerValue::from(value.to_vec()) {
+                                    match CosmosRustServerValue::try_from(value.to_vec()).unwrap() {
                                         CosmosRustServerValue::UserMetaData(user_meta_data) => {
                                             Some(user_meta_data.user_chat_id)
                                         }

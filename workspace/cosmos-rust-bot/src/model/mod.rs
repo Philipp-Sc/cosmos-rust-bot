@@ -301,10 +301,9 @@ async fn spawn_tasks(
             // 3) classify and save the result as FraudClassification(FraudClassification).
             // done. task will get called again and then expand the FraudClassifications, one step at a time.
 
-            // what is bothering me?
             // how to call the fraud classification,  via Sockets!
-            // -> send request to socket. | on rustbert-scam-detection there is a socket waiting for requests.
-            // -> does scam detection -> returns result.
+            // client_send_rust_bert_fraud_detection_request("socket_path",Vec<String>)
+            // TODO: update socket, wenn man schon dabei ist.
 
 
                 for (key, y) in memory.iter() {

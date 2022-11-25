@@ -6,6 +6,11 @@ members = [
     "cosmos-rust-bot/packages/cosmos-rust-telegram-bot",
 ]
 
+exclude = [
+    "./rust-bert-fraud-detection/socket_ipc",
+    "./rust-bert-fraud-detection/package",
+]
+
 resolver = "2"
 
 [workspace.dependencies]
@@ -16,7 +21,7 @@ cosmrs = {path = "./cosmos-rust-development/cosmrs" }
 cosmos-sdk-proto = { path = "./cosmos-rust-development/cosmos-sdk-proto" }
 osmosis-proto = { path = "./cosmos-rust-development/osmosis-proto" }
 
-rust-bert-fraud-detection = { path = "./rust-bert-fraud-detection/package" }
+rust-bert-fraud-detection-socket-ipc = { path = "./rust-bert-fraud-detection/socket_ipc" }
 
 chrono = "^0.4"
 tokio = { version = "1.21.1" }

@@ -16,6 +16,8 @@ const LIST_PROPOSAL_STATUS: [&str;6] = ["nil","passed","failed","rejected","depo
 const LIST_PROPOSAL_TYPE: [&str;8] = ["text","community pool spend","parameter change","software upgrade","client update","update pool incentives","store code","unknown"];
 const LIST_PROPOSAL_TIME: [&str;5] = ["latest","submit","deposit end","voting start","voting end"];
 
+const QUERY_SOCKET: &str = "./tmp/cosmos_rust_bot_query_socket";
+
 pub fn handle_tasks_count_list_history(user_hash: u64, msg: &str, msg_for_query: &str, db: &sled::Db) -> anyhow::Result<()>  {
         let task_info_regex = Regex::new(
             format!(
@@ -71,7 +73,7 @@ pub fn handle_tasks_count_list_history(user_hash: u64, msg: &str, msg_for_query:
                 user_hash: Some(user_hash)
             } };
 
-            let response = client_send_request(request).unwrap();
+            let response = client_send_query_request(QUERY_SOCKET,request).unwrap();
             notify_sled_db(db, response);
             return Ok(());
         }
@@ -125,7 +127,7 @@ pub fn handle_tasks_logs_errors_debug(user_hash: u64, msg: &str, msg_for_query: 
                 user_hash: Some(user_hash)
             } };
 
-            let response = client_send_request(request).unwrap();
+            let response = client_send_query_request(QUERY_SOCKET,request).unwrap();
             notify_sled_db(db, response);
             return Ok(());
         }
@@ -148,7 +150,7 @@ pub fn handle_subscribe_unsubscribe(user_hash: u64, msg: &str, msg_for_query: &s
         user_hash: Some(user_hash)
     } };
 
-    let response = client_send_request(request).unwrap();
+    let response = client_send_query_request(QUERY_SOCKET,request).unwrap();
     notify_sled_db(db, response);
     Ok(())
 }
@@ -229,7 +231,7 @@ pub fn handle_gov_prpsl(user_hash: u64, msg: &str, msg_for_query: &str, db: &sle
             user_hash: Some(user_hash)
         } };
 
-        let response = client_send_request(request).unwrap();
+        let response = client_send_query_request(QUERY_SOCKET,request).unwrap();
         notify_sled_db(db, response);
         return Ok(());
     }

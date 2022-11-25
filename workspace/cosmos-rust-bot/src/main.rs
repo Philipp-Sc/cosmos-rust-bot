@@ -33,7 +33,6 @@ use std::hash::{Hash, Hasher};
 use std::{thread, time};
 
 use cosmos_rust_interface::utils::entry::db::load_sled_db;
-use cosmos_rust_interface::utils::entry::db::notification::socket::client_send_request;
 use cosmos_rust_interface::utils::entry::db::query::{handle_query_sled_db, query_entries_sled_db, update_subscription};
 use cosmos_rust_interface::utils::entry::db::query::socket::spawn_socket_query_server;
 use cosmos_rust_interface::utils::entry::postproc::blockchain::cosmos::gov::governance_proposal_notifications;
@@ -50,6 +49,7 @@ use crate::model::requirements::get_requirements;
 
 use cosmos_rust_interface::utils::entry::db::*;
 
+const QUERY_SOCKET: &str = "./tmp/cosmos_rust_bot_query_socket";
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -77,7 +77,7 @@ async fn main() -> anyhow::Result<()> {
         .unwrap();
 
     let tree = load_sled_db("cosmos_rust_bot_sled_db");
-    spawn_socket_query_server(&tree);
+    spawn_socket_query_server(QUERY_SOCKET,&tree);
 
     let mut cosmos_rust_bot_store = CosmosRustBotStore::new(&tree);
     let _thread = cosmos_rust_bot_store.spawn_thread_notify_on_subscription_update();

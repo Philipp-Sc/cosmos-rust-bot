@@ -16,12 +16,12 @@ required-features = ["build-binary"]
 
 
 [features]
-build-binary = ["rust-bert-fraud-detection","log","env_logger","cosmos-rust-interface", "cosmos-rust-package", "anyhow", "bincode", "chrono", "enum-as-inner", "heck","litcrypt","notify","regex","secstr","sled","strum","strum_macros","tokio"]
+build-binary = ["rust-bert-fraud-detection-socket-ipc","log","env_logger","cosmos-rust-interface", "cosmos-rust-package", "anyhow", "bincode", "chrono", "enum-as-inner", "heck","litcrypt","notify","regex","secstr","sled","strum","strum_macros","tokio"]
 
 [dependencies]
 cosmos-rust-interface = { workspace = true, optional = true }
 cosmos-rust-package = { workspace = true, optional = true }
-rust-bert-fraud-detection = { workspace = true, optional = true }
+rust-bert-fraud-detection-socket-ipc = { workspace = true, optional = true }
 #cosmos-rust-interface = { git = "https://github.com/Philipp-Sc/cosmos-rust-interface.git", optional = true }
 #cosmos-rust-package = { git = "https://github.com/Philipp-Sc/cosmos-rust-package.git", optional = true }
 tokio = { workspace = true, features = ["full"], optional = true  }
