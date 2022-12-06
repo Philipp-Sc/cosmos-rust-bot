@@ -4,6 +4,9 @@ use serde_json::json;
 use std::collections::HashMap;
 use std::fs;
 
+
+const TASKS_PATH: &str = "./tmp/cosmos-rust-bot-feature-list.json";
+
 pub type UserSettings = UserSettingsImported;
 
 // around every 5s a new block is generated
@@ -35,7 +38,7 @@ pub struct TaskSpec {
 }
 
 pub fn feature_list() -> Vec<Feature> {
-    let feature_list: Vec<Feature> = match fs::read_to_string("./cosmos-rust-bot-feature-list.json")
+    let feature_list: Vec<Feature> = match fs::read_to_string(TASKS_PATH)
     {
         Ok(file) => match serde_json::from_str(&file) {
             Ok(res) => res,
@@ -105,8 +108,9 @@ pub fn feature_list_to_file() -> anyhow::Result<()> {
         kind: TaskType::FraudDetection,
         name: format!("fraud_detection"),
         args: json!({
+            // here should be the socket path
                 }),
-        refresh_rate: MINUTES_1,
+        refresh_rate: 10,
     };
     fraud_detection.push(task);
 
@@ -116,7 +120,7 @@ pub fn feature_list_to_file() -> anyhow::Result<()> {
     });
 
     let line = format!("{}", serde_json::to_string(&feature_list).unwrap());
-    fs::write("./cosmos-rust-bot-feature-list.json", &line).ok();
+    fs::write(TASKS_PATH, &line).ok();
     Ok(())
 }
 
@@ -126,6 +130,7 @@ fn feature_name_list(user_settings: &UserSettings) -> Vec<String> {
         args.push("governance_proposal_notifications".to_string());
     }
     args.push("chain_registry".to_string());
+    args.push("fraud_detection".to_string());
     args
 }
 

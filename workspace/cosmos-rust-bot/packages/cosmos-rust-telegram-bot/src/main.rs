@@ -14,13 +14,14 @@ use tokio::task::JoinSet;
 
 
 const NOTIFICATION_SOCKET: &str = "./tmp/cosmos_rust_bot_notification_socket";
+const TG_SLED_DB: &str = "./tmp/cosmos_rust_telegram_bot_sled_db";
 
 // RUST_LOG=error,debug,info
 #[tokio::main]
 async fn main() {
     let mut join_set: JoinSet<()> = JoinSet::new();
 
-    let tree = Arc::new(load_sled_db("cosmos_rust_telegram_bot_sled_db"));
+    let tree = Arc::new(load_sled_db(TG_SLED_DB));
     spawn_socket_notification_server(NOTIFICATION_SOCKET,tree.clone().as_ref());
 
     pretty_env_logger::init();

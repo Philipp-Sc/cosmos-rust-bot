@@ -20,7 +20,7 @@ fn xor_cipher(text: String) -> String {
      * It will be used to encrypt/decrypt the seed phrase!
      * This provides additional security in the case when someone is able to access the RAM due to a memory leak or exploit.
      */
-    let secret: Vec<u8> = lc!("e46566503ad72a6dcbd5e8a986ad900cecab96f8d9309cfcead2a03e62afa63690e98a2546c6152b4632ed2a6ab17bf5b71a9edbac1f4c6944147046c4b9a519ff8fe0ee5c422c861bc03046391dcccc8cfcd90dbc024e8ad659b7c09ab5835388840ae7e2d8b43260b5126efeb97a47a54c23030cb1ff7b926cde43169c4f8ceb41c345197406559d6e90794ac8c40ccc5916d10aa83ceba793695cb029e3f1cdf384f5a207022b2cc7e16d5fd0af54874fa7d389044b9f377b2867fa4205f146f1e9e5cc4edaf6c1acbf77c23fdcbf18c3683e8c2123a56e3b1a00663587196a14da74e7a2b32d7a1a3f24db17188b0a5b2be0cd70ee019aa5d43a388eaaa1").to_string().into_bytes();
+    let secret: Vec<u8> = lc!("f1d5a1a6be25bd6c9a1c71158f3d6e2e6c16cf3d9ae78814eaa53a5003af29ae0ce4f4909223fcef841a5c97e644628bde49015b2f1386ae3d64c12aa5e9f27b4e6a6b3ca7eb39b7e32fd93ec4cf13d51ed1f79c90ac7be574f157c19d89480ff9aa6439bd727157b301e03149d82df7a1f0a9ebe09aad568aa311fe9667b4c9f8d77430d6fc5fb69a92e8293743dbc6682a68cd8805029b7f3d659792849225d135cb7417254cabac626326843be46254a0756bd0b7ee3e0b6ace9998369c5d098145dbf71d8a177af0a812f35eaf4e7263a1a7a4a299a87a912f34cafad22d5d1d1baebfdb24a0fb27e8743d1f2f708f8eb46cbc0f9f621b0db2444da3fd20").to_string().into_bytes();
 
     v1.iter_mut()
         .zip(secret.iter())

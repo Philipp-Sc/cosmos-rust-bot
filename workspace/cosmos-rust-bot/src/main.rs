@@ -50,6 +50,8 @@ use crate::model::requirements::get_requirements;
 use cosmos_rust_interface::utils::entry::db::*;
 
 const QUERY_SOCKET: &str = "./tmp/cosmos_rust_bot_query_socket";
+const SETTINGS_PATH: &str = "./tmp/cosmos-rust-bot.json";
+const CRB_SLED_DB: &str = "./tmp/cosmos_rust_bot_sled_db";
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -60,7 +62,7 @@ async fn main() -> anyhow::Result<()> {
     let mut join_set: JoinSet<()> = JoinSet::new();
     let task_store: TaskMemoryStore = TaskMemoryStore::new().unwrap();
 
-    let mut user_settings: UserSettings = load_user_settings("./cosmos-rust-bot.json");
+    let mut user_settings: UserSettings = load_user_settings(SETTINGS_PATH);
     //println!("{}", serde_json::to_string_pretty(&user_settings)?);
 
     let (wallet_seed_phrase, wallet_acc_address) = get_wallet_details(&user_settings).await;
@@ -73,10 +75,10 @@ async fn main() -> anyhow::Result<()> {
     // Add a path to be watched. All files and directories at that path and
     // below will be monitored for changes.
     watcher
-        .watch("./cosmos-rust-bot.json", RecursiveMode::Recursive)
+        .watch(SETTINGS_PATH, RecursiveMode::Recursive)
         .unwrap();
 
-    let tree = load_sled_db("cosmos_rust_bot_sled_db");
+    let tree = load_sled_db(CRB_SLED_DB);
     spawn_socket_query_server(QUERY_SOCKET,&tree);
 
     let mut cosmos_rust_bot_store = CosmosRustBotStore::new(&tree);
@@ -115,8 +117,8 @@ async fn main() -> anyhow::Result<()> {
                 // since the processing of the ResponseResults is blazing fast, it makes no sense to hope for a value to be refreshed
                 // so potentially reduces function calls
                 // also post processing does not need to deal with Arc<Mutex>
-                let mut snapshot_of_memory = task_store.get_snapshot::<ResponseResult>(&RetrievalMethod::GetOk);
-                let mut internal_snapshot_of_memory = task_store.get_snapshot::<ResponseResult>(&RetrievalMethod::Get);
+
+                //let mut internal_snapshot_of_memory = task_store.value_iter::<ResponseResult>(&RetrievalMethod::Get);
                 // TODO: use SledDb listener/events to reduce the number of get function calls.
                 // TODO: have dependencies and update trigger key lists. if trigger key was updated, then get dependencies and update.
 
@@ -126,16 +128,16 @@ async fn main() -> anyhow::Result<()> {
                 entries.append(&mut task_meta_data);
 
                 if user_settings.governance_proposal_notifications {
-                    entries.append(&mut governance_proposal_notifications(&mut snapshot_of_memory));
+                    entries.append(&mut governance_proposal_notifications(&task_store));
                 }
 
                 let mut task_meta_data: Vec<CosmosRustBotValue> = Vec::new();
-                let mut debug: Vec<CosmosRustBotValue> = debug(&internal_snapshot_of_memory);
+                //let mut debug: Vec<CosmosRustBotValue> = debug(&mut internal_snapshot_of_memory);
                 //let mut logs: Vec<CosmosRustBotValue> = logs(&snapshot_of_memory);
-                let mut errors: Vec<CosmosRustBotValue> = errors(&internal_snapshot_of_memory);
-                task_meta_data.append(&mut debug);
+                //let mut errors: Vec<CosmosRustBotValue> = errors(&mut internal_snapshot_of_memory); // TODO: make debug, errors, logs one.
+                //task_meta_data.append(&mut debug);
                 //task_meta_data.append(&mut logs);
-                task_meta_data.append(&mut errors);
+                //task_meta_data.append(&mut errors);
                 entries.append(&mut task_meta_data);
 
                 CosmosRustBotValue::add_index(&mut entries, "timestamp", "timestamp");
@@ -149,7 +151,7 @@ async fn main() -> anyhow::Result<()> {
         }
         join_set.shutdown().await;
         if user_settings.hot_reload {
-            user_settings = load_user_settings("./cosmos-rust-bot.json");
+            user_settings = load_user_settings(SETTINGS_PATH);
         }
     }
 }

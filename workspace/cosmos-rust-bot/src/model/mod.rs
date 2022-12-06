@@ -32,7 +32,7 @@ use std::ops::Deref;
 use cosmos_rust_interface::utils::entry::*;
 
 use cosmos_rust_interface::blockchain::cosmos::gov::get_proposals;
-use cosmos_rust_interface::utils::response::ResponseResult;
+use cosmos_rust_interface::utils::response::{ResponseResult, TaskResult};
 use cosmos_rust_package::api::core::cosmos::channels;
 use cosmos_rust_package::api::core::cosmos::channels::SupportedBlockchain;
 use cosmos_rust_package::api::custom::query::gov::ProposalStatus;
@@ -44,6 +44,7 @@ use strum_macros::EnumIter;
 use cosmos_rust_interface::blockchain::cosmos::chain_registry::get_supported_blockchains_from_chain_registry;
 use cosmos_rust_interface::utils::entry::db::{RetrievalMethod, TaskMemoryStore};
 use log::{debug, info, trace};
+use cosmos_rust_interface::services::fraud_detection::fraud_detection;
 
 #[derive(strum_macros::Display, Debug, EnumIter, PartialEq, serde::Serialize)]
 pub enum TaskState {
@@ -187,7 +188,7 @@ pub async fn get_task_list(
     let mut task_list: Vec<TaskItem> = Vec::new();
 
     let now = Utc::now().timestamp();
-    for (k, v) in task_store.get_snapshot::<ResponseResult>(&RetrievalMethod::Get).into_iter() {
+    for (k, v) in task_store.value_iter::<ResponseResult>(&RetrievalMethod::Get) {
         let state: TaskState;
         let time: i64;
         match v {
@@ -272,7 +273,7 @@ async fn spawn_tasks(
     to_update: Vec<&TaskSpec>,
 ) -> usize {
 
-    let supported_blockchains = match task_store.get("chain_registry",&RetrievalMethod::GetOk) {
+    let supported_blockchains = match task_store.get("internal_chain_registry",&RetrievalMethod::GetOk) {
         Ok(Maybe{data: Ok(ResponseResult::ChainRegistry(chain_registry)), timestamp: t }) => {
             info!("spawn_tasks: chain_registry available");
             Some(chain_registry)
@@ -287,51 +288,18 @@ async fn spawn_tasks(
     for req in to_update {
 
         let mut f: Option<
-            Pin<Box<dyn Future<Output=anyhow::Result<ResponseResult>> + Send + 'static>>,
+            Pin<Box<dyn Future<Output=anyhow::Result<TaskResult>> + Send + 'static>>,
         > = None;
 
         match req.kind {
 
-
-            /*
-            TODO: first use dummy scam detection.
             TaskType::FraudDetection => {
-            // 1) find latest governance proposals across all ResponseResults
-            // 2) iterate over them and continue with the first where, the text hash does not exist in any FraudClassification(FraudClassification)
-            // 3) classify and save the result as FraudClassification(FraudClassification).
-            // done. task will get called again and then expand the FraudClassifications, one step at a time.
-
-            // how to call the fraud classification,  via Sockets!
-            // client_send_rust_bert_fraud_detection_request("socket_path",Vec<String>)
-            // TODO: update socket, wenn man schon dabei ist.
-
-
-                for (key, y) in memory.iter() {
-                    // TODO: function (data ok(_)) -> Option<(Key,Value)>
-                    // TODO: check if fraud_classification already exists for key.
-
-                    // Vec<(Key,Value)> take one and do fraud_detection.
-
-                    match y {
-                        Maybe { data: Ok(ResponseResult::Blockchain(BlockchainQuery::GovProposals(gov_proposals))), timestamp } => {
-                            proposals.append(&mut gov_proposals.into_iter().map(|x| (x,key.to_string(),timestamp.to_owned())).collect());
-                        },
-                        Maybe { data: Ok(ResponseResult::Blockchain(BlockchainQuery::SpamClassification(val))), timestamp } => {
-                            proposals.append((val,key.to_string(),timestamp.to_owned()));
-                        },
-                    }
-                }
-
-                // TODO: identify governance proposals that have not yet been checked for spam.
-
-                // TODO: run rustbert-spam-detection (maybe only on most recent proposals)
-                // TODO: write/insert new entry, with relevant information.
-
-            }*/
+                f = Some(Box::pin(fraud_detection(task_store.clone(),req.name.clone())));
+            }
 
             TaskType::ChainRegistry => {
                 let path = req.args["path"].as_str().unwrap().to_string();
-                f = Some(Box::pin(get_supported_blockchains_from_chain_registry(path)));
+                f = Some(Box::pin(get_supported_blockchains_from_chain_registry(path,task_store.clone(),req.name.clone())));
             }
             TaskType::GovernanceProposals => {
                 if let Some(supported_blockchains) = supported_blockchains.as_ref() {
@@ -339,7 +307,7 @@ async fn spawn_tasks(
                     let blockchain = supported_blockchains.get(req.args["blockchain"].as_str().unwrap())
                         .unwrap()
                         .clone();
-                    f = Some(Box::pin(get_proposals(blockchain, status)));
+                    f = Some(Box::pin(get_proposals(blockchain, status,task_store.clone(),req.name.clone())));
                 }
             }
             _ => {}
@@ -362,7 +330,7 @@ async fn spawn_tasks(
                     let result = m.await;
                     let result: Maybe<ResponseResult> = Maybe {
                         data: match result {
-                            Ok(data) => Ok(data),
+                            Ok(data) => Ok(ResponseResult::TaskResult(data)),
                             Err(err) => Err(MaybeError::AnyhowError(err.to_string())),
                         },
                         timestamp: Utc::now().timestamp(),

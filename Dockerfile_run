@@ -7,9 +7,9 @@ WORKDIR /usr/workspace
 COPY ./helper_run_script.sh /usr/
 RUN chmod 755 /usr/helper_run_script.sh
 
-# important settings! you might want to customize the json files.
-COPY ./workspace/cosmos-rust-bot/cosmos-rust-bot.json .
-COPY ./workspace/cosmos-rust-bot/cosmos-rust-bot-feature-list.json .
+# settings moved into the /tmp/ volume
+#COPY ./workspace/cosmos-rust-bot/cosmos-rust-bot.json .
+#COPY ./workspace/cosmos-rust-bot/cosmos-rust-bot-feature-list.json .
 
 ADD ./workspace/chain-registry /usr/workspace/chain-registry
 
