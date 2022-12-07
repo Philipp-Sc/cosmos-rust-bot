@@ -13,9 +13,13 @@ pub fn handle_start(user_hash: u64, msg: &str, db: &sled::Db) -> anyhow::Result<
             CosmosRustServerValue::Notify(Notify {
                 timestamp: Utc::now().timestamp(),
                 msg: vec![
-                    r#"🤖💬 Welcome! To get started just type /help or learn more about me via /about."#
+                    r#"🤖💬 Welcome! Save time and hassle with automatic notifications and on-chain data lookup. Ready to receive transmisions from the Cosmos? 🛰️ "#
                         .to_string(),
                 ],
+                buttons: vec![
+                    vec![("Setup Notifications".to_string(),"/help_subscriptions".to_string())],
+                    vec![("Lookup Governance Proposals".to_string(),"/help_governance_proposals".to_string())],
+                    vec![("About".to_string(),"/about".to_string())]],
                 user_hash,
             }),
         );
@@ -32,68 +36,12 @@ pub fn handle_about(user_hash: u64, msg: &str, db: &sled::Db) -> anyhow::Result<
             CosmosRustServerValue::Notify(Notify {
                 timestamp: Utc::now().timestamp(),
                 msg: vec![
-                    r#"🤖💬Why did my creator make me? And who am I?
+                    r#"Cosmos-Rust-Bot - a Rust bot for the Cosmos Ecosystem.
 
-A Rust Bot for the Cosmos Ecosystem.
-
-I created this bot to learn about smart contracts, the Terra blockchain and to get to know the Rust programming language.
-What I noticed then - and is still true now for the broader Cosmos Ecosystem - is that bots play an important role in crypto, at the same time not many have access to one. Having your own bot at your command is in many ways convenient and it often gives the power back to you.
-
-The project's purpose is to have a bot on your side:
-
-USERS
-
-- Save the hassle doing things manually
-- Enable strategies only bots can execute
-- Receive alerts and notifications
-- Send commands for the bot to execute
-
-DEVELOPERS
-
-- Provide insights into the Cosmos Ecosystem
-- Enable developers to write their own bot
-- Showcase how to use cosmos-rust
-- Rust
-
-You are currently interacting with an early (beta) version of the cosmos-rust-telegram-bot.
-The limitations are that this is a publicly hosted version of cosmos-rust-bot, letting the bot sign and execute transactions is not possible (a security risk). Therefore cosmos-rust-telegram-bot only automates notifications and lookups of on-chain data. If there are transactions to sign, you will need to do it manually via your wallet app.
-
-Cosmos-rust-bot starts out with governance notifications & lookup features, that being said other interesting features such as the following are planned:
-- wallet tracking
-- validator profile tracking
-- osmosiszone price/token/pool alerts
-...
-You can lookup available features via /help.
-(to see the full roadmap checkout my github repository)
-
-If you want to interact with the blockchain and execute transactions automaticly, you will have to setup your own cosmos-rust-signal-bot (for technically-skilled users).
-Checkout cosmos-rust-bot on github:
-https://github.com/Philipp-Sc/cosmos-rust-bot
-
-Cosmos-rust-bot is a constant work in progress: Bug Reports and Feature Requests are welcome!
-Either via github or write me directly @philipp_sc on telegram.
-
-Thank you. ❤️
-
+This is an early beta version, so please keep in mind that certain features may not be available. Check out our GitHub repository for more information and to see our roadmap. Thank you for using cosmos-rust-telegram-bot!
 "#.to_string(),
                 ],
-                user_hash,
-            }),
-        );
-        return Ok(());
-    }
-    Err(anyhow::anyhow!("Error: Unknown Command!"))
-}
-
-pub fn handle_help(user_hash: u64, msg: &str, db: &sled::Db)  -> anyhow::Result<()> {
-    if msg == "help" {
-        notify_sled_db(
-            db,
-            CosmosRustServerValue::Notify(Notify {
-                timestamp: Utc::now().timestamp(),
-                msg: vec![
-                    "🤖💬\nSubscribe to Governance Notifications\n\n/gov_prpsl_terra2_subscribe\n\n/gov_prpsl_osmosis_subscribe\n\n/gov_prpsl_juno_subscribe\n\n/gov_prpsl_cosmos_hub_subscribe\n\n\nLookup Governance Proposals\n\n/help_governance_proposals\n\nManage Subscriptions\n\n/help_subscriptions\n\n".to_string(),
-                ],
+                buttons: vec![vec![("GITHUB".to_string(),"".to_string())]],
                 user_hash,
             }),
         );
@@ -138,6 +86,7 @@ e.g. 1,2,..
 =================
 ℹ For examples check /tasks"#.to_string()
             ],
+            buttons: vec![],
             user_hash,
         }),
     );
@@ -152,20 +101,15 @@ pub fn handle_help_governance_proposals(user_hash: u64, msg: &str, db: &sled::Db
             CosmosRustServerValue::Notify(Notify {
                 timestamp: Utc::now().timestamp(),
                 msg: vec![
-                    r#"🤖💬 Shortcuts
+                    r#"🤖💬 Lookup Governance Proposals
 
-/latest_proposals
--  lookup the most recent proposals (by blockchain)
-
-/proposals_by_status
-- lookup proposals by status (voting/deposit period, passed, rejected,..)
-
-/proposal_by_id
-- lookup proposal by id
-
-/governance_proposals
-- additional information"#.to_string(),
+Use the /gov_prpsl command to lookup governance proposals on a specified blockchain network. Refer to the man page for detailed instructions, or use one of the three shortcuts to quickly find what you're looking for.
+"#.to_string(),
                 ],
+                buttons: vec![vec![("/latest_proposals".to_string(),"/latest_proposals".to_string())],
+                              vec![("/proposals_by_status".to_string(),"/proposals_by_status".to_string())],
+                              vec![("/proposal_by_id".to_string(),"/proposal_by_id".to_string())],
+                              vec![("man page".to_string(),"/governance_proposals".to_string())]],
                 user_hash,
             }),
         );
@@ -180,23 +124,58 @@ pub fn handle_governance_proposals(user_hash: u64, msg: &str, db: &sled::Db) -> 
             CosmosRustServerValue::Notify(Notify {
                 timestamp: Utc::now().timestamp(),
                 msg: vec![
-                    r#"🛰️ Lookup Governance Proposals 🛰️
-===============================
-🤖 COMMAND
-/gov_prpsl_Blockchain_ProposalId_ProposalStatus_ProposalType_ProposalTime_Limit
-Blockchain
-['terra2', 'osmosis', 'juno', 'cosmos_hub']
-ProposalId
-e.g. id1,id2,..
-ProposalStatus
-['nil', 'passed', 'failed', 'rejected', 'deposit period', 'voting period']
-ProposalType
-['text', 'community pool spend', 'parameter change', 'software proposal', 'client update', 'update pool incentives', 'store code', 'unknown']
-ProposalTime
-['latest','submit','deposit end','voting start','voting end']
-Limit
-e.g. 1,2,.."#.to_string(),
+                    r#"/gov_prpsl - look up governance proposals on a specified blockchain network
+
+SYNOPSIS
+    /gov_prpsl Blockchain ProposalId ProposalStatus ProposalType ProposalTime Limit [subscribe | unsubscribe]
+
+DESCRIPTION
+    The /gov_prpsl command allows users to look up governance proposals on one of the following blockchain networks:
+        - terra2
+        - osmosis
+        - juno
+        - cosmos_hub
+
+    The command takes the following parameters:
+        Blockchain: the blockchain network on which to look up governance proposals.
+        ProposalId: the unique identifier of the proposal to look up. Valid values are:
+            - id1
+            - id2
+        ProposalStatus: the status of the proposal to look up. Valid values are:
+            - nil
+            - passed
+            - failed
+            - rejected
+            - deposit period
+            - voting period
+        ProposalType: the type of the proposal to look up. Valid values are:
+            - text
+            - community pool spend
+            - parameter change
+            - software proposal
+            - client update
+            - update pool incentives
+            - store code
+            - unknown
+        ProposalTime: the timestamp to order the proposals by. Valid values are:
+            - latest
+            - submit
+            - deposit end
+            - voting start
+            - voting end
+        Limit: the maximum number of proposals to return.
+        subscribe: an optional parameter that can be used to receive notifications.
+        unsubscribe: an optional parameter that can be used to stop receiving notifications.
+
+EXAMPLES
+    To look up the latest proposal with ID "1" on the osmosis network:
+        /gov_prpsl_osmosis_id1_latest_1
+
+    To look up proposals of type "parameter change" that are in voting period on the cosmos_hub network:
+        /gov_prpsl_cosmos_hub_voting_period_parameter_change
+"#.to_string(),
                 ],
+                buttons: vec![],
                 user_hash,
             }),
         );
@@ -211,8 +190,12 @@ pub fn handle_help_subscriptions(user_hash: u64, msg: &str, db: &sled::Db) -> an
             CosmosRustServerValue::Notify(Notify {
                 timestamp: Utc::now().timestamp(),
                 msg: vec![
-                    "🤖💬 To manage subscriptions just append subscribe or unsubscribe to a request.\n\nList your current subscriptions:\n/subscriptions\n\nDelete all your subscriptions:\n/unsubscribe_all\n\nCommonly used subscriptions:\n/gov_prpsl_subs".to_string(),
+                    r#"🤖💬 Manage Subscriptions"#.to_string(),
                 ],
+                buttons: vec![vec![("Get started".to_string(),"/gov_prpsl_subs".to_string())],
+                              vec![("My Subscriptions".to_string(),"/subscriptions".to_string())],
+                              vec![("Unsubscribe All".to_string(),"/unsubscribe_all".to_string())]
+                              ],
                 user_hash,
             }),
         );
@@ -243,6 +226,7 @@ pub fn handle_tasks(user_hash: u64, msg: &str, db: &sled::Db)  -> anyhow::Result
 ℹ️ /tasks_errors_1"#
                         .to_string(),
                 ],
+                buttons: vec![],
                 user_hash,
             }),
         );
@@ -260,10 +244,20 @@ pub fn handle_proposal_by_id(user_hash: u64, msg: &str, db: &sled::Db)  -> anyho
                 msg: vec![
                     r#"🤖💬 Get proposal by id:
 
+To lookup a proposal with ID "1" on the Cosmos-Hub blockchain, use the following command:
+
 /gov_prpsl_cosmos_hub_id1
-- lookup proposal on Cosmos-Hub with id 1 (options are terra2, osmosis, juno or cosmos_hub)"#
+
+Note that you can also use this command to lookup proposals on the following blockchain networks:
+
+    terra2
+    osmosis
+    juno
+
+For more information, refer to the man page."#
                         .to_string(),
                 ],
+                buttons: vec![vec![("man page".to_string(),"/governance_proposals".to_string())]],
                 user_hash,
             }),
         );
@@ -279,16 +273,18 @@ pub fn handle_latest_proposals(user_hash: u64, msg: &str, db: &sled::Db) -> anyh
                 timestamp: Utc::now().timestamp(),
                 msg: vec![
                     r#"🤖💬 Get the latest proposals:
+To lookup the latest 3 proposals on the Terra2 network, use the following command:
 
-/gov_prpsl_terra2_3
-- lookup latest 3 proposals on Terra (options are terra2, osmosis, juno or cosmos_hub)
+/gov_prpsl_terra2_latest_3
 
-/gov_prpsl_juno_osmosis
-- lookup latest proposals on Juno or Osmosis (you can specify multiple blockchains)
+To lookup the latest proposals on both the Juno and Osmosis networks, use the following command:
 
-"#
+/gov_prpsl_juno_osmosis_latest
+
+For more information and detailed instructions, refer to the man page."#
                         .to_string(),
                 ],
+                buttons: vec![vec![("man page".to_string(),"/governance_proposals".to_string())]],
                 user_hash,
             }),
         );
@@ -307,18 +303,23 @@ pub fn handle_proposals_by_status(user_hash: u64, msg: &str, db: &sled::Db)  -> 
                 msg: vec![
                     r#"🤖💬 Get proposals by status:
 
-/gov_prpsl_terra2_deposit_period_3
-- lookup latest 3 proposals in deposit period on Terra (options are voting_period, deposit_period, rejected, passed or failed)
+To lookup the latest 3 proposals in the "deposit period" on the Terra2 network, use the following command:
 
-/gov_prpsl_terra2_voting_period_deposit_period_3
-- lookup latest 3 proposals in voting or deposit period on Terra (you can specify multiple statuses)
+/gov_prpsl_terra2_deposit_period_latest_3
 
-/gov_prpsl_terra2_passed_rejected_3
-- lookup latest 3 passed or rejected proposals on Terra
+To lookup the latest 3 proposals in the "voting period" or "deposit period" on the Terra2 network, use the following command:
 
+/gov_prpsl_terra2_voting_period_deposit_period_latest_3
+
+To lookup the latest 3 proposals that were "passed" or "rejected" on the Terra2 network, use the following command:
+
+/gov_prpsl_terra2_passed_rejected_latest_3
+
+For more information and detailed instructions, refer to the man page.
 "#
                         .to_string(),
                 ],
+                buttons: vec![vec![("man page".to_string(),"/governance_proposals".to_string())]],
                 user_hash,
             }),
         );
@@ -334,8 +335,14 @@ pub fn handle_common_subs(user_hash: u64, msg: &str, db: &sled::Db)  -> anyhow::
             CosmosRustServerValue::Notify(Notify {
                 timestamp: Utc::now().timestamp(),
                 msg: vec![
-                    "🤖💬 Get notified:\n\n/gov_prpsl_osmosis_subscribe\n- a proposal was created or updated\n\n/gov_prpsl_osmosis_voting_period_subscribe\n- a proposal enters the voting period\n\n/gov_prpsl_osmosis_deposit_period_subscribe\n- a proposal enters the deposit period\n\n/gov_prpsl_osmosis_voting_period_deposit_period_subscribe\n- a proposal enters the voting or deposit period".to_string(),
-                    "🤖💬 You have more control over the selection by specifying parameters, to learn more check:\n/help_governance_proposals".to_string(),
+                    "🤖💬 Just want to stay updated? Then select one of the pre-defined commands, to define more restrictive subscriptions checkout the man page.".to_string(),
+                ],
+                buttons: vec![
+                    vec![("/gov_prpsl_osmosis_subscribe".to_string(),"/gov_prpsl_osmosis_subscribe".to_string())],
+                    vec![("/gov_prpsl_terra2_subscribe".to_string(),"/gov_prpsl_terra2_subscribe".to_string())],
+                    vec![("/gov_prpsl_juno_subscribe".to_string(),"/gov_prpsl_juno_subscribe".to_string())],
+                    vec![("/gov_prpsl_cosmos_hub_subscribe".to_string(),"/gov_prpsl_cosmos_hub_subscribe".to_string())],
+                    vec![("man page".to_string(),"/governance_proposals".to_string())],
                 ],
                 user_hash,
             }),
@@ -357,6 +364,7 @@ pub fn handle_unknown_command(user_hash: u64, db: &sled::Db) -> anyhow::Result<(
 Type /help to see all the commands."#
                         .to_string(),
                 ],
+                buttons: vec![vec![("help".to_string(),"/help".to_string())]],
                 user_hash,
             }),
         );

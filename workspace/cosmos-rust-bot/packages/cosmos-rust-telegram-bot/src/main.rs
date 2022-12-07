@@ -10,6 +10,8 @@ use cosmos_rust_interface::utils::entry::db::notification::notify_sled_db;
 use cosmos_rust_interface::utils::entry::*;
 use cosmos_rust_interface::utils::entry::{CosmosRustServerValue, Notify};
 use std::sync::Arc;
+use teloxide::types::{InlineKeyboardButton, InlineKeyboardButtonKind, InlineKeyboardMarkup};
+use teloxide::types::ReplyMarkup::InlineKeyboard;
 use tokio::task::JoinSet;
 
 
@@ -19,6 +21,7 @@ const TG_SLED_DB: &str = "./tmp/cosmos_rust_telegram_bot_sled_db";
 // RUST_LOG=error,debug,info
 #[tokio::main]
 async fn main() {
+
     let mut join_set: JoinSet<()> = JoinSet::new();
 
     let tree = Arc::new(load_sled_db(TG_SLED_DB));
@@ -57,8 +60,23 @@ async fn main() {
                                         id
                                     );
                                     for msg in notify.msg {
+
+                                        // Create the inline keyboard with the desired buttons
+                                        let mut buttons: Vec<Vec<InlineKeyboardButton>> = Vec::new();
+                                        for row in &notify.buttons {
+                                            buttons.push(row.iter().map(|b| {
+                                                if b.0 == "GITHUB" {
+                                                    InlineKeyboardButton::new("GitHub".to_string(), InlineKeyboardButtonKind::Url("https://github.com/Philipp-Sc/cosmos-rust-bot".parse().unwrap()))
+                                                }else {
+                                                    InlineKeyboardButton::new(b.0.to_owned(), InlineKeyboardButtonKind::CallbackData(b.1.to_owned()))
+                                                }
+                                            }).collect());
+                                        }
+                                        let keyboard = InlineKeyboardMarkup::new(buttons);
+
                                         bot_clone.send_message(ChatId(id), msg)
                                             .disable_web_page_preview(true)
+                                            .reply_markup(keyboard)
                                             .send().await.ok();
                                     }
                                     // TODO: remove user if not subscribed and has no pending notifications/notify
@@ -76,12 +94,21 @@ async fn main() {
 
     // task that receives the messages
     join_set.spawn(async move {
-        let handler = Update::filter_message().endpoint(
-            |msg: Message, tree: Arc<sled::Db>| async move {
-                receive(tree,msg).await.ok();
-                respond(())
-            },
-        );
+
+        let handler = dptree::entry()
+            .branch(Update::filter_message().endpoint(
+                |msg: Message, tree: Arc<sled::Db>| async move {
+                    receive(tree,msg).await.ok();
+                    respond(())
+                },
+            ))
+            .branch(Update::filter_callback_query().endpoint(
+                |bot: Bot, q: CallbackQuery, tree: Arc<sled::Db>,| async move {
+                    callback_handler(bot,q,tree).await.ok();
+                    respond(())
+                },
+            ));
+
         Dispatcher::builder(bot, handler)
             // Pass the shared state to the handler as a dependency.
             .dependencies(dptree::deps![tree])
@@ -130,6 +157,51 @@ async fn receive(
             }
         }
         _ => {}
+    }
+    Ok(())
+}
+
+/// When it receives a callback from a button it edits the message with all
+/// those buttons writing a text with the selected Debian version.
+///
+/// **IMPORTANT**: do not send privacy-sensitive data this way!!!
+/// Anyone can read data stored in the callback button.
+async fn callback_handler(bot: Bot, q: CallbackQuery, tree: Arc<sled::Db>) -> Result<(), Box<dyn Error + Send + Sync>> {
+
+    if !q.from.is_bot {
+        if let Some(command) = q.data {
+            if let Some(message) = q.message {
+
+                // Tell telegram that we've seen this query, to remove 🕑 icons from the
+                //
+                // clients. You could also use `answer_callback_query`'s optional
+                // parameters to tweak what happens on the client side.
+                bot.answer_callback_query(q.id).send().await?;
+
+                let user_meta_data = CosmosRustServerValue::UserMetaData(UserMetaData {
+                    timestamp: Utc::now().timestamp(),
+                    user_id: q.from.id.0,
+                    user_name: q.from.username.to_owned(),
+                    first_name: Some(q.from.first_name.to_owned()),
+                    last_name: q.from.last_name.to_owned(),
+                    language_code: q.from.language_code.to_owned(),
+                    user_chat_id: message.chat.id.0,
+                });
+                notify_sled_db(&tree, user_meta_data);
+                log::info!(
+                            "Handle Message Button Callback: Request: {} - {:?},\nCommand: {:?}",
+                            Utc::now(),
+                            &message,
+                            &command,
+                        );
+                handle_message(
+                    q.from.id.0,
+                    command,
+                    &tree,
+                )
+                    .await;
+            }
+        }
     }
     Ok(())
 }

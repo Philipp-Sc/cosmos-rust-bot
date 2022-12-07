@@ -23,7 +23,6 @@ pub async fn handle_message(user_id: u64, message: String, db: &sled::Db) {
 
     handle_start(user_hash,&msg,db)
         .map_err(|_|handle_about(user_hash,&msg,db)
-        .map_err(|_|handle_help(user_hash,&msg,db)
         .map_err(|_|handle_help_tasks(user_hash,&msg,db)
         .map_err(|_|handle_help_governance_proposals(user_hash,&msg,db)
         .map_err(|_|handle_help_subscriptions(user_hash,&msg,db)
@@ -37,6 +36,6 @@ pub async fn handle_message(user_id: u64, message: String, db: &sled::Db) {
         .map_err(|_|handle_tasks_count_list_history(user_hash,&msg, &msg_for_query,db)
         .map_err(|_|handle_subscribe_unsubscribe(user_hash,&msg, &msg_for_query,db)
         .map_err(|_|handle_gov_prpsl(user_hash,&msg, &msg_for_query,db)
-        .map_err(|_|handle_unknown_command(user_hash,db).ok())))))))))))))))).ok();
+        .map_err(|_|handle_unknown_command(user_hash,db).ok()))))))))))))))).ok();
 
 }
