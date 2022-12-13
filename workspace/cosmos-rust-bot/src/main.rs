@@ -84,7 +84,6 @@ async fn main() -> anyhow::Result<()> {
     let mut cosmos_rust_bot_store = CosmosRustBotStore::new(&tree);
     let _thread = cosmos_rust_bot_store.spawn_thread_notify_on_subscription_update();
 
-
     loop {
         let req = get_requirements(&user_settings);
 
@@ -113,12 +112,6 @@ async fn main() -> anyhow::Result<()> {
 
             if number_of_tasks_resolved > 0 {
 
-                // ensures the display tasks operates on the same snapshot
-                // since the processing of the ResponseResults is blazing fast, it makes no sense to hope for a value to be refreshed
-                // so potentially reduces function calls
-                // also post processing does not need to deal with Arc<Mutex>
-
-                //let mut internal_snapshot_of_memory = task_store.value_iter::<ResponseResult>(&RetrievalMethod::Get);
                 // TODO: use SledDb listener/events to reduce the number of get function calls.
                 // TODO: have dependencies and update trigger key lists. if trigger key was updated, then get dependencies and update.
 

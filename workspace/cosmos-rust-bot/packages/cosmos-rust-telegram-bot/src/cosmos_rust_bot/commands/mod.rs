@@ -11,15 +11,26 @@ const SUB_UNSUB: &str = "(subscribe|unsubscribe)";
 
 const LIST_TASK_STATES: [&str;6] = ["pending","resolved","upcoming","failed","unknown","reserved"];
 
-const LIST_BLOCKCHAINS: [&str;5] = ["terra","terra2","osmosis","juno","cosmos hub"];
+const LIST_BLOCKCHAINS: [&str;5] = ["terra1","terra2","osmosis","juno","cosmos hub"];
 const LIST_PROPOSAL_STATUS: [&str;6] = ["nil","passed","failed","rejected","deposit period","voting period"];
 const LIST_PROPOSAL_TYPE: [&str;8] = ["text","community pool spend","parameter change","software upgrade","client update","update pool incentives","store code","unknown"];
 const LIST_PROPOSAL_TIME: [&str;5] = ["latest","submit","deposit end","voting start","voting end"];
 
+const LIST_GOV_PRPSL_VIEWS: [&str;3] = ["status","summary","content"];
+
 const QUERY_SOCKET: &str = "./tmp/cosmos_rust_bot_query_socket";
 
-pub fn handle_tasks_count_list_history(user_hash: u64, msg: &str, msg_for_query: &str, db: &sled::Db) -> anyhow::Result<()>  {
-        let task_info_regex = Regex::new(
+use lazy_static::lazy_static;
+
+lazy_static!{
+   pub static ref LOOKUP_PROPOSALS_REGEX: Regex = Regex::new(format!("gov prpsl({})?({})?(?: id([0-9]+))?({})?({})?({})?(?: ([0-9]+))?(?: {})?(?:\\s|$)",
+                                                    format!("[{}]+",LIST_GOV_PRPSL_VIEWS.map(|x| " ".to_string()+x).join("|")),
+                                                    format!("[{}]+",LIST_BLOCKCHAINS.map(|x| " ".to_string()+x).join("|")),
+                                                    format!("[{}]+",LIST_PROPOSAL_STATUS.map(|x| " ".to_string()+x).join("|")),
+                                                    format!("[{}]+",LIST_PROPOSAL_TYPE.map(|x| " ".to_string()+x).join("|")),
+                                                    format!("[{}]+",LIST_PROPOSAL_TIME.map(|x| " ".to_string()+x).join("|")),
+                                                    SUB_UNSUB).as_str()).unwrap();
+   pub static ref TASK_INFO_REGEX: Regex = Regex::new(
             format!(
                 "tasks (count|list|history)({})?(?: ([0-9]+))?(?: {})?(?:\\s|$)",
                 format!("[{}]+",LIST_TASK_STATES.map(|x| " ".to_string()+x).join("|")), SUB_UNSUB
@@ -27,8 +38,24 @@ pub fn handle_tasks_count_list_history(user_hash: u64, msg: &str, msg_for_query:
                 .as_str(),
         )
             .unwrap();
-        if task_info_regex.is_match(&msg) {
-            let caps = task_info_regex.captures(&msg).unwrap();
+
+    pub static ref LIMIT_REGEX: Regex = Regex::new(r"\s\d+").unwrap();
+
+    pub static ref LOG_ERROR_DEBUG_REGEX: Regex = Regex::new(
+            format!(
+                "tasks (logs|errors|debug)(?: ([0-9]+))?(?: {})?(?:\\s|$)",
+                SUB_UNSUB
+            )
+                .as_str(),
+        ).unwrap();
+
+}
+
+
+pub fn handle_tasks_count_list_history(user_hash: u64, msg: &str, msg_for_query: &str, db: &sled::Db) -> anyhow::Result<()>  {
+
+        if TASK_INFO_REGEX.is_match(&msg) {
+            let caps = TASK_INFO_REGEX.captures(&msg).unwrap();
             let mut filter: Vec<(String, String)> = Vec::new();
             let k = caps.get(1).map(|t| t.as_str());
             filter.push((
@@ -39,7 +66,7 @@ pub fn handle_tasks_count_list_history(user_hash: u64, msg: &str, msg_for_query:
             let mut filter_list: Vec<Vec<(String, String)>> = Vec::new();
             filter_list.push(filter);
 
-            filter_list = add_filter(filter_list,caps.get(2),LIST_TASK_STATES.to_vec(),"state",("",""));
+            filter_list = add_filter(filter_list,msg.to_string(),LIST_TASK_STATES.to_vec(),"state",("",""));
 
 
             let order_by = match k {
@@ -47,10 +74,10 @@ pub fn handle_tasks_count_list_history(user_hash: u64, msg: &str, msg_for_query:
                 _ => "index".to_string(),
             };
 
-            let limit = match caps.get(3) {
-                Some(t) => t.as_str().parse::<usize>().unwrap(),
-                None => 1,
-            };
+            let limit = if LIMIT_REGEX.is_match(&msg) {LIMIT_REGEX.captures(&msg).unwrap().get(0).map(|x| {
+                &x.as_str()[1..]
+            }).unwrap_or("1").parse::<usize>().unwrap_or(1usize)}else{1usize};
+
             let subscribe = caps
                 .get(4)
                 .map(|x| x.as_str() == "subscribe")
@@ -62,7 +89,7 @@ pub fn handle_tasks_count_list_history(user_hash: u64, msg: &str, msg_for_query:
 
             let request: UserQuery = UserQuery{ query_part: QueryPart::EntriesQueryPart(EntriesQueryPart{
                 message: msg_for_query.to_string(),
-                fields: vec!["summary".to_string()],
+                display: "default".to_string(),
                 indices: vec!["task_meta_data".to_string()],
                 filter: filter_list,
                 order_by,
@@ -81,21 +108,14 @@ pub fn handle_tasks_count_list_history(user_hash: u64, msg: &str, msg_for_query:
 }
 
 pub fn handle_tasks_logs_errors_debug(user_hash: u64, msg: &str, msg_for_query: &str, db: &sled::Db) -> anyhow::Result<()>  {
-        let log_error_debug_regex = Regex::new(
-            format!(
-                "tasks (logs|errors|debug)(?: ([0-9]+))?(?: {})?(?:\\s|$)",
-                SUB_UNSUB
-            )
-                .as_str(),
-        ).unwrap();
-
-        if log_error_debug_regex.is_match(msg) {
-            let caps = log_error_debug_regex.captures(msg).unwrap();
+        if LOG_ERROR_DEBUG_REGEX.is_match(msg) {
+            let caps = LOG_ERROR_DEBUG_REGEX.captures(msg).unwrap();
             let k = caps.get(1).map(|t| t.as_str()).unwrap();
-            let limit = match caps.get(2) {
-                Some(t) => t.as_str().parse::<usize>().unwrap(),
-                None => 1,
-            };
+
+            let limit = if LIMIT_REGEX.is_match(&msg) {LIMIT_REGEX.captures(&msg).unwrap().get(0).map(|x| {
+                &x.as_str()[1..]
+            }).unwrap_or("1").parse::<usize>().unwrap_or(1usize)}else{1usize};
+
             let subscribe = caps
                 .get(3)
                 .map(|x| x.as_str() == "subscribe")
@@ -108,15 +128,15 @@ pub fn handle_tasks_logs_errors_debug(user_hash: u64, msg: &str, msg_for_query: 
             let mut filter: Vec<(String, String)> = Vec::new();
             let fields = match k {
                 "logs" | "errors" => {
-                    vec!["summary".to_string()]
+                    "default".to_string()
                 }
                 "debug" | _ => {
-                    vec!["key".to_string(), "value".to_string()]
+                    "default".to_string()
                 }
             };
             let request: UserQuery = UserQuery{ query_part: QueryPart::EntriesQueryPart(EntriesQueryPart{
                 message: msg_for_query.to_string(),
-                fields,
+                display: fields,
                 indices: vec![format!("task_meta_data_{}",k)],
                 filter: vec![filter],
                 order_by: "timestamp".to_string(),
@@ -157,19 +177,12 @@ pub fn handle_subscribe_unsubscribe(user_hash: u64, msg: &str, msg_for_query: &s
 
 
 pub fn handle_gov_prpsl(user_hash: u64, msg: &str, msg_for_query: &str, db: &sled::Db) -> anyhow::Result<()> {
-    let lookup_proposals_regex = Regex::new(format!("gov prpsl({})?(?: id([0-9]+))?({})?({})?({})?(?: ([0-9]+))?(?: {})?(?:\\s|$)",
-                                                    format!("[{}]+",LIST_BLOCKCHAINS.map(|x| " ".to_string()+x).join("|")),
-                                                    format!("[{}]+",LIST_PROPOSAL_STATUS.map(|x| " ".to_string()+x).join("|")),
-                                                    format!("[{}]+",LIST_PROPOSAL_TYPE.map(|x| " ".to_string()+x).join("|")),
-                                                    format!("[{}]+",LIST_PROPOSAL_TIME.map(|x| " ".to_string()+x).join("|")),
-                                                    SUB_UNSUB).as_str()).unwrap();
-
-    if lookup_proposals_regex.is_match(&msg) {
-        let caps = lookup_proposals_regex.captures(&msg).unwrap();
+    if LOOKUP_PROPOSALS_REGEX.is_match(&msg) {
+        let caps = LOOKUP_PROPOSALS_REGEX.captures(&msg).unwrap();
         let mut filter: Vec<(String, String)> = Vec::new();
         filter.push((
             "proposal_id".to_string(),
-            caps.get(2)
+            caps.get(3)
                 .map(|t| format!("{}", t.as_str()))
                 .unwrap_or("any".to_string()),
         ));/*
@@ -181,11 +194,11 @@ pub fn handle_gov_prpsl(user_hash: u64, msg: &str, msg_for_query: &str, db: &sle
         let mut filter_list: Vec<Vec<(String, String)>> = Vec::new();
         filter_list.push(filter);
 
-        filter_list= add_filter(filter_list,caps.get(1),LIST_BLOCKCHAINS.to_vec(),"proposal_blockchain",("",""));
+        filter_list= add_filter(filter_list,msg.to_string(),LIST_BLOCKCHAINS.to_vec(),"proposal_blockchain",("",""));
 
-        filter_list= add_filter(filter_list,caps.get(0),LIST_PROPOSAL_STATUS.to_vec(),"proposal_status",("Status",""));
+        filter_list= add_filter(filter_list,msg.to_string(),LIST_PROPOSAL_STATUS.to_vec(),"proposal_status",("Status",""));
 
-        filter_list= add_filter(filter_list,caps.get(0),LIST_PROPOSAL_TYPE.to_vec(),"proposal_type",("","Proposal"));
+        filter_list= add_filter(filter_list,msg.to_string(),LIST_PROPOSAL_TYPE.to_vec(),"proposal_type",("","Proposal"));
 
 
         let order_by =
@@ -202,13 +215,12 @@ pub fn handle_gov_prpsl(user_hash: u64, msg: &str, msg_for_query: &str, db: &sle
                 .unwrap_or("proposal_id".to_string())
                 .to_owned()
                 .to_lowercase();
-        let limit = caps
-            .get(6)
-            .map(|x| x.as_str())
-            .unwrap_or("1")
-            .to_owned()
-            .parse::<usize>()
-            .unwrap();
+
+
+        let limit = if LIMIT_REGEX.is_match(&msg) {LIMIT_REGEX.captures(&msg).unwrap().get(0).map(|x| {
+            &x.as_str()[1..]
+        }).unwrap_or("1").parse::<usize>().unwrap_or(1usize)}else{1usize};
+
         let subscribe = caps
             .get(0)
             .map(|x| x.as_str().contains("subscribe") && !x.as_str().contains("unsubscribe") )
@@ -220,7 +232,7 @@ pub fn handle_gov_prpsl(user_hash: u64, msg: &str, msg_for_query: &str, db: &sle
 
         let request: UserQuery = UserQuery{ query_part: QueryPart::EntriesQueryPart(EntriesQueryPart{
             message: msg_for_query.to_string(),
-            fields: vec!["summary".to_string()],
+            display: if msg.to_string().contains("gov prpsl status"){"status"}else if msg.to_string().contains("gov prpsl summary"){"summary"}else if msg.to_string().contains("gov prpsl content"){"content"}else {"default"}.to_string(),
             indices: vec!["proposal_id".to_string()],
             filter: filter_list,
             order_by,
@@ -230,6 +242,7 @@ pub fn handle_gov_prpsl(user_hash: u64, msg: &str, msg_for_query: &str, db: &sle
             unsubscribe: Some(unsubscribe),
             user_hash: Some(user_hash)
         } };
+        println!("{:?}",&request);
 
         let response = client_send_query_request(QUERY_SOCKET,request).unwrap();
         notify_sled_db(db, response);
@@ -238,47 +251,41 @@ pub fn handle_gov_prpsl(user_hash: u64, msg: &str, msg_for_query: &str, db: &sle
     Err(anyhow::anyhow!("Error: Unknown Command!"))
 }
 
-fn add_filter(filter_list: Vec<Vec<(String, String)>>, regex_match: Option<Match>, list: Vec<&str>, name: &str, format_str: (&str,&str)) -> Vec<Vec<(String, String)>> {
+fn add_filter(filter_list: Vec<Vec<(String, String)>>, text: String, list: Vec<&str>, name: &str, format_str: (&str,&str)) -> Vec<Vec<(String, String)>> {
     let mut new_filter_list: Vec<Vec<(String, String)>> = Vec::new();
-    match regex_match {
-        Some(t) => {
-            let text = t.as_str().to_string();
-            for item in list {
-                if text.contains(item) {
-                    let mut filter_list_copy = filter_list.clone();
-                    if filter_list_copy.is_empty() {
-                        let mut filter: Vec<(String, String)> = Vec::new();
-                        filter.push((
-                            name.to_string(),
-                            format!("{}{}{}",
-                                    format_str.0,
-                                    item.to_upper_camel_case(),
-                                    format_str.1,
-                            )
-                        ));
-                        new_filter_list.push(filter);
-                    }else {
-                        for i in 0..filter_list_copy.len() {
-                            filter_list_copy[i].push((
-                                name.to_string(),
-                                format!("{}{}{}",
-                                        format_str.0,
-                                        item.to_upper_camel_case(),
-                                        format_str.1,
-                                )
-                            ));
-                        }
-                    }
-                    new_filter_list.append(&mut filter_list_copy);
+
+    for item in list {
+        if text.contains(item) {
+            let mut filter_list_copy = filter_list.clone();
+            if filter_list_copy.is_empty() {
+                let mut filter: Vec<(String, String)> = Vec::new();
+                filter.push((
+                    name.to_string(),
+                    format!("{}{}{}",
+                            format_str.0,
+                            item.to_upper_camel_case(),
+                            format_str.1,
+                    )
+                ));
+                new_filter_list.push(filter);
+            }else {
+                for i in 0..filter_list_copy.len() {
+                    filter_list_copy[i].push((
+                        name.to_string(),
+                        format!("{}{}{}",
+                                format_str.0,
+                                item.to_upper_camel_case(),
+                                format_str.1,
+                        )
+                    ));
                 }
             }
-            if !new_filter_list.is_empty() {
-                return new_filter_list;
-            }
-        },
-        None => {
+            new_filter_list.append(&mut filter_list_copy);
         }
-    };
+    }
+    if !new_filter_list.is_empty() {
+        return new_filter_list;
+    }
 
     let mut filter_list_copy = filter_list.clone();
     for i in 0..filter_list_copy.len() {

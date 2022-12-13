@@ -13,13 +13,14 @@ pub fn handle_start(user_hash: u64, msg: &str, db: &sled::Db) -> anyhow::Result<
             CosmosRustServerValue::Notify(Notify {
                 timestamp: Utc::now().timestamp(),
                 msg: vec![
-                    r#"🤖💬 Welcome! Save time and hassle with automatic notifications and on-chain data lookup. Ready to receive transmisions from the Cosmos? 🛰️ "#
+                    r#"🤖💬 Welcome! Save time and hassle with automatic notifications and on-chain data lookup. Ready to receive transmisions from the Cosmos? 🛰️"#
                         .to_string(),
                 ],
-                buttons: vec![
+                buttons: vec![vec![
+                    // (Daily) Cosmos Governance Briefing (CGB)
                     vec![("Setup Notifications".to_string(),"/help_subscriptions".to_string())],
                     vec![("Lookup Governance Proposals".to_string(),"/help_governance_proposals".to_string())],
-                    vec![("About".to_string(),"/about".to_string())]],
+                    vec![("About".to_string(),"/about".to_string())]]],
                 user_hash,
             }),
         );
@@ -41,7 +42,7 @@ pub fn handle_about(user_hash: u64, msg: &str, db: &sled::Db) -> anyhow::Result<
 This is an early beta version, so please keep in mind that certain features may not be available. Check out our GitHub repository for more information and to see our roadmap. Thank you for using cosmos-rust-telegram-bot!
 "#.to_string(),
                 ],
-                buttons: vec![vec![("GITHUB".to_string(),"".to_string())]],
+                buttons: vec![vec![vec![("GitHub".to_string(),"https://github.com/Philipp-Sc/cosmos-rust-bot".to_string())]]],
                 user_hash,
             }),
         );
@@ -106,10 +107,10 @@ pub fn handle_help_governance_proposals(user_hash: u64, msg: &str, db: &sled::Db
 Use the /gov_prpsl command to lookup governance proposals on a specified blockchain network. Refer to the man page for detailed instructions, or use one of the three shortcuts to quickly find what you're looking for.
 "#.to_string(),
                 ],
-                buttons: vec![vec![("/latest_proposals".to_string(),"/latest_proposals".to_string())],
+                buttons: vec![vec![vec![("/latest_proposals".to_string(),"/latest_proposals".to_string())],
                               vec![("/proposals_by_status".to_string(),"/proposals_by_status".to_string())],
                               vec![("/proposal_by_id".to_string(),"/proposal_by_id".to_string())],
-                              vec![("man page".to_string(),"/governance_proposals".to_string())]],
+                              vec![("man page".to_string(),"/governance_proposals".to_string())]]],
                 user_hash,
             }),
         );
@@ -192,10 +193,10 @@ pub fn handle_help_subscriptions(user_hash: u64, msg: &str, db: &sled::Db) -> an
                 msg: vec![
                     r#"🤖💬 Manage Subscriptions"#.to_string(),
                 ],
-                buttons: vec![vec![("Get started".to_string(),"/gov_prpsl_subs".to_string())],
+                buttons: vec![vec![vec![("Get started".to_string(),"/gov_prpsl_subs".to_string())],
                               vec![("My Subscriptions".to_string(),"/subscriptions".to_string())],
                               vec![("Unsubscribe All".to_string(),"/unsubscribe_all".to_string())]
-                              ],
+                              ]],
                 user_hash,
             }),
         );
@@ -257,7 +258,7 @@ Note that you can also use this command to lookup proposals on the following blo
 For more information, refer to the man page."#
                         .to_string(),
                 ],
-                buttons: vec![vec![("man page".to_string(),"/governance_proposals".to_string())]],
+                buttons: vec![vec![vec![("man page".to_string(),"/governance_proposals".to_string())]]],
                 user_hash,
             }),
         );
@@ -284,7 +285,7 @@ To lookup the latest proposals on both the Juno and Osmosis networks, use the fo
 For more information and detailed instructions, refer to the man page."#
                         .to_string(),
                 ],
-                buttons: vec![vec![("man page".to_string(),"/governance_proposals".to_string())]],
+                buttons: vec![vec![vec![("man page".to_string(),"/governance_proposals".to_string())]]],
                 user_hash,
             }),
         );
@@ -319,7 +320,7 @@ For more information and detailed instructions, refer to the man page.
 "#
                         .to_string(),
                 ],
-                buttons: vec![vec![("man page".to_string(),"/governance_proposals".to_string())]],
+                buttons: vec![vec![vec![("man page".to_string(),"/governance_proposals".to_string())]]],
                 user_hash,
             }),
         );
@@ -337,13 +338,13 @@ pub fn handle_common_subs(user_hash: u64, msg: &str, db: &sled::Db)  -> anyhow::
                 msg: vec![
                     "🤖💬 Just want to stay updated? Then select one of the pre-defined commands, to define more restrictive subscriptions checkout the man page.".to_string(),
                 ],
-                buttons: vec![
+                buttons: vec![vec![
                     vec![("/gov_prpsl_osmosis_subscribe".to_string(),"/gov_prpsl_osmosis_subscribe".to_string())],
                     vec![("/gov_prpsl_terra2_subscribe".to_string(),"/gov_prpsl_terra2_subscribe".to_string())],
                     vec![("/gov_prpsl_juno_subscribe".to_string(),"/gov_prpsl_juno_subscribe".to_string())],
                     vec![("/gov_prpsl_cosmos_hub_subscribe".to_string(),"/gov_prpsl_cosmos_hub_subscribe".to_string())],
                     vec![("man page".to_string(),"/governance_proposals".to_string())],
-                ],
+                ]],
                 user_hash,
             }),
         );
@@ -360,11 +361,10 @@ pub fn handle_unknown_command(user_hash: u64, db: &sled::Db) -> anyhow::Result<(
             CosmosRustServerValue::Notify(Notify {
                 timestamp: Utc::now().timestamp(),
                 msg: vec![
-                    r#"Unknown command.
-Type /help to see all the commands."#
+                    r#"Unknown command."#
                         .to_string(),
                 ],
-                buttons: vec![vec![("help".to_string(),"/help".to_string())]],
+                buttons: vec![vec![vec![("Help".to_string(),"/start".to_string())]]],
                 user_hash,
             }),
         );

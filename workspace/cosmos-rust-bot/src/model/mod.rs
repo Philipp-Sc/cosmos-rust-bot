@@ -1,10 +1,3 @@
-// includes functions from action/mod.rs
-
-// one list of only joinhandles/keys
-// each task gets access to an ARC/Mutex list to place their results
-// this way joinhandles can save the results themself.
-// https://aeshirey.github.io/code/2020/12/23/arc-mutex-in-rust.html
-
 pub mod requirements;
 
 use requirements::{get_requirements, Feature, TaskSpec, TaskType, UserSettings};
@@ -92,14 +85,16 @@ pub fn task_meta_data(task_list: Vec<TaskItem>) -> Vec<CosmosRustBotValue> {
             }
         };
 
-        CosmosRustBotValue::Entry(Entry::MetaData(MetaData {
-            index: i as i32,
+        CosmosRustBotValue::Entry(Entry::Value(Value {
             timestamp: now,
             origin: "task_meta_data".to_string(),
-            kind: v.0.to_owned(),
-            state: state.to_owned(),
-            value: value.to_owned(),
-            summary: info.to_owned(),
+            custom_data: CustomData::MetaData(MetaData{
+                index: i as i32,
+                kind: v.0.to_owned(),
+                state: state.to_owned(),
+                value: value.to_owned(),
+                summary: info.to_owned(),
+            })
         }))
     }).collect::<Vec<CosmosRustBotValue>>();
 

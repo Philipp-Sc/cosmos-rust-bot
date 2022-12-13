@@ -59,22 +59,24 @@ async fn main() {
                                         Utc::now(),
                                         id
                                     );
-                                    for msg in notify.msg {
+                                    for i in 0..notify.msg.len() {
 
                                         // Create the inline keyboard with the desired buttons
                                         let mut buttons: Vec<Vec<InlineKeyboardButton>> = Vec::new();
-                                        for row in &notify.buttons {
-                                            buttons.push(row.iter().map(|b| {
-                                                if b.0 == "GITHUB" {
-                                                    InlineKeyboardButton::new("GitHub".to_string(), InlineKeyboardButtonKind::Url("https://github.com/Philipp-Sc/cosmos-rust-bot".parse().unwrap()))
-                                                }else {
-                                                    InlineKeyboardButton::new(b.0.to_owned(), InlineKeyboardButtonKind::CallbackData(b.1.to_owned()))
-                                                }
-                                            }).collect());
+                                        if i < notify.buttons.len() {
+                                            for row in &notify.buttons[i] {
+                                                buttons.push(row.iter().map(|b| {
+                                                    if b.1.starts_with("https://") {
+                                                        InlineKeyboardButton::new(b.0.to_owned(), InlineKeyboardButtonKind::Url(b.1.to_owned().parse().unwrap()))
+                                                    } else {
+                                                        InlineKeyboardButton::new(b.0.to_owned(), InlineKeyboardButtonKind::CallbackData(b.1.to_owned()))
+                                                    }
+                                                }).collect());
+                                            }
                                         }
                                         let keyboard = InlineKeyboardMarkup::new(buttons);
 
-                                        bot_clone.send_message(ChatId(id), msg)
+                                        bot_clone.send_message(ChatId(id), &notify.msg[i])
                                             .disable_web_page_preview(true)
                                             .reply_markup(keyboard)
                                             .send().await.ok();
