@@ -38,6 +38,7 @@ use cosmos_rust_interface::blockchain::cosmos::chain_registry::get_supported_blo
 use cosmos_rust_interface::utils::entry::db::{RetrievalMethod, TaskMemoryStore};
 use log::{debug, info, trace};
 use cosmos_rust_interface::services::fraud_detection::fraud_detection;
+use cosmos_rust_interface::services::gpt3::gpt3;
 
 #[derive(strum_macros::Display, Debug, EnumIter, PartialEq, serde::Serialize)]
 pub enum TaskState {
@@ -290,6 +291,10 @@ async fn spawn_tasks(
 
             TaskType::FraudDetection => {
                 f = Some(Box::pin(fraud_detection(task_store.clone(),req.name.clone())));
+            }
+
+            TaskType::GPT3 => {
+                f = Some(Box::pin(gpt3(task_store.clone(),req.name.clone())));
             }
 
             TaskType::ChainRegistry => {

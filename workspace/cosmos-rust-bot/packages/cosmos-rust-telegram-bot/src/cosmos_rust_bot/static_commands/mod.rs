@@ -12,15 +12,16 @@ pub fn handle_start(user_hash: u64, msg: &str, db: &sled::Db) -> anyhow::Result<
             db,
             CosmosRustServerValue::Notify(Notify {
                 timestamp: Utc::now().timestamp(),
-                msg: vec![
-                    r#"🤖💬 Welcome! Save time and hassle with automatic notifications and on-chain data lookup. Ready to receive transmisions from the Cosmos? 🛰️"#
+                msg: vec![ // 🤖💬 Welcome! Save time and hassle with automatic notifications and on-chain data lookup.
+                    r#"Ready to receive transmisions from the Cosmos? 🛰️"#
                         .to_string(),
                 ],
                 buttons: vec![vec![
                     // (Daily) Cosmos Governance Briefing (CGB)
-                    vec![("Setup Notifications".to_string(),"/help_subscriptions".to_string())],
-                    vec![("Lookup Governance Proposals".to_string(),"/help_governance_proposals".to_string())],
-                    vec![("About".to_string(),"/about".to_string())]]],
+                    vec![("🔔 Get Updates".to_string(),"/get_updates".to_string())],
+                  /*  vec![("🔔 List Subscriptions".to_string(),"/subscriptions".to_string()),("❌ Unsubscribe All".to_string(),"/unsubscribe_all".to_string())], */
+                  /*  vec![("🔍 Search".to_string(),"/search".to_string())], */
+                    vec![("❔ Info".to_string(),"/about".to_string())]]],
                 user_hash,
             }),
         );
@@ -37,9 +38,7 @@ pub fn handle_about(user_hash: u64, msg: &str, db: &sled::Db) -> anyhow::Result<
             CosmosRustServerValue::Notify(Notify {
                 timestamp: Utc::now().timestamp(),
                 msg: vec![
-                    r#"Cosmos-Rust-Bot - a Rust bot for the Cosmos Ecosystem.
-
-This is an early beta version, so please keep in mind that certain features may not be available. Check out our GitHub repository for more information and to see our roadmap. Thank you for using cosmos-rust-telegram-bot!
+                    r#"This is an early beta version, so please keep in mind that certain features may not be available. Check out our GitHub repository for more information and to see our roadmap. Thank you!
 "#.to_string(),
                 ],
                 buttons: vec![vec![vec![("GitHub".to_string(),"https://github.com/Philipp-Sc/cosmos-rust-bot".to_string())]]],
@@ -96,13 +95,13 @@ e.g. 1,2,..
     Err(anyhow::anyhow!("Error: Unknown Command!"))
 }
 pub fn handle_help_governance_proposals(user_hash: u64, msg: &str, db: &sled::Db)  -> anyhow::Result<()> {
-    if msg == "help governance proposals".to_string() {
+    if msg == "search".to_string() {
         notify_sled_db(
             db,
             CosmosRustServerValue::Notify(Notify {
                 timestamp: Utc::now().timestamp(),
                 msg: vec![
-                    r#"🤖💬 Lookup Governance Proposals
+                    r#"Lookup Governance Proposals
 
 Use the /gov_prpsl command to lookup governance proposals on a specified blockchain network. Refer to the man page for detailed instructions, or use one of the three shortcuts to quickly find what you're looking for.
 "#.to_string(),
@@ -184,26 +183,6 @@ EXAMPLES
     }
     Err(anyhow::anyhow!("Error: Unknown Command!"))
 }
-pub fn handle_help_subscriptions(user_hash: u64, msg: &str, db: &sled::Db) -> anyhow::Result<()>  {
-    if msg == "help subscriptions" {
-        notify_sled_db(
-            db,
-            CosmosRustServerValue::Notify(Notify {
-                timestamp: Utc::now().timestamp(),
-                msg: vec![
-                    r#"🤖💬 Manage Subscriptions"#.to_string(),
-                ],
-                buttons: vec![vec![vec![("Get started".to_string(),"/gov_prpsl_subs".to_string())],
-                              vec![("My Subscriptions".to_string(),"/subscriptions".to_string())],
-                              vec![("Unsubscribe All".to_string(),"/unsubscribe_all".to_string())]
-                              ]],
-                user_hash,
-            }),
-        );
-        return Ok(());
-    }
-    Err(anyhow::anyhow!("Error: Unknown Command!"))
-}
 pub fn handle_tasks(user_hash: u64, msg: &str, db: &sled::Db)  -> anyhow::Result<()> {
     if msg == "tasks" {
         notify_sled_db(
@@ -243,7 +222,7 @@ pub fn handle_proposal_by_id(user_hash: u64, msg: &str, db: &sled::Db)  -> anyho
             CosmosRustServerValue::Notify(Notify {
                 timestamp: Utc::now().timestamp(),
                 msg: vec![
-                    r#"🤖💬 Get proposal by id:
+                    r#"Get proposal by id:
 
 To lookup a proposal with ID "1" on the Cosmos-Hub blockchain, use the following command:
 
@@ -273,7 +252,7 @@ pub fn handle_latest_proposals(user_hash: u64, msg: &str, db: &sled::Db) -> anyh
             CosmosRustServerValue::Notify(Notify {
                 timestamp: Utc::now().timestamp(),
                 msg: vec![
-                    r#"🤖💬 Get the latest proposals:
+                    r#"Get the latest proposals:
 To lookup the latest 3 proposals on the Terra2 network, use the following command:
 
 /gov_prpsl_terra2_latest_3
@@ -302,7 +281,7 @@ pub fn handle_proposals_by_status(user_hash: u64, msg: &str, db: &sled::Db)  -> 
             CosmosRustServerValue::Notify(Notify {
                 timestamp: Utc::now().timestamp(),
                 msg: vec![
-                    r#"🤖💬 Get proposals by status:
+                    r#"Get proposals by status:
 
 To lookup the latest 3 proposals in the "deposit period" on the Terra2 network, use the following command:
 
@@ -330,21 +309,46 @@ For more information and detailed instructions, refer to the man page.
 }
 
 pub fn handle_common_subs(user_hash: u64, msg: &str, db: &sled::Db)  -> anyhow::Result<()> {
-    if msg == "gov prpsl subs" {
+    if msg == "get updates" {
         notify_sled_db(
             db,
             CosmosRustServerValue::Notify(Notify {
                 timestamp: Utc::now().timestamp(),
                 msg: vec![
-                    "🤖💬 Just want to stay updated? Then select one of the pre-defined commands, to define more restrictive subscriptions checkout the man page.".to_string(),
+                    "🔔 You can receive updates for the following:\n\n- Proposal enters deposit period (💰)\n\n- Proposal enters voting period (🗳)\n\n- Proposal outcome (🟢 passed, 🔴 rejected, ❌ failed)".to_string(),
+                    "🌐 Osmosis".to_string(),
+                    "🌐 Terra2".to_string(),
+                    "🌐 Juno".to_string(),
+                    "🌐 Cosmos Hub".to_string(),
                 ],
-                buttons: vec![vec![
-                    vec![("/gov_prpsl_osmosis_subscribe".to_string(),"/gov_prpsl_osmosis_subscribe".to_string())],
-                    vec![("/gov_prpsl_terra2_subscribe".to_string(),"/gov_prpsl_terra2_subscribe".to_string())],
-                    vec![("/gov_prpsl_juno_subscribe".to_string(),"/gov_prpsl_juno_subscribe".to_string())],
-                    vec![("/gov_prpsl_cosmos_hub_subscribe".to_string(),"/gov_prpsl_cosmos_hub_subscribe".to_string())],
-                    vec![("man page".to_string(),"/governance_proposals".to_string())],
-                ]],
+
+                buttons: vec![
+                    vec![],
+                    vec![
+                        vec![
+                            ("💰".to_string(),"/gov_prpsl_osmosis_deposit_period_subscribe".to_string()),
+                            ("🗳".to_string(),"/gov_prpsl_osmosis_voting_period_subscribe".to_string()),
+                            ("🟢 🔴 ❌".to_string(),"/gov_prpsl_osmosis_passed_rejected_failed_subscribe".to_string())
+                        ]],
+                    vec![
+                        vec![
+                            ("💰".to_string(),"/gov_prpsl_terra2_deposit_period_subscribe".to_string()),
+                            ("🗳".to_string(),"/gov_prpsl_terra2_voting_period_subscribe".to_string()),
+                            ("🟢 🔴 ❌".to_string(),"/gov_prpsl_terra2_passed_rejected_failed_subscribe".to_string())
+                        ]],
+                    vec![
+                        vec![
+                            ("💰".to_string(),"/gov_prpsl_juno_deposit_period_subscribe".to_string()),
+                            ("🗳".to_string(),"/gov_prpsl_juno_voting_period_subscribe".to_string()),
+                            ("🟢 🔴 ❌".to_string(),"/gov_prpsl_juno_passed_rejected_failed_subscribe".to_string())
+                        ]],
+                    vec![
+                        vec![
+                            ("💰".to_string(),"/gov_prpsl_cosmos_hub_deposit_period_subscribe".to_string()),
+                            ("🗳".to_string(),"/gov_prpsl_cosmos_hub_voting_period_subscribe".to_string()),
+                            ("🟢 ❌ 🔴".to_string(),"/gov_prpsl_cosmos_hub_passed_rejected_failed_subscribe".to_string())
+                        ]],
+                ],
                 user_hash,
             }),
         );

@@ -24,3 +24,6 @@
 	update = rebase
 [submodule "rust-bert-fraud-detectiontest"]
 	update = rebase
+[submodule "workspace/rust-openai-gpt-tools"]
+	path = workspace/rust-openai-gpt-tools
+	url = https://github.com/Philipp-Sc/rust-openai-gpt-tools.git

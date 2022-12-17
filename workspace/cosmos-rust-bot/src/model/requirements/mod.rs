@@ -19,6 +19,7 @@ const MINUTES_10: i32 = 60 * 10;
 pub enum TaskType {
     ChainRegistry,
     FraudDetection,
+    GPT3,
     GovernanceProposals,
     None,
 }
@@ -119,8 +120,24 @@ pub fn feature_list_to_file() -> anyhow::Result<()> {
         requirements: fraud_detection,
     });
 
+    let mut gpt3: Vec<TaskSpec> = Vec::new();
+    let task = TaskSpec {
+        kind: TaskType::GPT3,
+        name: format!("gpt3"),
+        args: json!({
+            // here should be the socket path
+                }),
+        refresh_rate: 10,
+    };
+    gpt3.push(task);
+
+    feature_list.push(Feature {
+        name: "gpt3".to_string(),
+        requirements: gpt3,
+    });
+
     let line = format!("{}", serde_json::to_string(&feature_list).unwrap());
-    fs::write(TASKS_PATH, &line).ok();
+    fs::write(TASKS_PATH, &line).unwrap();
     Ok(())
 }
 
@@ -131,6 +148,7 @@ fn feature_name_list(user_settings: &UserSettings) -> Vec<String> {
     }
     args.push("chain_registry".to_string());
     args.push("fraud_detection".to_string());
+    args.push("gpt3".to_string());
     args
 }
 

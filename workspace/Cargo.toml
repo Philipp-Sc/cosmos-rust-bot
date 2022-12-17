@@ -9,6 +9,8 @@ members = [
 exclude = [
     "./rust-bert-fraud-detection/socket_ipc",
     "./rust-bert-fraud-detection/package",
+    "./rust-openai-gpt-tools/socket_ipc",
+    "./rust-openai-gpt-tools/package",
 ]
 
 resolver = "2"
@@ -22,6 +24,7 @@ cosmos-sdk-proto = { path = "./cosmos-rust-development/cosmos-sdk-proto" }
 osmosis-proto = { path = "./cosmos-rust-development/osmosis-proto" }
 
 rust-bert-fraud-detection-socket-ipc = { path = "./rust-bert-fraud-detection/socket_ipc" }
+rust-openai-gpt-tools-socket-ipc = { path = "./rust-openai-gpt-tools/socket_ipc" }
 
 chrono = "^0.4"
 tokio = { version = "1.21.1" }
