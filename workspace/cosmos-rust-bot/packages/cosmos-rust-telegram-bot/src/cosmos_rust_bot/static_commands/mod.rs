@@ -38,7 +38,16 @@ pub fn handle_about(user_hash: u64, msg: &str, db: &sled::Db) -> anyhow::Result<
             CosmosRustServerValue::Notify(Notify {
                 timestamp: Utc::now().timestamp(),
                 msg: vec![
-                    r#"This is an early beta version, so please keep in mind that certain features may not be available. Check out our GitHub repository for more information and to see our roadmap. Thank you!
+r#"
+Welcome to @cosmos_governance_briefings_bot! I am an independent developer with expertise in blockchain technology and governance, and I am dedicated to improving participation in the Cosmos ecosystem. My bot provides alerts and analysis on governance proposals, making it easier for users to navigate the process and stay informed about the proposals that are being considered.
+
+One of the unique features of my bot is the integrated fraud detection feature, which helps users identify potential scams or malicious proposals. This is particularly important in the cryptocurrency space, where scams and fraud can be a significant issue. I also use open source technology and AI to generate brief explanations of key aspects of governance proposals, helping users better understand complex technical language and make informed voting decisions. This is particularly useful for users who may be intimidated by the technical language or unfamiliar with the governance process, as it provides a more accessible and user-friendly way to participate.
+
+In addition to providing notifications and analysis, the bot also allows users to easily access and review proposals, staying up-to-date on the latest governance developments in the Cosmos ecosystem. This can be particularly helpful for users who may not have the time or resources to keep track of all the proposals on their own.
+
+I believe that my governance notification bot can be a valuable tool for improving governance participation in the Cosmos ecosystem. By providing clear and concise information about proposals, I can help users make more informed decisions about how to contribute to the governance process. I am committed to maintaining the bot and ensuring its ongoing reliability and effectiveness.
+
+Thank you for choosing @cosmos_governance_briefings_bot as your go-to resource for governance notifications and analysis in the Cosmos ecosystem! I welcome any feedback or suggestions for improvement.
 "#.to_string(),
                 ],
                 buttons: vec![vec![vec![("GitHub".to_string(),"https://github.com/Philipp-Sc/cosmos-rust-bot".to_string())]]],

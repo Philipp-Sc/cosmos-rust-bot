@@ -49,6 +49,9 @@ lazy_static!{
                 .as_str(),
         ).unwrap();
 
+
+    pub static ref BRIEFING_REGEX: Regex = Regex::new(r"(briefing\d+)").unwrap();
+
 }
 
 
@@ -232,7 +235,7 @@ pub fn handle_gov_prpsl(user_hash: u64, msg: &str, msg_for_query: &str, db: &sle
 
         let request: UserQuery = UserQuery{ query_part: QueryPart::EntriesQueryPart(EntriesQueryPart{
             message: msg_for_query.to_string(),
-            display: if msg.to_string().contains("gov prpsl status"){"status"}else if msg.to_string().contains("gov prpsl summary"){"summary"}else if msg.to_string().contains("gov prpsl content"){"content"}else {"default"}.to_string(),
+            display: if msg.to_string().contains("gov prpsl status"){"status"}else if msg.to_string().contains("gov prpsl briefing"){BRIEFING_REGEX.captures(msg).map(|capture| capture.get(1)).unwrap_or(None).map(|m| m.as_str()).unwrap_or("briefing0")}else if msg.to_string().contains("gov prpsl content"){"content"}else {"default"}.to_string(),
             indices: vec!["proposal_id".to_string()],
             filter: filter_list,
             order_by,
