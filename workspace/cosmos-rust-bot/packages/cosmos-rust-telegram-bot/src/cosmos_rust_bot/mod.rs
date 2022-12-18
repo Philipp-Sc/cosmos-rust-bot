@@ -10,14 +10,14 @@ use commands::*;
 pub async fn handle_message(user_id: u64, message: String, db: &sled::Db) {
 
     let mut msg = String::with_capacity(message.len());
-    message.trim().to_lowercase().replace("/","").replace("_"," ").replace("\n","").split_whitespace().for_each(|w| {
+    message.replace("cosmoshub","cosmos hub").trim().to_lowercase().replace("/","").replace("_"," ").replace("\n","").split_whitespace().for_each(|w| {
         if !msg.is_empty() {
             msg.push(' ');
         }
         msg.push_str(w);
     });
 
-    let msg_for_query = msg.replace(" subscribe","").replace(" unsubscribe","").replace("cosmoshub","cosmos hub");
+    let msg_for_query = msg.replace(" subscribe","").replace(" unsubscribe","");
 
     let user_hash = UserMetaData::user_hash(user_id);
 
