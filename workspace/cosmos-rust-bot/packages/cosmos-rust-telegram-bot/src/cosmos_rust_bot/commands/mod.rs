@@ -198,9 +198,7 @@ pub fn handle_gov_prpsl(user_hash: u64, msg: &str, msg_for_query: &str, db: &sle
         filter_list.push(filter);
 
         filter_list= add_filter(filter_list,msg.to_string(),LIST_BLOCKCHAINS.to_vec(),"proposal_blockchain",("",""));
-
         filter_list= add_filter(filter_list,msg.to_string(),LIST_PROPOSAL_STATUS.to_vec(),"proposal_status",("Status",""));
-
         filter_list= add_filter(filter_list,msg.to_string(),LIST_PROPOSAL_TYPE.to_vec(),"proposal_type",("","Proposal"));
 
 
