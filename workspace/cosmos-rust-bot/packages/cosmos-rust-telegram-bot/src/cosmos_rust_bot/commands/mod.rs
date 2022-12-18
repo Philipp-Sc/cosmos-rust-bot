@@ -16,7 +16,7 @@ const LIST_PROPOSAL_STATUS: [&str;6] = ["nil","passed","failed","rejected","depo
 const LIST_PROPOSAL_TYPE: [&str;8] = ["text","community pool spend","parameter change","software upgrade","client update","update pool incentives","store code","unknown"];
 const LIST_PROPOSAL_TIME: [&str;5] = ["latest","submit","deposit end","voting start","voting end"];
 
-const LIST_GOV_PRPSL_VIEWS: [&str;3] = ["status","summary","content"];
+const LIST_GOV_PRPSL_VIEWS: [&str;4] = ["status","briefing0","briefing1","content"];
 
 const QUERY_SOCKET: &str = "./tmp/cosmos_rust_bot_query_socket";
 
