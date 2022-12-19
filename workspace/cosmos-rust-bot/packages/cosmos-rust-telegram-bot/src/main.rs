@@ -61,25 +61,44 @@ async fn main() {
                                     );
                                     for i in 0..notify.msg.len() {
 
-                                        // Create the inline keyboard with the desired buttons
-                                        let mut buttons: Vec<Vec<InlineKeyboardButton>> = Vec::new();
-                                        if i < notify.buttons.len() {
-                                            for row in &notify.buttons[i] {
-                                                buttons.push(row.iter().map(|b| {
-                                                    if b.1.starts_with("https://") {
-                                                        InlineKeyboardButton::new(b.0.to_owned(), InlineKeyboardButtonKind::Url(b.1.to_owned().parse().unwrap()))
-                                                    } else {
-                                                        InlineKeyboardButton::new(b.0.to_owned(), InlineKeyboardButtonKind::CallbackData(b.1.to_owned()))
+                                        let mut batch: Vec<&str> = Vec::new();
+
+                                        let mut offset = 0;
+                                        let chunk_size = 4000;
+                                        while offset < notify.msg[i].len() {
+                                            let chunk = &notify.msg[i][offset..offset + chunk_size];
+                                            batch.push(chunk);
+                                            offset += chunk_size;
+                                        }
+
+                                        for i in 0..batch.len() {
+                                            if i < batch.len()-1 {
+                                                bot_clone.send_message(ChatId(id), batch[i])
+                                                    .disable_web_page_preview(true)
+                                                    .send().await.ok();
+                                            }else{
+                                                // Create the inline keyboard with the desired buttons
+                                                let mut buttons: Vec<Vec<InlineKeyboardButton>> = Vec::new();
+                                                if i < notify.buttons.len() {
+                                                    for row in &notify.buttons[i] {
+                                                        buttons.push(row.iter().map(|b| {
+                                                            if b.1.starts_with("https://") {
+                                                                InlineKeyboardButton::new(b.0.to_owned(), InlineKeyboardButtonKind::Url(b.1.to_owned().parse().unwrap()))
+                                                            } else {
+                                                                InlineKeyboardButton::new(b.0.to_owned(), InlineKeyboardButtonKind::CallbackData(b.1.to_owned()))
+                                                            }
+                                                        }).collect());
                                                     }
-                                                }).collect());
+                                                }
+                                                let keyboard = InlineKeyboardMarkup::new(buttons);
+
+                                                bot_clone.send_message(ChatId(id), batch[i])
+                                                    .disable_web_page_preview(true)
+                                                    .reply_markup(keyboard)
+                                                    .send().await.ok();
                                             }
                                         }
-                                        let keyboard = InlineKeyboardMarkup::new(buttons);
 
-                                        bot_clone.send_message(ChatId(id), &notify.msg[i])
-                                            .disable_web_page_preview(true)
-                                            .reply_markup(keyboard)
-                                            .send().await.ok();
                                     }
                                     // TODO: remove user if not subscribed and has no pending notifications/notify
                                 }
