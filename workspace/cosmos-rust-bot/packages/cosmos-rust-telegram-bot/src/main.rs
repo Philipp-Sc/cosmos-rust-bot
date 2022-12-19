@@ -66,7 +66,7 @@ async fn main() {
                                         let mut offset = 0;
                                         let chunk_size = 4000;
                                         while offset < notify.msg[i].len() {
-                                            let chunk = &notify.msg[i][offset..offset + chunk_size];
+                                            let chunk = &notify.msg[i][offset..std::cmp::min(offset + chunk_size, notify.msg[i].len())];
                                             batch.push(chunk);
                                             offset += chunk_size;
                                         }
