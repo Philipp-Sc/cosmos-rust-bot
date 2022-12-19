@@ -71,32 +71,33 @@ async fn main() {
                                             offset += chunk_size;
                                         }
 
-                                        for i in 0..batch.len() {
-                                            if i < batch.len()-1 {
-                                                bot_clone.send_message(ChatId(id), batch[i])
-                                                    .disable_web_page_preview(true)
-                                                    .send().await.ok();
-                                            }else{
-                                                // Create the inline keyboard with the desired buttons
-                                                let mut buttons: Vec<Vec<InlineKeyboardButton>> = Vec::new();
-                                                if i < notify.buttons.len() {
-                                                    for row in &notify.buttons[i] {
-                                                        buttons.push(row.iter().map(|b| {
-                                                            if b.1.starts_with("https://") {
-                                                                InlineKeyboardButton::new(b.0.to_owned(), InlineKeyboardButtonKind::Url(b.1.to_owned().parse().unwrap()))
-                                                            } else {
-                                                                InlineKeyboardButton::new(b.0.to_owned(), InlineKeyboardButtonKind::CallbackData(b.1.to_owned()))
-                                                            }
-                                                        }).collect());
-                                                    }
-                                                }
-                                                let keyboard = InlineKeyboardMarkup::new(buttons);
+                                        let batch_pop = batch.pop();
 
-                                                bot_clone.send_message(ChatId(id), batch[i])
-                                                    .disable_web_page_preview(true)
-                                                    .reply_markup(keyboard)
-                                                    .send().await.ok();
+                                        for b in batch {
+                                            bot_clone.send_message(ChatId(id), b)
+                                                .disable_web_page_preview(true)
+                                                .send().await.ok();
+                                        }
+                                        if let Some(last) = batch_pop {
+                                            // Create the inline keyboard with the desired buttons
+                                            let mut buttons: Vec<Vec<InlineKeyboardButton>> = Vec::new();
+                                            if i < notify.buttons.len() {
+                                                for row in &notify.buttons[i] {
+                                                    buttons.push(row.iter().map(|b| {
+                                                        if b.1.starts_with("https://") {
+                                                            InlineKeyboardButton::new(b.0.to_owned(), InlineKeyboardButtonKind::Url(b.1.to_owned().parse().unwrap()))
+                                                        } else {
+                                                            InlineKeyboardButton::new(b.0.to_owned(), InlineKeyboardButtonKind::CallbackData(b.1.to_owned()))
+                                                        }
+                                                    }).collect());
+                                                }
                                             }
+                                            let keyboard = InlineKeyboardMarkup::new(buttons);
+
+                                            bot_clone.send_message(ChatId(id), last)
+                                                .disable_web_page_preview(true)
+                                                .reply_markup(keyboard)
+                                                .send().await.ok();
                                         }
 
                                     }
