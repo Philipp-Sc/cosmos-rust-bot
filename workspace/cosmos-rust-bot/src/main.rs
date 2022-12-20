@@ -33,7 +33,6 @@ use std::hash::{Hash, Hasher};
 use std::{thread, time};
 
 use cosmos_rust_interface::utils::entry::db::load_sled_db;
-use cosmos_rust_interface::utils::entry::db::query::{handle_query_sled_db, query_entries_sled_db, update_subscription};
 use cosmos_rust_interface::utils::entry::db::query::socket::spawn_socket_query_server;
 use cosmos_rust_interface::utils::entry::postproc::blockchain::cosmos::gov::governance_proposal_notifications;
 use cosmos_rust_interface::utils::entry::postproc::meta_data::debug::debug;
@@ -52,6 +51,8 @@ use cosmos_rust_interface::utils::entry::db::*;
 const QUERY_SOCKET: &str = "./tmp/cosmos_rust_bot_query_socket";
 const SETTINGS_PATH: &str = "./tmp/cosmos-rust-bot.json";
 const CRB_SLED_DB: &str = "./tmp/cosmos_rust_bot_sled_db";
+const CRB_SUBSCRIPTION_STORE_SLED_DB: &str = "./tmp/cosmos_rust_bot_subscriptions_sled_db";
+
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -78,11 +79,14 @@ async fn main() -> anyhow::Result<()> {
         .watch(SETTINGS_PATH, RecursiveMode::Recursive)
         .unwrap();
 
-    let tree = load_sled_db(CRB_SLED_DB);
-    spawn_socket_query_server(QUERY_SOCKET,&tree);
+    let entry_index_db = load_sled_db(CRB_SLED_DB);
+    let subscription_db = load_sled_db(CRB_SUBSCRIPTION_STORE_SLED_DB);
 
-    let mut cosmos_rust_bot_store = CosmosRustBotStore::new(&tree);
-    let _thread = cosmos_rust_bot_store.spawn_thread_notify_on_subscription_update();
+    let mut cosmos_rust_bot_store = CosmosRustBotStore::new(entry_index_db,subscription_db);
+
+    spawn_socket_query_server(QUERY_SOCKET,&cosmos_rust_bot_store);
+
+    let _thread = cosmos_rust_bot_store.spawn_notify_on_subscription_update_thread();
 
     loop {
         let req = get_requirements(&user_settings);
