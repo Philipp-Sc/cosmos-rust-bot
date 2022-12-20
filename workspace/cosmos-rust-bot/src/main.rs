@@ -52,6 +52,7 @@ const QUERY_SOCKET: &str = "./tmp/cosmos_rust_bot_query_socket";
 const SETTINGS_PATH: &str = "./tmp/cosmos-rust-bot.json";
 const CRB_SLED_DB: &str = "./tmp/cosmos_rust_bot_sled_db";
 const CRB_SUBSCRIPTION_STORE_SLED_DB: &str = "./tmp/cosmos_rust_bot_subscriptions_sled_db";
+const CRB_SUBSCRIPTION_STORE_JSON: &str = "./tmp/cosmos_rust_bot_subscriptions.json";
 
 
 #[tokio::main]
@@ -81,8 +82,10 @@ async fn main() -> anyhow::Result<()> {
 
     let entry_index_db = load_sled_db(CRB_SLED_DB);
     let subscription_db = load_sled_db(CRB_SUBSCRIPTION_STORE_SLED_DB);
+    let subscription_store = SubscriptionStore::new(&subscription_db);
+    subscription_store.import_subscriptions(CRB_SUBSCRIPTION_STORE_JSON);
 
-    let mut cosmos_rust_bot_store = CosmosRustBotStore::new(entry_index_db,subscription_db);
+    let mut cosmos_rust_bot_store = CosmosRustBotStore::new(entry_index_db,subscription_store);
 
     spawn_socket_query_server(QUERY_SOCKET,&cosmos_rust_bot_store);
 
