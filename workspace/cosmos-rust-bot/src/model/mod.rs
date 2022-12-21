@@ -95,7 +95,8 @@ pub fn task_meta_data(task_list: Vec<TaskItem>) -> Vec<CosmosRustBotValue> {
                 state: state.to_owned(),
                 value: value.to_owned(),
                 summary: info.to_owned(),
-            })
+            }),
+            imperative: ValueImperative::Notify
         }))
     }).collect::<Vec<CosmosRustBotValue>>();
 

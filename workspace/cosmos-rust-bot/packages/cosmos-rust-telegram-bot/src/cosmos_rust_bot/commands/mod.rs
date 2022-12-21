@@ -178,7 +178,6 @@ pub fn handle_subscribe_unsubscribe(user_hash: u64, msg: &str, msg_for_query: &s
     Ok(())
 }
 
-
 pub fn handle_gov_prpsl(user_hash: u64, msg: &str, msg_for_query: &str, db: &sled::Db) -> anyhow::Result<()> {
     if LOOKUP_PROPOSALS_REGEX.is_match(&msg) {
         let caps = LOOKUP_PROPOSALS_REGEX.captures(&msg).unwrap();
