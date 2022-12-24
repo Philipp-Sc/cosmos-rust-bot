@@ -27,3 +27,6 @@
 [submodule "workspace/rust-openai-gpt-tools"]
 	path = workspace/rust-openai-gpt-tools
 	url = https://github.com/Philipp-Sc/rust-openai-gpt-tools.git
+[submodule "workspace/rust-link-to-text"]
+	path = workspace/rust-link-to-text
+	url = https://github.com/Philipp-Sc/rust-link-to-text.git

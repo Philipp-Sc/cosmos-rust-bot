@@ -20,6 +20,7 @@ pub enum TaskType {
     ChainRegistry,
     FraudDetection,
     GPT3,
+    LinkToText,
     GovernanceProposals,
     None,
 }
@@ -124,6 +125,17 @@ pub fn feature_list_to_file() -> anyhow::Result<()> {
     let task = TaskSpec {
         kind: TaskType::GPT3,
         name: format!("gpt3"),
+        args: json!({
+            // here should be the socket path
+                }),
+        refresh_rate: 10,
+    };
+    gpt3.push(task);
+
+    let mut link_to_text: Vec<TaskSpec> = Vec::new();
+    let task = TaskSpec {
+        kind: TaskType::LinkToText,
+        name: format!("link_to_text"),
         args: json!({
             // here should be the socket path
                 }),

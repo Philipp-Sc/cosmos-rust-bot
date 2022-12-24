@@ -11,6 +11,8 @@ exclude = [
     "./rust-bert-fraud-detection/package",
     "./rust-openai-gpt-tools/socket_ipc",
     "./rust-openai-gpt-tools/package",
+    "./rust-link-to-text/socket_ipc",
+    "./rust-link-to-text/package",
 ]
 
 resolver = "2"
@@ -25,7 +27,7 @@ osmosis-proto = { path = "./cosmos-rust-development/osmosis-proto" }
 
 rust-bert-fraud-detection-socket-ipc = { path = "./rust-bert-fraud-detection/socket_ipc" }
 rust-openai-gpt-tools-socket-ipc = { path = "./rust-openai-gpt-tools/socket_ipc" }
-
+rust-link-to-text-socket-ipc = { path = "./rust-link-to-text/socket_ipc" }
 chrono = "^0.4"
 tokio = { version = "1.21.1" }
 serde = "1.0"
@@ -48,6 +50,8 @@ linkify = "0.9.0"
 
 base64 = "0.13.0"
 secp256k1 = "0.20.3"
+
+
 
 #[patch.crates-io]
 #"curve25519-dalek" = { git = 'https://github.com/signalapp/curve25519-dalek', branch = 'lizard2' }
