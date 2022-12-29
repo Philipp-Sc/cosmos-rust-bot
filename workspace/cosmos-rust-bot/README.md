@@ -80,6 +80,7 @@ In short it's purpose is to have a bot on your side:
 - [ ] Governance Proposal Topic Prediction
 - [ ] Analyse Content of Links/URLs within a Governance Proposal (Spam Detection|Summary|Topics|Sentiment)
 - [ ] Lookup **Protocol** Governance Proposals
+- [ ] REDACTED
 - [ ] Lookup Prices (Osmosiszone)
 - [ ] Subscribe to Price Alerts
 - [ ] Token Listings/Pools (Add/Remove/Update)
@@ -88,7 +89,7 @@ In short it's purpose is to have a bot on your side:
 - [ ] Validator Profile (name, comission, votes)
 - [ ] Impermanent Loss tracking
 - [ ] Lookup Airdrops
-- [ ] Watch Wallet Networth 
+- [ ] Watch Wallet Net-worth 
 
 ### Actions
 - [ ] Send
