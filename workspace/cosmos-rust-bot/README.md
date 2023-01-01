@@ -40,7 +40,7 @@
 
 > dockerfiles available [here](https://github.com/Philipp-Sc/cosmos-rust-bot).
 
-# Use Case #1 
+# Services
 ## Cosmos Governance Briefings 
 
 [@cosmos_governance_briefings_bot](https://t.me/cosmos_governance_briefings_bot) provides alerts and analysis on governance proposals, making it easier for users to navigate the process and stay informed about the proposals that are being considered.
