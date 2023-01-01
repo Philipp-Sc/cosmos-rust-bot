@@ -2,130 +2,73 @@
 
   <img src="https://github.com/Philipp-Sc/media/blob/main/cosmos-rust-bot/cosmos-rust-bot-icon.png" height="100">
   <h1>CRB - Cosmos Rust Bot™</h1> 
-  <p>If you can't beat them join them!</p> 
+  <p> A Rust Bot for the Cosmos Ecosystem. </p> 
     <img src="https://img.shields.io/github/languages/top/Philipp-Sc/cosmos-rust-bot"> 
     <img src="https://img.shields.io/github/repo-size/Philipp-Sc/cosmos-rust-bot"> 
     <img src="https://img.shields.io/github/commit-activity/m/Philipp-Sc/cosmos-rust-bot"> 
     <img src="https://img.shields.io/github/license/Philipp-Sc/cosmos-rust-bot">
     <a href="https://twitter.com/cosmosrustbot"><img src="https://img.shields.io/twitter/follow/CosmosRustBot?style=social"></a>
   </div>
-<br/>  
-<div align="center">
-
-  <img src="https://github.com/Philipp-Sc/media/blob/main/cosmos-rust-bot/cosmos_rust_bot_telegram_start.jpeg" height="250"> 
-  <img src="https://github.com/Philipp-Sc/media/blob/main/cosmos-rust-bot/cosmos_rust_bot_telegram_shortcuts_new.jpeg" height="250"> 
-  <img src="https://github.com/Philipp-Sc/media/blob/main/cosmos-rust-bot/cosmos_rust_bot_telegram_help_sub.jpeg" height="250">  
-  <img src="https://github.com/Philipp-Sc/media/blob/main/cosmos-rust-bot/cosmos_rust_bot_telegram_osmosis_id_333.jpeg" height="250">  
-  <img src="https://github.com/Philipp-Sc/media/blob/main/cosmos-rust-bot/cosmos_rust_bot_telegram_terra2_passed.jpeg" height="125"> 
-  </div>
+<br/> 
 
 
 
-> :warning: The bot needs your **seed phrase** to create and sign transactions.  
-> :arrow_right_hook: You can use Cosmos-rust-bot without a seed phrase in view mode. Test this first.
-
-> :warning: No security audit has been performed. (*[See Disclaimer: This may steal your money. Do your own research.
-Take a look at the code.](https://github.com/Philipp-Sc/cosmos-rust-bot/blob/0ecae398c80192822090598947ba7c0ee5cba562/DISCLAIMER.txt)*)
+> :warning: No security audit has been performed. (*[See Disclaimer: Do your own research. Take a look at the code.](https://github.com/Philipp-Sc/cosmos-rust-bot/blob/0ecae398c80192822090598947ba7c0ee5cba562/DISCLAIMER.txt)*)
 
 ##
 
-### [About](#about) · [Features](#features) · [Install](#install) · [Summary](#summary)
+### [About](#about) · [Install](#install) · [Summary](#summary)
 
 ## About
 
-### Use Case #1
+> Cosmos-Rust-Bot refers to this repository and it's code which enables others to build services on top of CRB.
 
-- Lookup on-chain information and subscribe to get notified on state changes.
-- Easy access via Telegram bot.
-
-### Use Case #2
-
-- Set notifications (events) to trigger/execute on-chain actions. (Send, Execute Contract,..)
-- Requires: You to manage a (Linux) Server and provide a wallet seed phrase.
-- Secure acces via Signal Messenger.
 
 ### Description
 
-**CRB** is intended to be used by **coders, developers and technically-skilled users** to make use of automation.    
-At the same time **CRB** can be compiled to a single executable that is easy to use with few dependencies. Making it
-easy to deploy and use right away.
+> Cosmos-Rust-Bot queries the blockchain nodes via **gRPC** (a remote procedure call protocol that uses protobufs for serializing structured data) for the best performance due to its binary encoding format. Also syncing directly to blockchain nodes using gRPC allows for efficient access to data and functionality, useful for tasks such as submitting transactions or querying the blockchain state. This avoids going through an additional layer of abstraction (e.g LCD/FCD). 
 
-In short it's purpose is to have a bot on your side:
+> Cosmos-Rust-Bot integrates **CosmWasm 1.0.0** via [cosmos-rust](https://github.com/cosmos/cosmos-rust) as well as providing its own adjustments (including additional types and osmosis-proto definitions) [here](https://github.com/Philipp-Sc/cosmos-rust-development). The resulting core is provided as simple rust crate [cosmos-rust-package](https://github.com/Philipp-Sc/cosmos-rust-package), making it easy to use in your own project.
 
-**users**
+> Cosmos-Rust-Bot aims to be modular and therefore the following features/programs are integrated via **UNIX Sockets**, enabling them to be developed and updated sepearatly: [Fraud Detection](https://github.com/Philipp-Sc/rust-bert-fraud-detection), [LinkToText](https://github.com/Philipp-Sc/rust-link-to-text) and the [OpenAI API](https://github.com/Philipp-Sc/rust-openai-gpt-tools).
 
-- Save the hassle of managing positions manually
-- Enable strategies only bots can execute
-- Receive alerts and notifications
-- Send commands for the bot to execute
+> **Telegram** and **Signal Messenger** integrations are also available as separate package.
 
-**devs**
-
-- Provide insights into the Cosmos Ecosystem
-- Enable developers to write their own bot
-- Showcase how to use [cosmos-rust](https://github.com/cosmos/cosmos-rust/)
-- Rust
-
-## Features
-> This roadmap is intended to outline the general direction for CRB. It does not represent a commitment, guarantee, obligation, or promise to deliver any feature.
-
-### Notifications
-- [x] Monitor Cosmos-Rust-Bot
-- [x] Lookup Governance Proposals
-- [x] Subscribe to Governance Proposal Notifications
-- [x] Telegram Chat Bot 
-- [x] Scam Detection/Classification for Governance Proposals
-- [x] Generate Summaries for Governance Proposals (GPT3)
-- [x] Exploring the Pros and Cons of a Proposal (GPT3)
-- [ ] Governance Proposal Topic Prediction
-- [ ] Analyse Content of Links/URLs within a Governance Proposal (Spam Detection|Summary|Topics|Sentiment)
-- [ ] Lookup **Protocol** Governance Proposals
-- [ ] REDACTED
-- [ ] Lookup Prices (Osmosiszone)
-- [ ] Subscribe to Price Alerts
-- [ ] Token Listings/Pools (Add/Remove/Update)
-- [ ] NFT sales tracking
-- [ ] Wallet actions tracking (Whale tracking)
-- [ ] Validator Profile (name, comission, votes)
-- [ ] Impermanent Loss tracking
-- [ ] Lookup Airdrops
-- [ ] Watch Wallet Net-worth 
-
-### Actions
-- [ ] Send
-- [ ] Staking: Delegate/Re-delegate/Un-delegate
-- [ ] Vote on proposals in deposit/voting period
-- [ ] Buy/Sell Asset
-- [ ] Auto compound staking rewards
-- [ ] Transfer tokens to existing or new wallet
-- [ ] Transfer IBC tokens Cross-Chain
-- [ ] Swap in/out Stablecoin
-- [ ] Manage Collateral / Loans
-- [ ] Balance Wallet
+> To bring everything together **Dockerfiles** are provided for easy setup and development.
 
 ## Install
 
-- convenient dockerfiles available [here](https://github.com/Philipp-Sc/cosmos-rust-bot).
+> dockerfiles available [here](https://github.com/Philipp-Sc/cosmos-rust-bot).
+
+# Use Case #1 
+## Cosmos Governance Briefings 
+
+[@cosmos_governance_briefings_bot](https://t.me/cosmos_governance_briefings_bot) provides alerts and analysis on governance proposals, making it easier for users to navigate the process and stay informed about the proposals that are being considered.
+
+One of the unique features is the integrated fraud detection, which helps users identify potential scams or malicious proposals. This is particularly important in the cryptocurrency space, where scams and fraud can be a significant issue. I also use open source technology and AI to generate brief explanations of key aspects of governance proposals, helping users better understand technical language and make informed voting decisions. This is particularly useful for users who may be intimidated by the complexity or unfamiliar with the governance process, as it provides a more accessible and user-friendly way to participate.
+
+In addition to providing notifications and analysis, the bot also allows users to easily access and review proposals, staying up-to-date on the latest governance developments in the Cosmos ecosystem. This can be particularly helpful for users who may not have the time or resources to keep track of all the proposals on their own. 
 
 ## Summary
 
-- I created this bot to learn about smart contracts, the Terra blockchain and to get to know the Rust programming
+> I created this bot to learn about smart contracts, the Terra blockchain and to get to know the Rust programming
   language. Post-attack the journey continues with a stronger focus on the broader Cosmos ecosystem.
-- Cosmos-rust-bot is a constant work in progress: **Bug Reports** and **Feature Requests** are welcome!
-- Thanks to the people who helped me along the way on the terra discord. :heart:
-- Special thanks to [PFC Validator](https://pfc-validator.github.io/) for being super helpful and providing their rust
+  
+> Cosmos-rust-bot is a constant work in progress: **Bug Reports** and **Feature Requests** are welcome!
+
+> Thanks to the people who helped me along the way on the terra discord. :heart:
+
+> Special thanks to [PFC Validator](https://pfc-validator.github.io/) for being super helpful and providing their rust
   tooling open source.
 
 ##
 
-- Grant Recipient of
+> Grant Recipient of
   the <img src="https://uploads-ssl.webflow.com/62aba8dc00fdd48273d4c874/62b327d14f4b5887c5a0c359_osmosis-logomark-white.svg" height="12"> [Osmosis Grants Program](https://grants.osmosis.zone/)
-- Many thanks to the Osmosis Grants Team for incentivizing this project. :pray:
+  
+> Many thanks to the Osmosis Grants Team for incentivizing this project. :pray:
 
 ## License
 
-- Open Source
-- Apache-2.0 license
-
-## Similar Projects
-- [Cosmos Gov](https://github.com/shifty11/cosmos-gov)
+> Open Source
+> Apache-2.0 license
