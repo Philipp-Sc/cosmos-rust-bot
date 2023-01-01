@@ -18,31 +18,3 @@ ADD ./workspace/chain-registry /usr/workspace/chain-registry
 ENTRYPOINT ["/usr/helper_run_script.sh"]
 CMD ["dev","prod","native","tg-bot"]
 
-# run the package, after building them via the process outlined in ./Dockerfile_build
-# 1. build the container.
-## sudo docker build -t crb_run -f Dockerfile_run .
-# 2. specify the target volume that contains the binaries and the package you want to run.
-## Package Run Options:
-## - Cosmos-Rust-Bot: dev, prod or native:
-##  sudo docker run -it --rm -v "$(pwd)/target":/usr/target:ro -v "$(pwd)/tmp":/usr/workspace/tmp crb_run dev
-## - Cosmos-Rust-Telegram-Bot: tg-bot:
-##  sudo docker run -it --rm -v "$(pwd)/target":/usr/target:ro -v "$(pwd)/tmp":/usr/workspace/tmp -e TELOXIDE_TOKEN=12345 crb_run tg-bot
-
-# (ICP is archived via sockets that are linked between docker containers via: -v "$(pwd)/tmp":/usr/workspace/tmp)
-#./tmp/cosmos_rust_bot_query_socket
-#./tmp/cosmos_rust_bot_notification_socket
-
-# 3. checkout the container when it is running.
-# sudo docker container ls
-# sudo docker exec -it CONTAINER_ID bash
-
-# TODO: add signal-bot (signal-bot is behind (outdated) tg-bot, both should use a common lib, so this does not happen)
-
-# TODO: make rust-scam-detection communicate per ICP Unix Sockets.
-# TODO: cleanup database handling.
-
- # cheat sheet
- #  1  sudo docker build -t crb_build -f Dockerfile_build .
- #  2  sudo docker build -t crb_run -f Dockerfile_run .
- #  3  sudo docker run -it --rm  -v "$(pwd)/workspace":/usr/workspace -v "$(pwd)/cargo_home":/usr/cargo_home -v "$(pwd)/target":/usr/target crb_build dev
- #  4  sudo docker run -it --rm -v "$(pwd)/target":/usr/target:ro -v "$(pwd)/tmp":/usr/workspace/tmp crb_run dev

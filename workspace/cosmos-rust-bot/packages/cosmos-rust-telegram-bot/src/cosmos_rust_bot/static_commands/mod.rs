@@ -144,6 +144,7 @@ DESCRIPTION
         - osmosis
         - juno
         - cosmos_hub
+        - kujira
 
     The command takes the following parameters:
         Blockchain: the blockchain network on which to look up governance proposals.
@@ -325,10 +326,11 @@ pub fn handle_common_subs(user_hash: u64, msg: &str, db: &sled::Db)  -> anyhow::
                 timestamp: Utc::now().timestamp(),
                 msg: vec![
                     "🔔 You can receive updates for the following:\n\n- Proposal enters deposit period (💰)\n\n- Proposal enters voting period (🗳)\n\n- Proposal outcome (🟢 passed, 🔴 rejected, ❌ failed)".to_string(),
-                    "🌐 Osmosis".to_string(),
-                    "🌐 Terra2".to_string(),
-                    "🌐 Juno".to_string(),
-                    "🌐 Cosmos Hub".to_string(),
+                    "🧪 Osmosis".to_string(),
+                    "🌏 Terra2".to_string(),
+                    "🪐 Juno".to_string(),
+                    "🌌 Cosmos Hub".to_string(),
+                    "🐋 Kujira".to_string(),
                 ],
 
                 buttons: vec![
@@ -356,6 +358,12 @@ pub fn handle_common_subs(user_hash: u64, msg: &str, db: &sled::Db)  -> anyhow::
                             ("💰".to_string(),"/gov_prpsl_cosmos_hub_deposit_period_subscribe".to_string()),
                             ("🗳".to_string(),"/gov_prpsl_cosmos_hub_voting_period_subscribe".to_string()),
                             ("🟢 ❌ 🔴".to_string(),"/gov_prpsl_cosmos_hub_passed_rejected_failed_subscribe".to_string())
+                        ]],
+                    vec![
+                        vec![
+                            ("💰".to_string(),"/gov_prpsl_kujira_deposit_period_subscribe".to_string()),
+                            ("🗳".to_string(),"/gov_prpsl_kujira_voting_period_subscribe".to_string()),
+                            ("🟢 ❌ 🔴".to_string(),"/gov_prpsl_kujira_passed_rejected_failed_subscribe".to_string())
                         ]],
                 ],
                 user_hash,

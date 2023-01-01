@@ -21,7 +21,7 @@ resolver = "2"
 cosmos-rust-interface = { path = "./cosmos-rust-interface" }
 cosmos-rust-package = { path = './cosmos-rust-package' }
 
-cosmrs = {path = "./cosmos-rust-development/cosmrs" }
+cosmrs = {git = "https://github.com/cosmos/cosmos-rust.git" }
 cosmos-sdk-proto = { path = "./cosmos-rust-development/cosmos-sdk-proto" }
 osmosis-proto = { path = "./cosmos-rust-development/osmosis-proto" }
 
