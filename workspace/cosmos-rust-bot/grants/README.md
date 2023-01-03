@@ -100,7 +100,7 @@ I hope that the Cosmos-Rust-Bot will be a valuable resource for anyone intereste
 
 ### What is next?
 
-> Multiple validators and cosmos users have already created various Governance Notification Bots. Nevertheless, my project is overtaking them both in features and development process. Additionally, Cosmos-Rust-Bot is 100% open source!
+> Multiple validators and cosmos users have already created various Governance Notification Bots. Nevertheless, my project is overtaking them both in features and development progress. Additionally, Cosmos-Rust-Bot is 100% open source!
 > However it is important to be aware of the features users actually value and use, therefore I will continue to gather feedback from users and regularly update and improve the Cosmos-Rust-Bot based on their needs and preferences.
 
 > I plan to continue expanding the bot's capabilities and adding new features that will enhance the user experience and facilitate engagement with the governance process.
