@@ -49,23 +49,35 @@ I hope that the Cosmos-Rust-Bot will be a valuable resource for anyone intereste
 #### Features
 > Cosmos-Rust-Bot aims to be modular and therefore the following features/programs are integrated via **UNIX Sockets**, enabling them to be developed and updated sepearatly: [Fraud Detection](https://github.com/Philipp-Sc/rust-bert-fraud-detection), [LinkToText](https://github.com/Philipp-Sc/rust-link-to-text) and the [OpenAI API](https://github.com/Philipp-Sc/rust-openai-gpt-tools).    
 
-> ➡️ Live 🔵 [@cosmos_governance_briefings_bot](https://t.me/cosmos_governance_briefings_bot) (Telegram)
+> ➡️ Live [@cosmos_governance_briefings_bot ](https://t.me/cosmos_governance_briefings_bot) (Telegram)
 #### Governance Proposal Notifications
-- [x] Sending notifications to users when new governance proposals are submitted, when existing proposals are up for vote, pass, fail or are rejected
+- [x] Sending notifications to users when new governance proposals are submitted, when existing proposals: are up for vote, pass, fail or are rejected
 - [x] Allowing users to customize their notification preferences, including the types of notifications they receive
 - [x] Allowing users to search and view specific proposals.
+
+
+  
+<div align="left">
+  <img src="https://github.com/Philipp-Sc/cosmos-rust-bot/blob/development/workspace/cosmos-rust-bot/grants/get_updates.jpeg" height="350"> 
+</div>
+
 
 #### Governance Proposal Fraud Detection
 - [x] I implemented a robust semi-supervised spam detection using Rust native (state-of-the-art) NLP pipelines.
 - This currently provides a decent fraud/spam/scam detection (accuracy >=90%), and it can be further improved via fine-tuning.
 - Details can be found here [rust-bert-fraud-detection](https://github.com/Philipp-Sc/rust-bert-fraud-detection), it's open source.
+  
+<div align="left">
+  <img src="https://github.com/Philipp-Sc/cosmos-rust-bot/blob/development/workspace/cosmos-rust-bot/grants/fraud_detection.jpeg" height="350"> 
+</div>
 
 ### GPT-3
 > I developed a tool [LinkToText](https://github.com/Philipp-Sc/rust-link-to-text) that uses a headless browser to follow links (within the proposal description) and extract the main text content from the websites.
 
 > Note: This feature is limited to legitimate proposals in voting period. (This is to reduce costs.)
-
+ 
 #### Governance Proposal Summaries 
+
 - [x] Generating useful summaries of governance proposals using artificial intelligence and natural language processing techniques. Providing a brief overview of the proposal, including its main points and key arguments.
 
 #### Governance Proposal Briefings
@@ -79,6 +91,12 @@ I hope that the Cosmos-Rust-Bot will be a valuable resource for anyone intereste
   - 🌿 Long-term sustainability
   - 🔎 Transparency & Accountability
   - 👥 Community Support 
+  
+<div align="center">
+  <img src="https://github.com/Philipp-Sc/cosmos-rust-bot/blob/development/workspace/cosmos-rust-bot/grants/3.jpeg" height="250">
+  <img src="https://github.com/Philipp-Sc/cosmos-rust-bot/blob/development/workspace/cosmos-rust-bot/grants/5.jpeg" height="250">
+  <img src="https://github.com/Philipp-Sc/cosmos-rust-bot/blob/development/workspace/cosmos-rust-bot/grants/4.jpeg" height="250">
+</div>
 
 ### What is next?
 
