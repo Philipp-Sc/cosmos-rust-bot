@@ -123,4 +123,4 @@ sudo docker run -d --rm -v "$(pwd)/target":/usr/target:ro -v "$(pwd)/tmp":/usr/w
 - [ ] cosmos-rust-bot-feature-list.json updated?
 - [ ] cosmos_rust_telegram_bot_user_meta_data.json backup restored? 
 - [ ] Test with no subscriptions if okay, restart with cosmos_rust_bot_subscriptions.json
-- [ ] Volatile Sled Databases Removed?
+- [ ] Volatile Sled Databases Removed? cosmos_rust_bot_sled_db
