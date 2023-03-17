@@ -49,6 +49,17 @@ One of the unique features is the integrated fraud detection, which helps users 
 
 In addition to providing notifications and analysis, the bot also allows users to easily access and review proposals, staying up-to-date on the latest governance developments in the Cosmos ecosystem. This can be particularly helpful for users who may not have the time or resources to keep track of all the proposals on their own. 
 
+## Vision
+
+- Don't Be a Cosmos Noob: This Chatbot Will Make You a Pro
+- Get Rich or Die Tryin': This Chatbot Shows You How in the Cosmos Ecosystem
+- The Cosmos Awaits: This Chatbot Will Show You the Way
+- Mastering the Cosmos: This Chatbot is your Key to Success
+- Revolutionizing the Cosmos Ecosystem: Introducing the Must-Have Chatbot for Crypto Investors
+- Navigating the Cosmos Just Got Easier: New Chatbot Simplifies Governance and Crypto Management
+- Cosmos Ecosystem Gets a Boost with the Launch of Innovative Chatbot for Investors and Traders
+- Streamlining the Cosmos: New Chatbot Makes Governance and Asset Management Effortless
+
 ## Summary
 
 > I created this bot to learn about smart contracts, the Terra blockchain and to get to know the Rust programming
