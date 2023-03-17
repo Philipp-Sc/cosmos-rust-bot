@@ -1,9 +1,17 @@
 use chrono::Utc;
+use lazy_static::lazy_static;
 use cosmos_rust_interface::utils::entry::{
     db::{notification::notify_sled_db},
     CosmosRustServerValue, Notify,
 };
-
+use std::collections::HashMap;
+lazy_static! {
+    static ref LIST_BLOCKCHAINS: HashMap<String,String> = {
+        let data = std::fs::read_to_string("./tmp/supported_blockchains.json").expect("Unable to read file");
+        let supported_blockchains: HashMap<String, serde_json::Value> = serde_json::from_str(&data).expect("Unable to parse JSON");
+        supported_blockchains.into_iter().map(|(k,v)| (k,v.as_object().unwrap().get("display").unwrap().as_str().unwrap().to_string())).collect()
+    };
+}
 
 
 pub fn handle_start(user_hash: u64, msg: &str, db: &sled::Db) -> anyhow::Result<()> {
@@ -320,52 +328,32 @@ For more information and detailed instructions, refer to the man page.
 
 pub fn handle_common_subs(user_hash: u64, msg: &str, db: &sled::Db)  -> anyhow::Result<()> {
     if msg == "get updates" {
+        let mut msg_vec = vec![
+            "🔔 You can receive updates for the following:\n\n- Proposal enters deposit period (💰)\n\n- Proposal enters voting period (🗳)\n\n- Proposal outcome (🟢 passed, 🔴 rejected, ❌ failed)".to_string()
+        ];
+
+        let mut buttons_vec = vec![vec![]];
+
+        for (k,v) in LIST_BLOCKCHAINS.iter() {
+            msg_vec.push(v.clone());
+            let mut button_vec =
+                vec![
+                    vec![
+                        ("💰".to_string(),format!("/gov_prpsl_{}_deposit_period_subscribe",k)),
+                        ("🗳".to_string(),format!("/gov_prpsl_{}_voting_period_subscribe",k)),
+                        ("🟢 ❌ 🔴".to_string(),format!("/gov_prpsl_{}_passed_rejected_failed_subscribe",k))
+                    ]];
+            buttons_vec.push(button_vec);
+        }
+
+
         notify_sled_db(
             db,
             CosmosRustServerValue::Notify(Notify {
                 timestamp: Utc::now().timestamp(),
-                msg: vec![
-                    "🔔 You can receive updates for the following:\n\n- Proposal enters deposit period (💰)\n\n- Proposal enters voting period (🗳)\n\n- Proposal outcome (🟢 passed, 🔴 rejected, ❌ failed)".to_string(),
-                    "🧪 Osmosis".to_string(),
-                    "🌏 Terra2".to_string(),
-                    "🪐 Juno".to_string(),
-                    "🌌 Cosmos Hub".to_string(),
-                    "🐋 Kujira".to_string(),
-                ],
+                msg: msg_vec,
 
-                buttons: vec![
-                    vec![],
-                    vec![
-                        vec![
-                            ("💰".to_string(),"/gov_prpsl_osmosis_deposit_period_subscribe".to_string()),
-                            ("🗳".to_string(),"/gov_prpsl_osmosis_voting_period_subscribe".to_string()),
-                            ("🟢 🔴 ❌".to_string(),"/gov_prpsl_osmosis_passed_rejected_failed_subscribe".to_string())
-                        ]],
-                    vec![
-                        vec![
-                            ("💰".to_string(),"/gov_prpsl_terra2_deposit_period_subscribe".to_string()),
-                            ("🗳".to_string(),"/gov_prpsl_terra2_voting_period_subscribe".to_string()),
-                            ("🟢 🔴 ❌".to_string(),"/gov_prpsl_terra2_passed_rejected_failed_subscribe".to_string())
-                        ]],
-                    vec![
-                        vec![
-                            ("💰".to_string(),"/gov_prpsl_juno_deposit_period_subscribe".to_string()),
-                            ("🗳".to_string(),"/gov_prpsl_juno_voting_period_subscribe".to_string()),
-                            ("🟢 🔴 ❌".to_string(),"/gov_prpsl_juno_passed_rejected_failed_subscribe".to_string())
-                        ]],
-                    vec![
-                        vec![
-                            ("💰".to_string(),"/gov_prpsl_cosmos_hub_deposit_period_subscribe".to_string()),
-                            ("🗳".to_string(),"/gov_prpsl_cosmos_hub_voting_period_subscribe".to_string()),
-                            ("🟢 ❌ 🔴".to_string(),"/gov_prpsl_cosmos_hub_passed_rejected_failed_subscribe".to_string())
-                        ]],
-                    vec![
-                        vec![
-                            ("💰".to_string(),"/gov_prpsl_kujira_deposit_period_subscribe".to_string()),
-                            ("🗳".to_string(),"/gov_prpsl_kujira_voting_period_subscribe".to_string()),
-                            ("🟢 ❌ 🔴".to_string(),"/gov_prpsl_kujira_passed_rejected_failed_subscribe".to_string())
-                        ]],
-                ],
+                buttons: buttons_vec,
                 user_hash,
             }),
         );

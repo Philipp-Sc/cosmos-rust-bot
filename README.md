@@ -94,7 +94,7 @@ docker run -d --rm  -v "$(pwd)/target":/usr/target -v "$(pwd)/cargo_home":/usr/c
 ```
 ### START CosmosRustBot
 ```bash
-sudo docker run -d --rm -v "$(pwd)/target":/usr/target:ro -v "$(pwd)/tmp":/usr/workspace/tmp -e RUST_LOG=Error crb_run dev
+sudo docker run -d --rm -v "$(pwd)/target":/usr/target:ro -v "$(pwd)/tmp":/usr/workspace/tmp -v "$(pwd)/workspace/chain-registry":/usr/workspace/chain-registry -e RUST_LOG=Error crb_run dev
 ```
 ### START Telegram Bot
 ```bash

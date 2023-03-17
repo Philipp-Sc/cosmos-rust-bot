@@ -16,7 +16,7 @@ required-features = ["build-binary"]
 
 
 [features]
-build-binary = ["log","env_logger","cosmos-rust-interface", "cosmos-rust-package", "anyhow", "bincode", "chrono", "enum-as-inner", "heck","litcrypt","notify","regex","secstr","sled","strum","strum_macros","tokio"]
+build-binary = ["lazy_static","log","env_logger","cosmos-rust-interface", "cosmos-rust-package", "anyhow", "bincode", "chrono", "enum-as-inner", "heck","litcrypt","notify","regex","secstr","sled","strum","strum_macros","tokio"]
 
 [dependencies]
 cosmos-rust-interface = { workspace = true, optional = true }
@@ -43,3 +43,4 @@ notify  = { version = "4.0.17", optional = true }
 
 log  = { workspace = true, optional = true }
 env_logger  = { workspace = true, optional = true }
+lazy_static = { workspace = true, optional = true }

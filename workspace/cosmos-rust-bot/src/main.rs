@@ -53,6 +53,7 @@ const SETTINGS_PATH: &str = "./tmp/cosmos-rust-bot.json";
 const CRB_SLED_DB: &str = "./tmp/cosmos_rust_bot_sled_db";
 const CRB_SUBSCRIPTION_STORE_SLED_DB: &str = "./tmp/cosmos_rust_bot_subscriptions_sled_db";
 const CRB_SUBSCRIPTION_STORE_JSON: &str = "./tmp/cosmos_rust_bot_subscriptions.json";
+const CRB_REGISTRATION_STORE_JSON: &str = "./tmp/cosmos_rust_bot_registrations.json";
 
 
 #[tokio::main]
@@ -84,6 +85,7 @@ async fn main() -> anyhow::Result<()> {
     let subscription_db = load_sled_db(CRB_SUBSCRIPTION_STORE_SLED_DB);
     let subscription_store = SubscriptionStore::new(&subscription_db);
     subscription_store.import_subscriptions(CRB_SUBSCRIPTION_STORE_JSON);
+    subscription_store.import_registrations(CRB_REGISTRATION_STORE_JSON);
 
     let mut cosmos_rust_bot_store = CosmosRustBotStore::new(entry_index_db,subscription_store);
 
@@ -134,10 +136,10 @@ async fn main() -> anyhow::Result<()> {
                 let mut task_meta_data: Vec<CosmosRustBotValue> = Vec::new();
                 //let mut debug: Vec<CosmosRustBotValue> = debug(&mut internal_snapshot_of_memory);
                 //let mut logs: Vec<CosmosRustBotValue> = logs(&snapshot_of_memory);
-                //let mut errors: Vec<CosmosRustBotValue> = errors(&mut internal_snapshot_of_memory); // TODO: make debug, errors, logs one.
+                let mut errors: Vec<CosmosRustBotValue> = errors(&task_store); // TODO: make debug, errors, logs one.
                 //task_meta_data.append(&mut debug);
                 //task_meta_data.append(&mut logs);
-                //task_meta_data.append(&mut errors);
+                task_meta_data.append(&mut errors);
                 entries.append(&mut task_meta_data);
 
                 CosmosRustBotValue::add_index(&mut entries, "timestamp", "timestamp");

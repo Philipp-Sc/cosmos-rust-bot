@@ -4,6 +4,7 @@ use serde_json::json;
 use std::collections::HashMap;
 use std::fs;
 
+use lazy_static::lazy_static;
 
 const TASKS_PATH: &str = "./tmp/cosmos-rust-bot-feature-list.json";
 
@@ -14,6 +15,15 @@ pub type UserSettings = UserSettingsImported;
 const MINUTES_1: i32 = 60 * 1;
 const MINUTES_5: i32 = 60 * 5;
 const MINUTES_10: i32 = 60 * 10;
+
+
+lazy_static! {
+    static ref LIST_BLOCKCHAINS: Vec<String> = {
+        let data = std::fs::read_to_string("./tmp/supported_blockchains.json").expect("Unable to read file");
+        let supported_blockchains: HashMap<String, serde_json::Value> = serde_json::from_str(&data).expect("Unable to parse JSON");
+        supported_blockchains.into_keys().collect()
+    };
+}
 
 #[derive(Debug, Serialize, Deserialize,PartialEq)]
 pub enum TaskType {
@@ -69,8 +79,8 @@ pub fn feature_list_to_file() -> anyhow::Result<()> {
         "rejected",
         /*"nil",*/ // TODO query only if no other states of that proposal exist.
     ];
-    let blockchain_list = vec!["osmosis", "terra", "terra2", "juno", "cosmoshub", "kujira"];
-    for blockchain in &blockchain_list {
+
+    for blockchain in LIST_BLOCKCHAINS.iter() {
         for proposal_status in &proposal_status_list {
             let task = TaskSpec {
                 kind: TaskType::GovernanceProposals,
@@ -147,6 +157,8 @@ pub fn feature_list_to_file() -> anyhow::Result<()> {
         name: "gpt3".to_string(),
         requirements: gpt3,
     });
+
+    // TODO: create new feature task that gets all wallet info.
 
     let line = format!("{}", serde_json::to_string(&feature_list).unwrap());
     fs::write(TASKS_PATH, &line).unwrap();

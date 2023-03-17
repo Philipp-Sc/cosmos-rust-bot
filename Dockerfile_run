@@ -11,7 +11,8 @@ RUN chmod 755 /usr/helper_run_script.sh
 #COPY ./workspace/cosmos-rust-bot/cosmos-rust-bot.json .
 #COPY ./workspace/cosmos-rust-bot/cosmos-rust-bot-feature-list.json .
 
-ADD ./workspace/chain-registry /usr/workspace/chain-registry
+#ADD ./workspace/chain-registry /usr/workspace/chain-registry
+# add as volume instead
 
 #ENV RUST_BACKTRACE=1
 

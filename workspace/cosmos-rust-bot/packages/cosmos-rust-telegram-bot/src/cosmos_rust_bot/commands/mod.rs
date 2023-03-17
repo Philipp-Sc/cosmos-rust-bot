@@ -7,11 +7,19 @@ use chrono::TimeZone;
 
 use cosmos_rust_interface::utils::entry::*;
 
+
+lazy_static! {
+    static ref LIST_BLOCKCHAINS: Vec<String> = {
+        let data = std::fs::read_to_string("./tmp/supported_blockchains.json").expect("Unable to read file");
+        let supported_blockchains: HashMap<String, serde_json::Value> = serde_json::from_str(&data).expect("Unable to parse JSON");
+        supported_blockchains.into_keys().collect()
+    };
+}
+
 const SUB_UNSUB: &str = "(subscribe|unsubscribe)";
 
 const LIST_TASK_STATES: [&str;6] = ["pending","resolved","upcoming","failed","unknown","reserved"];
 
-const LIST_BLOCKCHAINS: [&str;6] = ["terra1","terra2","osmosis","juno","cosmos hub","kujira"];
 const LIST_PROPOSAL_STATUS: [&str;6] = ["nil","passed","failed","rejected","deposit period","voting period"];
 const LIST_PROPOSAL_TYPE: [&str;8] = ["text","community pool spend","parameter change","software upgrade","client update","update pool incentives","store code","unknown"];
 const LIST_PROPOSAL_TIME: [&str;5] = ["latest","submit","deposit end","voting start","voting end"];
@@ -25,7 +33,7 @@ use lazy_static::lazy_static;
 lazy_static!{
    pub static ref LOOKUP_PROPOSALS_REGEX: Regex = Regex::new(format!("gov prpsl({})?({})?(?: id([0-9]+))?({})?({})?({})?(?: ([0-9]+))?(?: {})?(?:\\s|$)",
                                                     format!("[{}]+",LIST_GOV_PRPSL_VIEWS.map(|x| " ".to_string()+x).join("|")),
-                                                    format!("[{}]+",LIST_BLOCKCHAINS.map(|x| " ".to_string()+x).join("|")),
+                                                    format!("[{}]+",LIST_BLOCKCHAINS.iter().map(|x| " ".to_string()+x).collect::<Vec<String>>().join("|")),
                                                     format!("[{}]+",LIST_PROPOSAL_STATUS.map(|x| " ".to_string()+x).join("|")),
                                                     format!("[{}]+",LIST_PROPOSAL_TYPE.map(|x| " ".to_string()+x).join("|")),
                                                     format!("[{}]+",LIST_PROPOSAL_TIME.map(|x| " ".to_string()+x).join("|")),
@@ -43,7 +51,7 @@ lazy_static!{
 
     pub static ref LOG_ERROR_DEBUG_REGEX: Regex = Regex::new(
             format!(
-                "tasks (logs|errors|debug)(?: ([0-9]+))?(?: {})?(?:\\s|$)",
+                "show (logs|errors|debug)(?: ([0-9]+))?(?: {})?(?:\\s|$)",
                 SUB_UNSUB
             )
                 .as_str(),
@@ -100,6 +108,7 @@ pub fn handle_tasks_count_list_history(user_hash: u64, msg: &str, msg_for_query:
             }), settings_part: SettingsPart {
                 subscribe: Some(subscribe),
                 unsubscribe: Some(unsubscribe),
+                register: None,
                 user_hash: Some(user_hash)
             } };
 
@@ -117,7 +126,7 @@ pub fn handle_tasks_logs_errors_debug(user_hash: u64, msg: &str, msg_for_query: 
 
             let limit = if LIMIT_REGEX.is_match(&msg) {LIMIT_REGEX.captures(&msg).unwrap().get(0).map(|x| {
                 &x.as_str()[1..]
-            }).unwrap_or("1").parse::<usize>().unwrap_or(1usize)}else{1usize};
+            }).unwrap_or("100").parse::<usize>().unwrap_or(1usize)}else{1usize};
 
             let subscribe = caps
                 .get(3)
@@ -147,6 +156,7 @@ pub fn handle_tasks_logs_errors_debug(user_hash: u64, msg: &str, msg_for_query: 
             }), settings_part: SettingsPart {
                 subscribe: Some(subscribe),
                 unsubscribe: Some(unsubscribe),
+                register: None,
                 user_hash: Some(user_hash)
             } };
 
@@ -170,6 +180,27 @@ pub fn handle_subscribe_unsubscribe(user_hash: u64, msg: &str, msg_for_query: &s
     }), settings_part: SettingsPart {
         subscribe: None,
         unsubscribe: Some(unsubscribe),
+        register: None,
+        user_hash: Some(user_hash)
+    } };
+
+    let response = client_send_query_request(QUERY_SOCKET,request).unwrap();
+    notify_sled_db(db, response);
+    Ok(())
+}
+
+pub fn handle_register(user_hash: u64, msg: &str, _msg_for_query: &str, db: &sled::Db) -> anyhow::Result<()>  {
+    let register: bool = if msg == "sign up" {
+        true
+    } else if msg == "get token" {
+        false
+    } else {
+        return Err(anyhow::anyhow!("Error: Unknown Command!"));
+    };
+    let request: UserQuery = UserQuery{ query_part: QueryPart::RegisterQueryPart(RegisterQueryPart{}), settings_part: SettingsPart {
+        subscribe: None,
+        unsubscribe: None,
+        register: Some(register),
         user_hash: Some(user_hash)
     } };
 
@@ -196,7 +227,7 @@ pub fn handle_gov_prpsl(user_hash: u64, msg: &str, msg_for_query: &str, db: &sle
         let mut filter_list: Vec<Vec<(String, String)>> = Vec::new();
         filter_list.push(filter);
 
-        filter_list= add_filter(filter_list,msg.to_string(),LIST_BLOCKCHAINS.to_vec(),"proposal_blockchain",("",""));
+        filter_list= add_filter(filter_list,msg.to_string(),LIST_BLOCKCHAINS.iter().map(|s| s.as_str()).collect(),"proposal_blockchain",("",""));
         filter_list= add_filter(filter_list,msg.to_string(),LIST_PROPOSAL_STATUS.to_vec(),"proposal_status",("Status",""));
         filter_list= add_filter(filter_list,msg.to_string(),LIST_PROPOSAL_TYPE.to_vec(),"proposal_type",("","Proposal"));
 
@@ -240,6 +271,7 @@ pub fn handle_gov_prpsl(user_hash: u64, msg: &str, msg_for_query: &str, db: &sle
         }), settings_part: SettingsPart {
             subscribe: Some(subscribe),
             unsubscribe: Some(unsubscribe),
+            register: None,
             user_hash: Some(user_hash)
         } };
         println!("{:?}",&request);
