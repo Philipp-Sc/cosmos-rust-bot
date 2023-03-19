@@ -22,8 +22,10 @@ cosmos-rust-interface = { path = "./cosmos-rust-interface" }
 cosmos-rust-package = { path = './cosmos-rust-package' }
 
 cosmrs = {git = "https://github.com/cosmos/cosmos-rust.git" }
-cosmos-sdk-proto = { path = "./cosmos-rust-development/cosmos-sdk-proto" }
-osmosis-proto = { path = "./cosmos-rust-development/osmosis-proto" }
+
+cosmos-sdk-proto = "0.16.0"
+osmosis-std = "0.14.0"
+
 
 rust-bert-fraud-detection-socket-ipc = { path = "./rust-bert-fraud-detection/socket_ipc" }
 rust-openai-gpt-tools-socket-ipc = { path = "./rust-openai-gpt-tools/socket_ipc" }
@@ -53,6 +55,10 @@ secp256k1 = "0.20.3"
 
 nnsplit = "0.5.8"
 
+
+[patch.crates-io]
+#cosmos-sdk-proto = { path = "./cosmos-rust-development/cosmos-sdk-proto" }
+cosmos-sdk-proto = { git = "https://github.com/Philipp-Sc/cosmos-rust-development.git" , branch= 'patch-1' }
 
 #[patch.crates-io]
 #"curve25519-dalek" = { git = 'https://github.com/signalapp/curve25519-dalek', branch = 'lizard2' }

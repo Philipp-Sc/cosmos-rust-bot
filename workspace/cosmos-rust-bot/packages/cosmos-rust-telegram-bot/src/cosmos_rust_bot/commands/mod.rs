@@ -122,7 +122,12 @@ pub fn handle_tasks_count_list_history(user_hash: u64, msg: &str, msg_for_query:
 pub fn handle_tasks_logs_errors_debug(user_hash: u64, msg: &str, msg_for_query: &str, db: &sled::Db) -> anyhow::Result<()>  {
         if LOG_ERROR_DEBUG_REGEX.is_match(msg) {
             let caps = LOG_ERROR_DEBUG_REGEX.captures(msg).unwrap();
+            let mut filter: Vec<(String, String)> = Vec::new();
             let k = caps.get(1).map(|t| t.as_str()).unwrap();
+            filter.push((
+                "kind".to_string(),
+                "error".to_string(),
+            ));
 
             let limit = if LIMIT_REGEX.is_match(&msg) {LIMIT_REGEX.captures(&msg).unwrap().get(0).map(|x| {
                 &x.as_str()[1..]
@@ -137,18 +142,9 @@ pub fn handle_tasks_logs_errors_debug(user_hash: u64, msg: &str, msg_for_query: 
                 .map(|x| x.as_str() == "unsubscribe")
                 .unwrap_or(false);
 
-            let mut filter: Vec<(String, String)> = Vec::new();
-            let fields = match k {
-                "logs" | "errors" => {
-                    "default".to_string()
-                }
-                "debug" | _ => {
-                    "default".to_string()
-                }
-            };
             let request: UserQuery = UserQuery{ query_part: QueryPart::EntriesQueryPart(EntriesQueryPart{
                 message: msg_for_query.to_string(),
-                display: fields,
+                display: "default".to_string(),
                 indices: vec![format!("task_meta_data_{}",k)],
                 filter: vec![filter],
                 order_by: "timestamp".to_string(),
@@ -159,6 +155,7 @@ pub fn handle_tasks_logs_errors_debug(user_hash: u64, msg: &str, msg_for_query: 
                 register: None,
                 user_hash: Some(user_hash)
             } };
+            println!("{:?}",request);
 
             let response = client_send_query_request(QUERY_SOCKET,request).unwrap();
             notify_sled_db(db, response);
