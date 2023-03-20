@@ -17,8 +17,7 @@ pub async fn handle_message(user_id: u64, message: String, db: &sled::Db) {
         msg.push_str(w);
     });
 
-    let msg_for_query = msg.replace(" subscribe","").replace(" unsubscribe","").replace("cosmos hub","cosmoshub");
-    let msg = msg.replace("cosmos hub","cosmoshub");
+    let msg_for_query = msg.replace(" subscribe","").replace(" unsubscribe",""); 
 
     let user_hash = UserMetaData::user_hash(user_id);
 
