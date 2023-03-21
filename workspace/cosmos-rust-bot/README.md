@@ -51,7 +51,7 @@ In addition to providing notifications and analysis, the bot also allows users t
 
 ## Cosmos Governance Fraud Prevention
  
-Cosmos Governance Fraud Prevention is an API that offers spam, ham, and fraud classification for Cosmos Governance proposals. The API is hosted at ```libreai.de:8080/54a469/cosmos-governance-fraud-prevention/```, and it's designed to provide a trustworthiness evaluation of a proposal before voting.
+Cosmos Governance Fraud Prevention is an API that offers spam, ham, and fraud classification for Cosmos Governance proposals. The API is hosted at [libreai.de/cosmos-governance-fraud-prevention/](libreai.de/cosmos-governance-fraud-prevention/), and it's designed to provide a trustworthiness evaluation of a proposal before voting.
 
 The API leverages cutting-edge machine learning algorithms to analyze proposal text and calculate a reputation score that indicates the probability of fraud or spam. If the calculated score is greater than 0.4, the proposal is likely spam, while scores above 0.7 indicate a very high probability of spam.
 
