@@ -49,16 +49,22 @@ One of the unique features is the integrated fraud detection, which helps users 
 
 In addition to providing notifications and analysis, the bot also allows users to easily access and review proposals, staying up-to-date on the latest governance developments in the Cosmos ecosystem. This can be particularly helpful for users who may not have the time or resources to keep track of all the proposals on their own. 
 
-## Vision
+## Cosmos Governance Fraud Prevention
+ 
+Cosmos Governance Fraud Prevention is an API that offers spam, ham, and fraud classification for Cosmos Governance proposals. The API is hosted at [libreai.de/cosmos-governance-fraud-prevention/](libreai.de/cosmos-governance-fraud-prevention/), and it's designed to provide a trustworthiness evaluation of a proposal before voting.
 
-- Don't Be a Cosmos Noob: This Chatbot Will Make You a Pro
-- Get Rich or Die Tryin': This Chatbot Shows You How in the Cosmos Ecosystem
-- The Cosmos Awaits: This Chatbot Will Show You the Way
-- Mastering the Cosmos: This Chatbot is your Key to Success
-- Revolutionizing the Cosmos Ecosystem: Introducing the Must-Have Chatbot for Crypto Investors
-- Navigating the Cosmos Just Got Easier: New Chatbot Simplifies Governance and Crypto Management
-- Cosmos Ecosystem Gets a Boost with the Launch of Innovative Chatbot for Investors and Traders
-- Streamlining the Cosmos: New Chatbot Makes Governance and Asset Management Effortless
+The API leverages cutting-edge machine learning algorithms to analyze proposal text and calculate a reputation score that indicates the probability of fraud or spam. 
+
+How to use it:
+
+- fraud prediction > 0.4 indicating a moderate risk, provide a warning: 
+  - ```Stay safe. Be cautious..```
+- fraud prediction >= 0.7 indicating a very high probability of a fraudulent activity, provide an alert: 
+  - ```Be cautious. Check URLs, avoid suspicious links, and remember, if it seems too good to be true, it probably is.```
+
+
+
+This powerful tool is a significant step towards preventing bad actors from manipulating the Cosmos Governance process and ensuring transparent and fair decision-making.
 
 ## Summary
 
