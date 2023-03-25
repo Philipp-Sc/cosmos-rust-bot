@@ -109,7 +109,7 @@ pub fn task_meta_data(task_list: Vec<TaskItem>) -> Vec<CosmosRustBotValue> {
 
 pub async fn poll_resolved_tasks(join_set: &mut JoinSet<()>) -> usize {
 
-    info!("poll_resolved_tasks");
+    debug!("poll_resolved_tasks");
     let mut counter: usize = 0;
     // The following removes all completed tasks from the set.
     // Unresolved tasks are unaffected.
@@ -142,7 +142,7 @@ pub async fn try_spawn_upcoming_tasks(
 
     let task_list: Vec<TaskItem> = get_task_list(task_store,req).await;
 
-    info!("try_spawn_upcoming_tasks: task_list: {}", serde_json::to_string_pretty(&task_list).unwrap_or("Formatting Error".to_string()));
+    debug!("try_spawn_upcoming_tasks: task_list: {}", serde_json::to_string_pretty(&task_list).unwrap_or("Formatting Error".to_string()));
 
     let upcoming_task_spec_list: Vec<&TaskSpec> = req
         .iter()
@@ -153,7 +153,7 @@ pub async fn try_spawn_upcoming_tasks(
             .collect::<Vec<&String>>().contains(&&x.name))
         .collect();
 
-    info!("try_spawn_upcoming_tasks: to_update: {}", serde_json::to_string_pretty(&upcoming_task_spec_list).unwrap_or("Formatting Error".to_string()));
+    debug!("try_spawn_upcoming_tasks: to_update: {}", serde_json::to_string_pretty(&upcoming_task_spec_list).unwrap_or("Formatting Error".to_string()));
 
     let number_of_tasks_added =
         spawn_tasks(
