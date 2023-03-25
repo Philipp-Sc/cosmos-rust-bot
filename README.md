@@ -27,19 +27,19 @@ git submodule update --remote --rebase
 ### Build FRAUD DETECTION Service
 ```bash
 cd /workspace/rust-bert-fraud-detection
-# just build the docker image
+docker build -t rust-bert-fraud-detection .
 ```
 
 ### Build GPT3 Service
 ```bash
 cd /workspace/rust-openai-gpt3-tools
-# just build the docker image
+docker build -t rust-openai-gpt3-tools .
 ```
 
 ### Build LinkToText Service
 ```bash
 cd /workspace/rust-link-to-text
-# just build the docker image
+docker build -t rust-link-to-text .
 ```
 
 ### Build Cosmos-Rust-Bot
