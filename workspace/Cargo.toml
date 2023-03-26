@@ -23,7 +23,7 @@ cosmos-rust-package = { path = './cosmos-rust-package' }
 
 cosmrs = {git = "https://github.com/cosmos/cosmos-rust.git" }
 
-cosmos-sdk-proto = "0.16.0"
+cosmos-sdk-proto = "0.17.0"
 osmosis-std = "0.14.0"
 
 
@@ -57,7 +57,6 @@ nnsplit = "0.5.8"
 
 
 [patch.crates-io]
-#cosmos-sdk-proto = { path = "./cosmos-rust-development/cosmos-sdk-proto" }
 cosmos-sdk-proto = { git = "https://github.com/Philipp-Sc/cosmos-rust-development.git" , branch= 'patch-1' }
 
 #[patch.crates-io]
