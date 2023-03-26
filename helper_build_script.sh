@@ -9,10 +9,15 @@ echo "created secret LITCRYPT_ENCRYPT_KEY"
 
 case $1 in
 
-  "test")
-    echo "test"
+       "update")
+        echo "update"
+        cargo update
+        ;;
+
+        "test")
+        echo "test"
   	cargo test --package cosmos-rust-bot --features build-binary -- --nocapture
-    ;;
+        ;;
 
 	"dev")
 	echo "cargo build --features build-binary"
