@@ -1,13 +1,4 @@
-./workspace/cosmos-rust-development
-./workspace/cosmos-rust-interface
-./workspace/cosmos-rust-package
-./workspace/rust-scam-detection
-./.idea
-.gitignore
-.gitmodules
-./README.md
-./Dockerfile
-./target
-./cargo_home
-**/target
-./tmp
+workspace
+target
+tmp
+cargo_home
