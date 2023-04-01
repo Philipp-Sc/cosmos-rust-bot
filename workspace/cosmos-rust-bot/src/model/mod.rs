@@ -24,7 +24,7 @@ use std::ops::Deref;
 
 use cosmos_rust_interface::utils::entry::*;
 
-use cosmos_rust_interface::blockchain::cosmos::gov::{fetch_proposals, fetch_tally_results};
+use cosmos_rust_interface::blockchain::cosmos::gov::{fetch_params, fetch_proposals, fetch_tally_results};
 use cosmos_rust_interface::utils::response::{ResponseResult, TaskResult};
 use cosmos_rust_interface::cosmos_rust_package::api::core::cosmos::channels;
 use cosmos_rust_interface::cosmos_rust_package::api::core::cosmos::channels::SupportedBlockchain;
@@ -323,6 +323,15 @@ async fn spawn_tasks(
                         .unwrap()
                         .clone();
                     f = Some(Box::pin(fetch_tally_results(blockchain, status, task_store.clone(),req.name.clone())));
+                }
+            }
+            TaskType::Params => {
+                if let Some(supported_blockchains) = supported_blockchains.as_ref() {
+                    let params_type = req.args["params_type"].as_str().unwrap().to_string();
+                    let blockchain = supported_blockchains.get(req.args["blockchain"].as_str().unwrap())
+                        .unwrap()
+                        .clone();
+                    f = Some(Box::pin(fetch_params(blockchain, params_type, task_store.clone(),req.name.clone())));
                 }
             }
             _ => {}

@@ -16,6 +16,20 @@ const MINUTES_1: i32 = 60 * 1;
 const MINUTES_5: i32 = 60 * 5;
 const MINUTES_10: i32 = 60 * 10;
 
+const PROPOSAL_STATUS_LIST: [&str;5] = [
+    "voting_period",
+    "deposit_period",
+    "failed",
+    "passed",
+    "rejected",
+    /*"nil",*/ // TODO query only if no other states of that proposal exist.
+];
+
+const PARAM_TYPES: [&str; 3] = [
+    "voting",
+    "tallying",
+    "deposit",
+];
 
 lazy_static! {
     static ref LIST_BLOCKCHAINS: Vec<String> = {
@@ -33,6 +47,7 @@ pub enum TaskType {
     LinkToText,
     GovernanceProposals,
     TallyResults,
+    Params,
     None,
 }
 
@@ -73,17 +88,21 @@ pub fn feature_list_to_file() -> anyhow::Result<()> {
 
     let mut governance_proposals: Vec<TaskSpec> = Vec::new();
     let mut tally_results: Vec<TaskSpec> = Vec::new();
-
-    let proposal_status_list = vec![
-        "voting_period",
-        "deposit_period",
-        "failed",
-        "passed",
-        "rejected",
-        /*"nil",*/ // TODO query only if no other states of that proposal exist.
-    ];
+    let mut params: Vec<TaskSpec> = Vec::new();
 
     for blockchain in LIST_BLOCKCHAINS.iter() {
+        for params_type in &PARAM_TYPES {
+            let task = TaskSpec {
+                kind: TaskType::Params,
+                name: format!("{}_params_{}", blockchain, params_type),
+                args: json!({
+                    "blockchain": blockchain,
+                    "params_type": params_type
+                }),
+                refresh_rate: MINUTES_10,
+            };
+            params.push(task);
+        }
         let task = TaskSpec {
             kind: TaskType::TallyResults,
             name: format!("{}_tally_results_{}_proposals", blockchain, "voting_period"),
@@ -94,7 +113,7 @@ pub fn feature_list_to_file() -> anyhow::Result<()> {
             refresh_rate: MINUTES_10,
         };
         tally_results.push(task);
-        for proposal_status in &proposal_status_list {
+        for proposal_status in &PROPOSAL_STATUS_LIST {
             let task = TaskSpec {
                 kind: TaskType::GovernanceProposals,
                 name: format!("{}_governance_{}_proposals", blockchain, proposal_status),
@@ -115,6 +134,10 @@ pub fn feature_list_to_file() -> anyhow::Result<()> {
     feature_list.push(Feature {
         name: "governance_proposal_tally_results".to_string(),
         requirements: tally_results,
+    });
+    feature_list.push(Feature {
+        name: "governance_proposal_params".to_string(),
+        requirements: params,
     });
 
     let mut chain_registry: Vec<TaskSpec> = Vec::new();
@@ -188,6 +211,7 @@ fn feature_name_list(user_settings: &UserSettings) -> Vec<String> {
     if user_settings.governance_proposal_notifications {
         args.push("governance_proposal_notifications".to_string());
         args.push("governance_proposal_tally_results".to_string());
+        args.push("governance_proposal_params".to_string());
     }
     args.push("chain_registry".to_string());
     args.push("fraud_detection".to_string());
