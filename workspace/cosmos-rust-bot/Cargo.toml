@@ -16,27 +16,21 @@ required-features = ["build-binary"]
 
 
 [features]
-build-binary = ["lazy_static","log","env_logger","cosmos-rust-interface", "cosmos-rust-package", "anyhow", "bincode", "chrono", "enum-as-inner", "heck","litcrypt","notify","regex","secstr","sled","strum","strum_macros","tokio"]
+build-binary = ["lazy_static","log","env_logger","cosmos-rust-interface", "anyhow", "enum-as-inner", "heck","litcrypt","notify","regex","secstr","strum","strum_macros"]
 
 [dependencies]
 cosmos-rust-interface = { workspace = true, optional = true }
-cosmos-rust-package = { workspace = true, optional = true }
 #cosmos-rust-interface = { git = "https://github.com/Philipp-Sc/cosmos-rust-interface.git", optional = true }
 #cosmos-rust-package = { git = "https://github.com/Philipp-Sc/cosmos-rust-package.git", optional = true }
-tokio = { workspace = true, features = ["full"], optional = true  }
 anyhow  = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 rust_decimal.workspace = true
-chrono = { workspace = true, optional = true }
 enum-as-inner = { workspace = true, optional = true }
 heck = { workspace = true, optional = true }
 regex = { workspace = true, optional = true }
 strum = { workspace = true, optional = true }
 strum_macros = { workspace = true, optional = true }
-sled = { workspace = true, features = ["compression"], optional = true }
-bincode = { workspace = true, optional = true }
-
 secstr = { version = "0.5.0", optional = true }
 litcrypt = { version = "0.3", optional = true }
 notify  = { version = "4.0.17", optional = true }

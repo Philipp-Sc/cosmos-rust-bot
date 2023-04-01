@@ -32,6 +32,7 @@ pub enum TaskType {
     GPT3,
     LinkToText,
     GovernanceProposals,
+    TallyResults,
     None,
 }
 
@@ -71,6 +72,8 @@ pub fn feature_list_to_file() -> anyhow::Result<()> {
     let mut feature_list: Vec<Feature> = Vec::new();
 
     let mut governance_proposals: Vec<TaskSpec> = Vec::new();
+    let mut tally_results: Vec<TaskSpec> = Vec::new();
+
     let proposal_status_list = vec![
         "voting_period",
         "deposit_period",
@@ -81,6 +84,16 @@ pub fn feature_list_to_file() -> anyhow::Result<()> {
     ];
 
     for blockchain in LIST_BLOCKCHAINS.iter() {
+        let task = TaskSpec {
+            kind: TaskType::TallyResults,
+            name: format!("{}_tally_results_{}_proposals", blockchain, "voting_period"),
+            args: json!({
+                    "blockchain": blockchain,
+                    "proposal_status": "voting_period"
+                }),
+            refresh_rate: MINUTES_10,
+        };
+        tally_results.push(task);
         for proposal_status in &proposal_status_list {
             let task = TaskSpec {
                 kind: TaskType::GovernanceProposals,
@@ -94,9 +107,14 @@ pub fn feature_list_to_file() -> anyhow::Result<()> {
             governance_proposals.push(task);
         }
     }
+
     feature_list.push(Feature {
         name: "governance_proposal_notifications".to_string(),
         requirements: governance_proposals,
+    });
+    feature_list.push(Feature {
+        name: "governance_proposal_tally_results".to_string(),
+        requirements: tally_results,
     });
 
     let mut chain_registry: Vec<TaskSpec> = Vec::new();
@@ -169,6 +187,7 @@ fn feature_name_list(user_settings: &UserSettings) -> Vec<String> {
     let mut args: Vec<String> = Vec::new();
     if user_settings.governance_proposal_notifications {
         args.push("governance_proposal_notifications".to_string());
+        args.push("governance_proposal_tally_results".to_string());
     }
     args.push("chain_registry".to_string());
     args.push("fraud_detection".to_string());
@@ -203,6 +222,7 @@ pub fn get_requirements(user_settings: &UserSettings) -> Vec<TaskSpec> {
 #[cfg(test)]
 mod test {
 
+    use cosmos_rust_interface::cosmos_rust_package::tokio as tokio;
     // cargo test -- --nocapture
 
     #[tokio::test]
