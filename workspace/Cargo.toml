@@ -24,7 +24,7 @@ cosmos-rust-package = { path = './cosmos-rust-package' }
 cosmrs = {git = "https://github.com/cosmos/cosmos-rust.git" }
 
 cosmos-sdk-proto = "0.17.0"
-osmosis-std = "0.14.0"
+osmosis-std = "0.15.0"
 
 
 rust-bert-fraud-detection-socket-ipc = { path = "./rust-bert-fraud-detection/socket_ipc" }
