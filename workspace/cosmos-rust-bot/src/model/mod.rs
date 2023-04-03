@@ -165,7 +165,11 @@ pub async fn try_spawn_upcoming_tasks(
         )
         .await;
 
-    info!("try_spawn_upcoming_tasks: number_of_tasks_added: {}", &number_of_tasks_added);
+    if number_of_tasks_added == 0usize {
+        debug!("try_spawn_upcoming_tasks: number_of_tasks_added: {}", &number_of_tasks_added);
+    }else {
+        info!("try_spawn_upcoming_tasks: number_of_tasks_added (excl. zero): {}", &number_of_tasks_added);
+    }
     number_of_tasks_added
 }
 
