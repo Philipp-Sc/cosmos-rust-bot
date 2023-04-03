@@ -168,7 +168,7 @@ pub async fn try_spawn_upcoming_tasks(
     if number_of_tasks_added == 0usize {
         debug!("No upcoming tasks to spawn.");
     }else {
-        info!("Spawned {} upcoming tasks.", &number_of_tasks_added);
+        info!("spawn_tasks: {} upcoming tasks.", &number_of_tasks_added);
     }
     number_of_tasks_added
 }
@@ -293,52 +293,48 @@ async fn spawn_tasks(
             Pin<Box<dyn Future<Output=anyhow::Result<TaskResult>> + Send + 'static>>,
         > = None;
 
-        match req.kind {
-
-            TaskType::FraudDetection => {
-                f = Some(Box::pin(fraud_detection(task_store.clone(),req.name.clone())));
-            }
-
-            TaskType::LinkToText => {
-                f = Some(Box::pin(link_to_text(task_store.clone(),req.name.clone())));
-            }
-
-            TaskType::GPT3 => {
-                f = Some(Box::pin(gpt3(task_store.clone(),req.name.clone())));
-            }
-
-            TaskType::ChainRegistry => {
-                let path = req.args["path"].as_str().unwrap().to_string();
-                f = Some(Box::pin(get_supported_blockchains_from_chain_registry(path,task_store.clone(),req.name.clone())));
-            }
-            TaskType::GovernanceProposals => {
-                if let Some(supported_blockchains) = supported_blockchains.as_ref() {
+        if let Some(supported_blockchains) = supported_blockchains.as_ref() {
+            match req.kind {
+                TaskType::FraudDetection => {
+                    f = Some(Box::pin(fraud_detection(task_store.clone(), req.name.clone())));
+                }
+                TaskType::LinkToText => {
+                    f = Some(Box::pin(link_to_text(task_store.clone(), req.name.clone())));
+                }
+                TaskType::GPT3 => {
+                    f = Some(Box::pin(gpt3(task_store.clone(), req.name.clone())));
+                }
+                TaskType::GovernanceProposals => {
                     let status = ProposalStatus::new(req.args["proposal_status"].as_str().unwrap());
                     let blockchain = supported_blockchains.get(req.args["blockchain"].as_str().unwrap())
                         .unwrap()
                         .clone();
-                    f = Some(Box::pin(fetch_proposals(blockchain, status,task_store.clone(),req.name.clone())));
+                    f = Some(Box::pin(fetch_proposals(blockchain, status, task_store.clone(), req.name.clone())));
                 }
-            }
-            TaskType::TallyResults => {
-                if let Some(supported_blockchains) = supported_blockchains.as_ref() {
+                TaskType::TallyResults => {
                     let status = ProposalStatus::new(req.args["proposal_status"].as_str().unwrap());
                     let blockchain = supported_blockchains.get(req.args["blockchain"].as_str().unwrap())
                         .unwrap()
                         .clone();
-                    f = Some(Box::pin(fetch_tally_results(blockchain, status, task_store.clone(),req.name.clone())));
+                    f = Some(Box::pin(fetch_tally_results(blockchain, status, task_store.clone(), req.name.clone())));
                 }
-            }
-            TaskType::Params => {
-                if let Some(supported_blockchains) = supported_blockchains.as_ref() {
+                TaskType::Params => {
                     let params_type = req.args["params_type"].as_str().unwrap().to_string();
                     let blockchain = supported_blockchains.get(req.args["blockchain"].as_str().unwrap())
                         .unwrap()
                         .clone();
-                    f = Some(Box::pin(fetch_params(blockchain, params_type, task_store.clone(),req.name.clone())));
+                    f = Some(Box::pin(fetch_params(blockchain, params_type, task_store.clone(), req.name.clone())));
                 }
+                _ => {}
             }
-            _ => {}
+        }else{
+            match req.kind {
+                TaskType::ChainRegistry => {
+                    let path = req.args["path"].as_str().unwrap().to_string();
+                    f = Some(Box::pin(get_supported_blockchains_from_chain_registry(path, task_store.clone(), req.name.clone())));
+                }
+                _ => {}
+            }
         }
 
         if let Some(m) = f {
