@@ -31,7 +31,7 @@ rust-bert-fraud-detection-socket-ipc = { path = "./rust-bert-fraud-detection/soc
 rust-openai-gpt-tools-socket-ipc = { path = "./rust-openai-gpt-tools/socket_ipc" }
 rust-link-to-text-socket-ipc = { path = "./rust-link-to-text/socket_ipc" }
 chrono = "^0.4"
-tokio = { version = "1.21.1" }
+tokio = { version = "1.27.1" }
 serde = "1.0"
 serde_json = "1.0"
 anyhow = "1.0"
