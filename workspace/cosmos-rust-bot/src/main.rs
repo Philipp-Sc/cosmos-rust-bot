@@ -52,6 +52,7 @@ use cosmos_rust_interface::utils::entry::db::*;
 const QUERY_SOCKET: &str = "./tmp/cosmos_rust_bot_query_socket";
 const SETTINGS_PATH: &str = "./tmp/cosmos-rust-bot.json";
 const CRB_SLED_DB: &str = "./tmp/cosmos_rust_bot_sled_db";
+const TASK_STORE_SLED_DB: &str = "./tmp/task_store_sled_db";
 const CRB_SUBSCRIPTION_STORE_SLED_DB: &str = "./tmp/cosmos_rust_bot_subscriptions_sled_db";
 const CRB_SUBSCRIPTION_STORE_JSON: &str = "./tmp/cosmos_rust_bot_subscriptions.json";
 const CRB_REGISTRATION_STORE_JSON: &str = "./tmp/cosmos_rust_bot_registrations.json";
@@ -64,7 +65,7 @@ async fn main() -> anyhow::Result<()> {
 
     // stores all requirements either as task or the resolved value.
     let mut join_set: JoinSet<()> = JoinSet::new();
-    let task_store: TaskMemoryStore = TaskMemoryStore::new().unwrap();
+    let task_store: TaskMemoryStore = TaskMemoryStore::new(Some(TASK_STORE_SLED_DB.to_string())).unwrap();
 
     let mut user_settings: UserSettings = load_user_settings(SETTINGS_PATH);
     //println!("{}", serde_json::to_string_pretty(&user_settings)?);

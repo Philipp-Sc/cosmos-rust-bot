@@ -48,6 +48,7 @@ pub enum TaskType {
     GovernanceProposals,
     TallyResults,
     Params,
+    Pool,
     None,
 }
 
@@ -89,6 +90,7 @@ pub fn feature_list_to_file() -> anyhow::Result<()> {
     let mut governance_proposals: Vec<TaskSpec> = Vec::new();
     let mut tally_results: Vec<TaskSpec> = Vec::new();
     let mut params: Vec<TaskSpec> = Vec::new();
+    let mut pool: Vec<TaskSpec> = Vec::new();
 
     for blockchain in LIST_BLOCKCHAINS.iter() {
         for params_type in &PARAM_TYPES {
@@ -103,6 +105,15 @@ pub fn feature_list_to_file() -> anyhow::Result<()> {
             };
             params.push(task);
         }
+        let task = TaskSpec {
+            kind: TaskType::Pool,
+            name: format!("pool_{}", blockchain),
+            args: json!({
+                    "blockchain": blockchain,
+                }),
+            refresh_rate: MINUTES_10,
+        };
+        pool.push(task);
         let task = TaskSpec {
             kind: TaskType::TallyResults,
             name: format!("{}_tally_results_{}_proposals", blockchain, "voting_period"),
@@ -134,6 +145,10 @@ pub fn feature_list_to_file() -> anyhow::Result<()> {
     feature_list.push(Feature {
         name: "governance_proposal_tally_results".to_string(),
         requirements: tally_results,
+    });
+    feature_list.push(Feature {
+        name: "governance_proposal_pool".to_string(),
+        requirements: pool,
     });
     feature_list.push(Feature {
         name: "governance_proposal_params".to_string(),
@@ -211,6 +226,7 @@ fn feature_name_list(user_settings: &UserSettings) -> Vec<String> {
     if user_settings.governance_proposal_notifications {
         args.push("governance_proposal_notifications".to_string());
         args.push("governance_proposal_tally_results".to_string());
+        args.push("governance_proposal_pool".to_string());
         args.push("governance_proposal_params".to_string());
     }
     args.push("chain_registry".to_string());

@@ -28,7 +28,9 @@ use cosmos_rust_interface::blockchain::cosmos::gov::{fetch_params, fetch_proposa
 use cosmos_rust_interface::utils::response::{ResponseResult, TaskResult};
 use cosmos_rust_interface::cosmos_rust_package::api::core::cosmos::channels;
 use cosmos_rust_interface::cosmos_rust_package::api::core::cosmos::channels::SupportedBlockchain;
-use cosmos_rust_interface::cosmos_rust_package::api::custom::query::gov::ProposalStatus;
+use cosmos_rust_interface::cosmos_rust_package::api::custom::types::gov::proposal_ext::{ProposalStatus};
+
+
 use serde_json::json;
 use std::string::ToString;
 use strum::IntoEnumIterator;
@@ -37,6 +39,7 @@ use strum_macros::EnumIter;
 use cosmos_rust_interface::blockchain::cosmos::chain_registry::get_supported_blockchains_from_chain_registry;
 use cosmos_rust_interface::utils::entry::db::{RetrievalMethod, TaskMemoryStore};
 use log::{debug, info, trace};
+use cosmos_rust_interface::blockchain::cosmos::staking::fetch_pool;
 use cosmos_rust_interface::services::fraud_detection::fraud_detection;
 use cosmos_rust_interface::services::gpt3::gpt3;
 use cosmos_rust_interface::services::link_to_text::link_to_text;
@@ -324,6 +327,12 @@ async fn spawn_tasks(
                         .unwrap()
                         .clone();
                     f = Some(Box::pin(fetch_params(blockchain, params_type, task_store.clone(), req.name.clone())));
+                }
+                TaskType::Pool => {
+                    let blockchain = supported_blockchains.get(req.args["blockchain"].as_str().unwrap())
+                        .unwrap()
+                        .clone();
+                    f = Some(Box::pin(fetch_pool(blockchain, task_store.clone(), req.name.clone())));
                 }
                 _ => {}
             }
