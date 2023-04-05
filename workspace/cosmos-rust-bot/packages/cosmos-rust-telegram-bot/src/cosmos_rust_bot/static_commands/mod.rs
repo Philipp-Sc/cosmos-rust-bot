@@ -7,10 +7,11 @@ use cosmos_rust_interface::utils::entry::{
 use std::collections::HashMap;
 
 lazy_static! {
-    static ref SUPPORTED_BLOCKCHAINS: Vec<HashMap<String, serde_json::Value>> = {
+    static ref SUPPORTED_BLOCKCHAINS: Vec<(String, serde_json::Value)> = {
         let data = std::fs::read_to_string("./tmp/supported_blockchains.json").expect("Unable to read file");
-        let mut blockchains: Vec<HashMap<String, serde_json::Value>> = serde_json::from_str(&data).expect("Unable to parse JSON");
-        blockchains.sort_by_key(|b| b.get("rank").unwrap().as_u64().unwrap());
+        let mut blockchains: HashMap<String, serde_json::Value> = serde_json::from_str(&data).expect("Unable to parse JSON");
+        let mut blockchains: Vec<(String, serde_json::Value)> = blockchains.into_iter().collect();
+        blockchains.sort_by_key(|(_,b)| b.get("rank").unwrap().as_u64().unwrap());
         blockchains
     };
 }
@@ -337,19 +338,17 @@ pub fn handle_common_subs(user_hash: u64, msg: &str, db: &sled::Db)  -> anyhow::
         let mut buttons_vec = vec![vec![]];
 
 
-        for blockchain in SUPPORTED_BLOCKCHAINS.iter() {
-            for (k, v) in blockchain.iter() {
-                let display_name = v.get("display").unwrap().as_str().unwrap();
-                msg_vec.push(display_name.to_string());
-                let mut button_vec =
+        for (k, v) in SUPPORTED_BLOCKCHAINS.iter() {
+            let display_name = v.get("display").unwrap().as_str().unwrap();
+            msg_vec.push(display_name.to_string());
+            let mut button_vec =
+                vec![
                     vec![
-                        vec![
-                            ("💰".to_string(),format!("/gov_prpsl_{}_deposit_period_subscribe",k)),
-                            ("🗳".to_string(),format!("/gov_prpsl_{}_voting_period_subscribe",k)),
-                            ("🟢 ❌ 🔴".to_string(),format!("/gov_prpsl_{}_passed_rejected_failed_subscribe",k))
-                        ]];
-                buttons_vec.push(button_vec);
-            }
+                        ("💰".to_string(),format!("/gov_prpsl_{}_deposit_period_subscribe",k)),
+                        ("🗳".to_string(),format!("/gov_prpsl_{}_voting_period_subscribe",k)),
+                        ("🟢 ❌ 🔴".to_string(),format!("/gov_prpsl_{}_passed_rejected_failed_subscribe",k))
+                    ]];
+            buttons_vec.push(button_vec);
         }
 
         notify_sled_db(
