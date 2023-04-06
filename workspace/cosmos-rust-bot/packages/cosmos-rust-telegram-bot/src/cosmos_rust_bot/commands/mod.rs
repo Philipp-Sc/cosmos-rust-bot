@@ -281,42 +281,59 @@ pub fn handle_gov_prpsl(user_hash: u64, msg: &str, msg_for_query: &str, db: &sle
     Err(anyhow::anyhow!("Error: Unknown Command!"))
 }
 
+
+// This function takes in a list of filters, a string of text, a list of strings, a name, and a format string as parameters.
 fn add_filter(filter_list: Vec<Vec<(String, String)>>, text: String, list: Vec<&str>, name: &str, format_str: (&str,&str)) -> Vec<Vec<(String, String)>> {
+    
+    let add_filter_item = |filter_list_copy: &mut Vec<Vec<(String, String)>>, name: &str, item: &str, format_str: (&str, &str)| {
+        // Iterate over each filter in `filter_list_copy`
+        filter_list_copy.iter_mut().for_each(|filter| {
+            // Push a new filter item to the current filter
+            filter.push((
+                name.to_string(),
+                format!("{}{}{}",
+                        format_str.0,
+                        item.to_upper_camel_case(),
+                        format_str.1,
+                ),
+            ));
+        });
+    };
+
+    // Create a new empty list to store the updated filters.
     let mut new_filter_list: Vec<Vec<(String, String)>> = Vec::new();
 
-    for item in list {
-        if text.contains(item) {
+    // Iterate through the given list of strings.
+
+    for word in text.split_whitespace() {
+        if list.contains(&word) {
+            // Add the word to the filter list
+
+            // Make a copy of the filter list.
             let mut filter_list_copy = filter_list.clone();
+
+            // If the filter list is empty,
             if filter_list_copy.is_empty() {
+                // Create a new filter and add it to the new filter list.
                 let mut filter: Vec<(String, String)> = Vec::new();
-                filter.push((
-                    name.to_string(),
-                    format!("{}{}{}",
-                            format_str.0,
-                            item.to_upper_camel_case(),
-                            format_str.1,
-                    )
-                ));
                 new_filter_list.push(filter);
-            }else {
-                for i in 0..filter_list_copy.len() {
-                    filter_list_copy[i].push((
-                        name.to_string(),
-                        format!("{}{}{}",
-                                format_str.0,
-                                item.to_upper_camel_case(),
-                                format_str.1,
-                        )
-                    ));
-                }
+                add_filter_item(&mut filter_list_copy, name, word, format_str);
+            } else {
+                // Iterate through the copied filter list and add the current string to each filter.
+                add_filter_item(&mut filter_list_copy, name, word, format_str);
             }
+
+            // Append the copied and updated filter list to the new filter list.
             new_filter_list.append(&mut filter_list_copy);
         }
     }
+
+    // If the new filter list is not empty, return it.
     if !new_filter_list.is_empty() {
         return new_filter_list;
     }
 
+    // If the new filter list is empty, make a copy of the filter list and add a default filter to each filter in the copied list.
     let mut filter_list_copy = filter_list.clone();
     for i in 0..filter_list_copy.len() {
         filter_list_copy[i].push((
@@ -324,6 +341,8 @@ fn add_filter(filter_list: Vec<Vec<(String, String)>>, text: String, list: Vec<&
             "any".to_string()
         ));
     }
+
+    // Append the copied and updated filter list to the new filter list and return it.
     new_filter_list.append(&mut filter_list_copy);
     new_filter_list
 }
