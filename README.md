@@ -2,11 +2,11 @@
 [A Rust Bot for the Cosmos Ecosystem.](https://github.com/Philipp-Sc/cosmos-rust-bot/tree/development/workspace/cosmos-rust-bot)
 
 ```
-rust-bert-fraud-detection    rust-link-to-text
-               \                 /
+[rust-bert-fraud-detection, rust-link-to-text, rust-openai-gpt3-tools]
+               \        |        /               
                  cosmos-rust-bot
-               /        |        \
-rust-openai-gpt3-tools  |  cosmos-rust-telegram-bot
+                        |        \
+                        |  cosmos-rust-telegram-bot
                         |             |
                         |          END USER 
                         |        /
