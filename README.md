@@ -3,12 +3,14 @@
 
 ```
 rust-bert-fraud-detection    rust-link-to-text
-               \               /
-                cosmos-rust-bot
-                /               \
-rust-openai-gpt3-tools    cosmos-rust-telegram-bot
-                                   |
-                                   user
+               \                 /
+                 cosmos-rust-bot
+               /        |        \
+rust-openai-gpt3-tools  |  cosmos-rust-telegram-bot
+                        |             |
+                        |          END USER 
+                        |        /
+               cosmos-rust-server        
 ```
 # Workspace Setup
 
