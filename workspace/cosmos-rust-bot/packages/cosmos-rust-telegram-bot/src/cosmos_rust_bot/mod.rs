@@ -22,19 +22,20 @@ pub async fn handle_message(user_id: u64, message: String, db: &sled::Db) {
     let user_hash = UserMetaData::user_hash(user_id);
 
     handle_start(user_hash,&msg,db)
-        .map_err(|_|handle_about(user_hash,&msg,db)
-        .map_err(|_|handle_help_tasks(user_hash,&msg,db)
-        .map_err(|_|handle_help_governance_proposals(user_hash,&msg,db)
-        .map_err(|_|handle_common_subs(user_hash,&msg,db)
-        .map_err(|_|handle_tasks(user_hash,&msg,db)
-        .map_err(|_|handle_governance_proposals(user_hash,&msg,db)
-        .map_err(|_|handle_proposal_by_id(user_hash,&msg,db)
-        .map_err(|_|handle_latest_proposals(user_hash,&msg,db)
-        .map_err(|_|handle_proposals_by_status(user_hash,&msg,db)
-        .map_err(|_|handle_tasks_logs_errors_debug(user_hash,&msg, &msg_for_query,db)
-        .map_err(|_|handle_tasks_count_list_history(user_hash,&msg, &msg_for_query,db)
-        .map_err(|_|handle_subscribe_unsubscribe(user_hash,&msg, &msg_for_query,db)
-        .map_err(|_|handle_gov_prpsl(user_hash,&msg, &msg_for_query,db)
-        .map_err(|_|handle_unknown_command(user_hash,db).ok())))))))))))))).ok();
+        .or_else(|_|handle_about(user_hash,&msg,db))
+        .or_else(|_|handle_help_tasks(user_hash,&msg,db))
+        .or_else(|_|handle_help_governance_proposals(user_hash,&msg,db))
+        .or_else(|_|handle_common_subs(user_hash,&msg,db))
+        .or_else(|_|handle_tasks(user_hash,&msg,db))
+        .or_else(|_|handle_governance_proposals(user_hash,&msg,db))
+        .or_else(|_|handle_proposal_by_id(user_hash,&msg,db))
+        .or_else(|_|handle_latest_proposals(user_hash,&msg,db))
+        .or_else(|_|handle_proposals_by_status(user_hash,&msg,db))
+        .or_else(|_|handle_tasks_logs_errors_debug(user_hash,&msg, &msg_for_query,db))
+        .or_else(|_|handle_tasks_count_list_history(user_hash,&msg, &msg_for_query,db))
+        .or_else(|_|handle_subscribe_unsubscribe(user_hash,&msg, &msg_for_query,db))
+        .or_else(|_|handle_gov_prpsl(user_hash,&msg, &msg_for_query,db))
+        .or_else(|_|handle_register(user_hash,&msg, &msg_for_query,db))
+        .or_else(|_|handle_unknown_command(user_hash,db)).ok();
 
 }
