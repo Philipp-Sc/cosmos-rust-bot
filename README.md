@@ -125,11 +125,11 @@ sudo docker run -d --rm -v "$(pwd)/target":/usr/target:ro -v "$(pwd)/tmp":/usr/w
 # (ICP is archived via sockets that are linked between docker containers via: -v "$(pwd)/tmp":/usr/workspace/tmp)
 ```
  
-# Update Checklist
+# Update Checklist 
 
-- [ ] Submodules up to date? (Initialized?|Head Detached?)
-- [ ] supported_blockchains.json updated?
-- [ ] cosmos-rust-bot-feature-list.json updated?
-- [ ] cosmos_rust_telegram_bot_user_meta_data.json backup restored? 
-- [ ] Test with no subscriptions if okay, restart with cosmos_rust_bot_subscriptions.json
-- [ ] Volatile Sled Databases Removed? cosmos_rust_bot_sled_db
+    Are submodules up to date? (Initialized? Head Detached?)
+    Is supported_blockchains.json updated?
+    Is cosmos-rust-bot-feature-list.json updated?
+    Was cosmos_rust_telegram_bot_user_meta_data.json backup restored?
+    Test with no subscriptions. If okay, restart with cosmos_rust_bot_subscriptions.json.
+    Are volatile Sled databases removed? (cosmos_rust_bot_sled_db, task_store_sled_db)
