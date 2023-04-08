@@ -3,7 +3,7 @@
 
 ```
 [rust-bert-fraud-detection, rust-link-to-text, rust-openai-gpt3-tools]
-               \        |        /               
+                        |                        
                  cosmos-rust-bot
                         |        \
                         |  cosmos-rust-telegram-bot
