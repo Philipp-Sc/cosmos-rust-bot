@@ -6,7 +6,7 @@ description = ""
 edition = "2018"
 
 [[bin]]
-name = "server"
+name = "cosmos_rust_server"
 
 [dependencies]
 cosmos-rust-interface = { workspace = true, default-features = false }
