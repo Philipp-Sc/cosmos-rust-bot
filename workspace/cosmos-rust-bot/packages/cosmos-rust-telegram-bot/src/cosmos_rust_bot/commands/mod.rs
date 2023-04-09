@@ -58,7 +58,7 @@ lazy_static!{
         ).unwrap();
 
 
-    pub static ref VERIFY_REGEX: Regex = Regex::new(r"(verify \d+)").unwrap();
+    pub static ref VERIFY_REGEX: Regex = Regex::new(r"verify ([0-9]+)").unwrap();
 
 }
 
@@ -209,7 +209,7 @@ pub fn handle_register(user_hash: u64, msg: &str, db: &sled::Db) -> anyhow::Resu
 pub fn handle_verify(user_hash: u64, msg: &str, db: &sled::Db) -> anyhow::Result<()>  {
     if VERIFY_REGEX.is_match(&msg){
         let caps = VERIFY_REGEX.captures(&msg).ok_or(anyhow::anyhow!("Error: Parse Error!"))?;
-        let token = caps.get(2).map(|t| format!("{}", t.as_str())).ok_or(anyhow::anyhow!("Error: Parse Error!"))?.parse::<u64>()?;
+        let token = caps.get(1).map(|t| format!("{}", t.as_str())).ok_or(anyhow::anyhow!("Error: Parse Error!"))?.parse::<u64>()?;
 
         let request: UserQuery = UserQuery{ query_part: QueryPart::AuthQueryPart(AuthQueryPart{ token, user_hash }), settings_part: SettingsPart {
             subscribe: None,
