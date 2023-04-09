@@ -35,7 +35,8 @@ pub async fn handle_message(user_id: u64, message: String, db: &sled::Db) {
         .or_else(|_|handle_tasks_count_list_history(user_hash,&msg, &msg_for_query,db))
         .or_else(|_|handle_subscribe_unsubscribe(user_hash,&msg, &msg_for_query,db))
         .or_else(|_|handle_gov_prpsl(user_hash,&msg, &msg_for_query,db))
-        .or_else(|_|handle_register(user_hash,&msg, &msg_for_query,db))
+        .or_else(|_|handle_register(user_hash,&msg,db))
+        .or_else(|_|handle_verify(user_hash,&msg,,db))
         .or_else(|_|handle_unknown_command(user_hash,db)).ok();
 
 }

@@ -186,7 +186,7 @@ pub fn handle_subscribe_unsubscribe(user_hash: u64, msg: &str, msg_for_query: &s
     Ok(())
 }
 
-pub fn handle_register(user_hash: u64, msg: &str, _msg_for_query: &str, db: &sled::Db) -> anyhow::Result<()>  {
+pub fn handle_register(user_hash: u64, msg: &str, db: &sled::Db) -> anyhow::Result<()>  {
     let register: bool = if msg == "sign up" {
         true
     } else if msg == "get token" {
@@ -206,7 +206,7 @@ pub fn handle_register(user_hash: u64, msg: &str, _msg_for_query: &str, db: &sle
     Ok(())
 }
 
-pub fn handle_verify(user_hash: u64, msg: &str, _msg_for_query: &str, db: &sled::Db) -> anyhow::Result<()>  {
+pub fn handle_verify(user_hash: u64, msg: &str, db: &sled::Db) -> anyhow::Result<()>  {
     if VERIFY_REGEX.is_match(&msg){
         let caps = VERIFY_REGEX.captures(&msg).ok_or(anyhow::anyhow!("Error: Parse Error!"))?;
         let token = caps.get(2).map(|t| format!("{}", t.as_str())).ok_or(anyhow::anyhow!("Error: Parse Error!"))?.parse::<u64>()?;
