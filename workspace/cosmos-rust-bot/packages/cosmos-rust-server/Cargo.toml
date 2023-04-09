@@ -5,9 +5,6 @@ authors = ["Philipp Schlütermann <philipp.schluetermann@udo.edu>"]
 description = ""
 edition = "2018"
 
-[[bin]]
-name = "cosmos_rust_server"
-
 [dependencies]
 cosmos-rust-interface = { workspace = true, default-features = false }
 
