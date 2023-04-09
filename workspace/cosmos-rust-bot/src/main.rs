@@ -48,6 +48,7 @@ use crate::model::{get_task_meta_data, poll_resolved_tasks, try_spawn_upcoming_t
 use crate::model::requirements::get_requirements;
 
 use cosmos_rust_interface::utils::entry::db::*;
+use cosmos_rust_interface::utils::entry::db::query::CosmosRustBotStoreInquirer;
 
 const QUERY_SOCKET: &str = "./tmp/cosmos_rust_bot_query_socket";
 const SETTINGS_PATH: &str = "./tmp/cosmos-rust-bot.json";
@@ -93,7 +94,7 @@ async fn main() -> anyhow::Result<()> {
 
     spawn_socket_query_server(QUERY_SOCKET,&cosmos_rust_bot_store);
 
-    let _thread = cosmos_rust_bot_store.spawn_notify_on_subscription_update_thread();
+    let _thread = cosmos_rust_bot_store.spawn_notify_on_subscription_update_task();
 
         loop {
             let req = get_requirements(&user_settings);

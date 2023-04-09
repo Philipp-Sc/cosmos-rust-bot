@@ -58,7 +58,7 @@ lazy_static!{
         ).unwrap();
 
 
-    pub static ref BRIEFING_REGEX: Regex = Regex::new(r"(briefing\d+)").unwrap();
+    pub static ref VERIFY_REGEX: Regex = Regex::new(r"(verify \d+)").unwrap();
 
 }
 
@@ -66,7 +66,7 @@ lazy_static!{
 pub fn handle_tasks_count_list_history(user_hash: u64, msg: &str, msg_for_query: &str, db: &sled::Db) -> anyhow::Result<()>  {
 
         if TASK_INFO_REGEX.is_match(&msg) {
-            let caps = TASK_INFO_REGEX.captures(&msg).unwrap();
+            let caps = TASK_INFO_REGEX.captures(&msg).ok_or(anyhow::anyhow!("Error: Parse Error!"))?;
             let mut filter: Vec<(String, String)> = Vec::new();
             let k = caps.get(1).map(|t| t.as_str());
             filter.push((
@@ -85,7 +85,7 @@ pub fn handle_tasks_count_list_history(user_hash: u64, msg: &str, msg_for_query:
                 _ => "index".to_string(),
             };
 
-            let limit = if LIMIT_REGEX.is_match(&msg) {LIMIT_REGEX.captures(&msg).unwrap().get(0).map(|x| {
+            let limit = if LIMIT_REGEX.is_match(&msg) {LIMIT_REGEX.captures(&msg).ok_or(anyhow::anyhow!("Error: Parse Error!"))?.get(0).map(|x| {
                 &x.as_str()[1..]
             }).unwrap_or("1").parse::<usize>().unwrap_or(1usize)}else{1usize};
 
@@ -112,7 +112,7 @@ pub fn handle_tasks_count_list_history(user_hash: u64, msg: &str, msg_for_query:
                 user_hash: Some(user_hash)
             } };
 
-            let response = client_send_query_request(QUERY_SOCKET,request).unwrap();
+            let response = client_send_query_request(QUERY_SOCKET,request)?;
             notify_sled_db(db, response);
             return Ok(());
         }
@@ -121,15 +121,15 @@ pub fn handle_tasks_count_list_history(user_hash: u64, msg: &str, msg_for_query:
 
 pub fn handle_tasks_logs_errors_debug(user_hash: u64, msg: &str, msg_for_query: &str, db: &sled::Db) -> anyhow::Result<()>  {
         if LOG_ERROR_DEBUG_REGEX.is_match(msg) {
-            let caps = LOG_ERROR_DEBUG_REGEX.captures(msg).unwrap();
+            let caps = LOG_ERROR_DEBUG_REGEX.captures(msg).ok_or(anyhow::anyhow!("Error: Parse Error!"))?;
             let mut filter: Vec<(String, String)> = Vec::new();
-            let k = caps.get(1).map(|t| t.as_str()).unwrap();
+            let k = caps.get(1).map(|t| t.as_str()).ok_or(anyhow::anyhow!("Error: Parse Error!"))?;
             filter.push((
                 "kind".to_string(),
                 "error".to_string(),
             ));
 
-            let limit = if LIMIT_REGEX.is_match(&msg) {LIMIT_REGEX.captures(&msg).unwrap().get(0).map(|x| {
+            let limit = if LIMIT_REGEX.is_match(&msg) {LIMIT_REGEX.captures(&msg).ok_or(anyhow::anyhow!("Error: Parse Error!"))?.get(0).map(|x| {
                 &x.as_str()[1..]
             }).unwrap_or("100").parse::<usize>().unwrap_or(1usize)}else{1usize};
 
@@ -157,7 +157,7 @@ pub fn handle_tasks_logs_errors_debug(user_hash: u64, msg: &str, msg_for_query: 
             } };
             println!("{:?}",request);
 
-            let response = client_send_query_request(QUERY_SOCKET,request).unwrap();
+            let response = client_send_query_request(QUERY_SOCKET,request)?;
             notify_sled_db(db, response);
             return Ok(());
         }
@@ -181,7 +181,7 @@ pub fn handle_subscribe_unsubscribe(user_hash: u64, msg: &str, msg_for_query: &s
         user_hash: Some(user_hash)
     } };
 
-    let response = client_send_query_request(QUERY_SOCKET,request).unwrap();
+    let response = client_send_query_request(QUERY_SOCKET,request)?;
     notify_sled_db(db, response);
     Ok(())
 }
@@ -201,14 +201,35 @@ pub fn handle_register(user_hash: u64, msg: &str, _msg_for_query: &str, db: &sle
         user_hash: Some(user_hash)
     } };
 
-    let response = client_send_query_request(QUERY_SOCKET,request).unwrap();
+    let response = client_send_query_request(QUERY_SOCKET,request)?;
     notify_sled_db(db, response);
     Ok(())
 }
 
+pub fn handle_verify(user_hash: u64, msg: &str, _msg_for_query: &str, db: &sled::Db) -> anyhow::Result<()>  {
+    if VERIFY_REGEX.is_match(&msg){
+        let caps = VERIFY_REGEX.captures(&msg).ok_or(anyhow::anyhow!("Error: Parse Error!"))?;
+        let token = caps.get(2).map(|t| format!("{}", t.as_str())).ok_or(anyhow::anyhow!("Error: Parse Error!"))?.parse::<u64>()?;
+
+        let request: UserQuery = UserQuery{ query_part: QueryPart::AuthQueryPart(AuthQueryPart{ token, user_hash }), settings_part: SettingsPart {
+            subscribe: None,
+            unsubscribe: None,
+            register: None,
+            user_hash: Some(user_hash)
+        } };
+
+        let response = client_send_query_request(QUERY_SOCKET,request)?;
+        notify_sled_db(db, response);
+        return Ok(());
+    } else {
+        return Err(anyhow::anyhow!("Error: Unknown Command!"));
+    };
+
+}
+
 pub fn handle_gov_prpsl(user_hash: u64, msg: &str, msg_for_query: &str, db: &sled::Db) -> anyhow::Result<()> {
     if LOOKUP_PROPOSALS_REGEX.is_match(&msg) {
-        let caps = LOOKUP_PROPOSALS_REGEX.captures(&msg).unwrap();
+        let caps = LOOKUP_PROPOSALS_REGEX.captures(&msg).ok_or(anyhow::anyhow!("Error: Parse Error!"))?;
         let mut filter: Vec<(String, String)> = Vec::new();
         filter.push((
             "proposal_id".to_string(),
@@ -246,7 +267,7 @@ pub fn handle_gov_prpsl(user_hash: u64, msg: &str, msg_for_query: &str, db: &sle
                 .to_lowercase();
 
 
-        let limit = if LIMIT_REGEX.is_match(&msg) {LIMIT_REGEX.captures(&msg).unwrap().get(0).map(|x| {
+        let limit = if LIMIT_REGEX.is_match(&msg) {LIMIT_REGEX.captures(&msg).ok_or(anyhow::anyhow!("Error: Parse Error!"))?.get(0).map(|x| {
             &x.as_str()[1..]
         }).unwrap_or("1").parse::<usize>().unwrap_or(1usize)}else{1usize};
 
@@ -261,7 +282,7 @@ pub fn handle_gov_prpsl(user_hash: u64, msg: &str, msg_for_query: &str, db: &sle
 
         let request: UserQuery = UserQuery{ query_part: QueryPart::EntriesQueryPart(EntriesQueryPart{
             message: msg_for_query.to_string(),
-            display: if msg.to_string().contains("gov prpsl status"){"status"}else if msg.to_string().contains("gov prpsl briefing"){BRIEFING_REGEX.captures(msg).map(|capture| capture.get(1)).unwrap_or(None).map(|m| m.as_str()).unwrap_or("briefing0")}else if msg.to_string().contains("gov prpsl content"){"content"}else {"default"}.to_string(),
+            display: "default".to_string(),
             indices: vec!["proposal_id".to_string()],
             filter: filter_list,
             order_by,
@@ -274,7 +295,7 @@ pub fn handle_gov_prpsl(user_hash: u64, msg: &str, msg_for_query: &str, db: &sle
         } };
         println!("{:?}",&request);
 
-        let response = client_send_query_request(QUERY_SOCKET,request).unwrap();
+        let response = client_send_query_request(QUERY_SOCKET,request)?;
         notify_sled_db(db, response);
         return Ok(());
     }
