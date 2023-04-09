@@ -4,6 +4,7 @@ members = [
     "cosmos-rust-interface",
     "cosmos-rust-package",
     "cosmos-rust-bot/packages/cosmos-rust-telegram-bot",
+    "cosmos-rust-bot/packages/cosmos-rust-server",
 ]
 
 exclude = [
