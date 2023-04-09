@@ -12,7 +12,7 @@ use qstring::QString;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
-use reqwest::Client; 
+use reqwest::Client;
 use reqwest::header::HeaderValue;
 use reqwest::header::CONTENT_TYPE;
 
@@ -107,7 +107,7 @@ async fn verify(_req: HttpRequest, _bearer_auth: BearerAuth) -> actix_web::Resul
 async fn subscriptions(req: HttpRequest, bearer_auth: BearerAuth) -> actix_web::Result<NamedFile> {
 
     // use auth token, to request
-   
+
     let qs = QString::from(req.query_string());
     if let Some(question_parameter) = (qs.get("question")) {
 
@@ -147,7 +147,7 @@ async fn main() -> std::io::Result<()> {
                 bearer::Config::default()
                     .realm("Restricted area")
                     .scope("cosmos-rust-server"),
-            ) 
+            )
             .wrap(HttpAuthentication::bearer(validator))
             */
             .wrap(Logger::default())
@@ -157,10 +157,10 @@ async fn main() -> std::io::Result<()> {
             .wrap(Cors::permissive())
             //.service(file_exists)
             .service(verify)
-            //.service(subscriptions)
-            //.service(file)
+        //.service(subscriptions)
+        //.service(file)
     })
-    .bind(("127.0.0.1", 8090))?
-    .run()
-    .await
+        .bind(("127.0.0.1", 8090))?
+        .run()
+        .await
 }
