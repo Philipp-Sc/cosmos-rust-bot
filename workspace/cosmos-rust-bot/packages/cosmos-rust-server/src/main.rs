@@ -67,6 +67,8 @@ async fn validator(
 
         if let Ok(CosmosRustServerValue::Notification(n)) = client_send_query_request(QUERY_SOCKET,request) {
 
+            println!("Notification: {:?}", &n);
+
             let mut is_authorized = false;
 
             match n.query.query_part {
