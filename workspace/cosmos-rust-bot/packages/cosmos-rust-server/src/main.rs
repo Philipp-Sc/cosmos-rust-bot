@@ -100,7 +100,7 @@ async fn validator(
 
 
 #[get("/verify")]
-async fn verify(_req: HttpRequest, _bearer_auth: BearerAuth) -> actix_web::Result<HttpResponse> {
+async fn verify(_req: HttpRequest, _basic_auth: BasicAuth) -> actix_web::Result<HttpResponse> {
     Ok(HttpResponse::Ok().finish())
 }
 
