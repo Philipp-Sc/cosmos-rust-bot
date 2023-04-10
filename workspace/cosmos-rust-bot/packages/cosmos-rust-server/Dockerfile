@@ -6,8 +6,6 @@ COPY src src/
 COPY Cargo.toml .
 RUN cargo build
 
-RUN mkdir ./static 
-
 EXPOSE 8081
 CMD ["cargo run"]
 

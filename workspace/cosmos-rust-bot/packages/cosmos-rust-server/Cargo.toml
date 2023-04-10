@@ -8,6 +8,7 @@ edition = "2018"
 [dependencies]
 cosmos-rust-interface = { workspace = true, default-features = false }
 
+log.workspace = true
 actix-web-httpauth = "*"
 actix-cors = "0.6"
 actix-service = "2"
