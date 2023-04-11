@@ -38,7 +38,7 @@ use strum_macros;
 use strum_macros::EnumIter;
 use cosmos_rust_interface::blockchain::cosmos::chain_registry::get_supported_blockchains_from_chain_registry;
 use cosmos_rust_interface::utils::entry::db::{RetrievalMethod, TaskMemoryStore};
-use log::{debug, info, trace};
+use log::{debug, error, info, trace};
 use cosmos_rust_interface::blockchain::cosmos::staking::fetch_pool;
 use cosmos_rust_interface::services::fraud_detection::fraud_detection;
 use cosmos_rust_interface::services::gpt3::gpt3;
@@ -364,7 +364,10 @@ async fn spawn_tasks(
                     let result: Maybe<ResponseResult> = Maybe {
                         data: match result {
                             Ok(data) => Ok(ResponseResult::TaskResult(data)),
-                            Err(err) => Err(MaybeError::AnyhowError(err.to_string())),
+                            Err(err) => {
+                                error!("Task {} failed: {:?}",&key, &err);
+                                Err(MaybeError::AnyhowError(err.to_string()))
+                            },
                         },
                         timestamp: Utc::now().timestamp(),
                     };
