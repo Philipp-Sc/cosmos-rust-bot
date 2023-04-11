@@ -280,7 +280,7 @@ async fn spawn_tasks(
 
     let supported_blockchains = match task_store.get("internal_chain_registry",&RetrievalMethod::GetOk) {
         Ok(Maybe{data: Ok(ResponseResult::ChainRegistry(chain_registry)), timestamp: t }) => {
-            info!("spawn_tasks: chain_registry available");
+            debug!("spawn_tasks: chain_registry available");
             Some(chain_registry)
         },
         Err(_) | Ok(Maybe{ .. }) => {
