@@ -281,6 +281,9 @@ async fn spawn_tasks(
     to_update: Vec<&TaskSpec>,
 ) -> usize {
 
+    // TODO each supported blockchain saved into taskstore.
+    // if rate limited save meta data into supported blockchain. such that get channel can fail before attempting to connect.
+
     let supported_blockchains = match task_store.get("internal_chain_registry",&RetrievalMethod::GetOk) {
         Ok(Maybe{data: Ok(ResponseResult::ChainRegistry(chain_registry)), timestamp: t }) => {
             debug!("spawn_tasks: chain_registry available");
@@ -337,7 +340,11 @@ async fn spawn_tasks(
                         .clone();
                     f = Some(Box::pin(fetch_pool(blockchain, task_store.clone(), req.name.clone())));
                 }
-                _ => {}
+                TaskType::ChainRegistry => {
+                    let path = req.args["path"].as_str().unwrap().to_string();
+                    f = Some(Box::pin(get_supported_blockchains_from_chain_registry(path, task_store.clone(), req.name.clone())));
+                }
+                TaskType::None => {}
             }
         }else{
             match req.kind {

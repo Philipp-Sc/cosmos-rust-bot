@@ -64,6 +64,11 @@ async fn main() -> anyhow::Result<()> {
 
     env_logger::init();
 
+    // TODO: supported blockchains need to be managed in a central manner.
+    // to apply certain limitations.
+    // there should be a Mutex such that each endpoint can only be used for one request at a time.
+
+
     // stores all requirements either as task or the resolved value.
     let mut join_set: JoinSet<()> = JoinSet::new();
     let task_store: TaskMemoryStore = TaskMemoryStore::new(Some(TASK_STORE_SLED_DB.to_string())).unwrap();
