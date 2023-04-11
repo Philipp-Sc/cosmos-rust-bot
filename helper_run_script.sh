@@ -21,6 +21,11 @@ case $1 in
 	echo "./target/release/cosmos-rust-telegram-bot"
 	../target/release/cosmos-rust-telegram-bot
 	;;
+        "api")
+        echo "./target/release/cosmos-rust-server"
+        ../target/release/cosmos-rust-server
+        ;;
+
 esac
 
 echo "exit 0"

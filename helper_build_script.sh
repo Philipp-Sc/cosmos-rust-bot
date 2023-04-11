@@ -35,8 +35,13 @@ case $1 in
 	;;
 
 	"tg-bot")
-	echo "RUSTFLAGS=""$RUSTFLAGS" -C target-cpu=native" cargo build --package cosmos-rust-telegram-bot --release "
-	RUSTFLAGS="$RUSTFLAGS -C target-cpu=native" cargo build --package cosmos-rust-telegram-bot --release
+        echo "RUSTFLAGS=""$RUSTFLAGS" -C target-cpu=native" cargo build --package cosmos-rust-telegram-bot --release "
+        RUSTFLAGS="$RUSTFLAGS -C target-cpu=native" cargo build --package cosmos-rust-telegram-bot --release
+        ;;
+
+	"api")
+	echo "RUSTFLAGS=""$RUSTFLAGS" -C target-cpu=native" cargo build --package cosmos-rust-server --release "
+	RUSTFLAGS="$RUSTFLAGS -C target-cpu=native" cargo build --package cosmos-rust-server --release
 	;;
 esac
 

@@ -1,0 +1,21 @@
+FROM rust:latest
+
+WORKDIR /usr/workspace
+
+RUN git clone https://github.com/svenstaro/miniserve.git
+RUN cd miniserve;RUSTFLAGS="-C target-cpu=native" cargo install --locked --path .
+
+RUN mkdir ./public
+RUN mkdir ./config 
+CMD ["miniserve"]
+
+# sudo docker build -t miniserve -f Dockerfile_file_server .
+
+# without TSL
+# sudo docker run --rm -p 8080:8080 -v "$(pwd)/static":/usr/workspace/public miniserve miniserve --auth librelearning:123 --random-route ./public
+
+# with TSL
+# sudo docker run --rm -p 8080:8080 -v "$(pwd)/static":/usr/workspace/public -v "$(pwd)/config":/usr/workspace/config miniserve miniserve --tls-cert ./config/my.cert --tls-key ./config/my.key --auth librelearning:123 --random-route ./public 
+
+
+#http://localhost:8080/4e8180/

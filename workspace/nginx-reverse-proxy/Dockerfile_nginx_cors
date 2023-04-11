@@ -1,0 +1,9 @@
+FROM nginx:alpine
+
+WORKDIR /etc/nginx
+COPY ./nginx.conf ./conf.d/default.conf
+COPY ./config/*.pem /etc/
+EXPOSE 443
+EXPOSE 444
+ENTRYPOINT [ "nginx" ]
+CMD [ "-g", "daemon off;" ]

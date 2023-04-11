@@ -17,5 +17,5 @@ RUN chmod 755 /usr/helper_run_script.sh
 #ENV RUST_BACKTRACE=1
 
 ENTRYPOINT ["/usr/helper_run_script.sh"]
-CMD ["dev","prod","native","tg-bot"]
+CMD ["dev","prod","native","tg-bot","api"]
 

@@ -14,4 +14,4 @@ COPY ./helper_build_script.sh /usr/
 RUN chmod 755 /usr/helper_build_script.sh
 
 ENTRYPOINT ["/usr/helper_build_script.sh"]
-CMD ["test","dev","prod","native","tg-bot"]
+CMD ["test","dev","prod","native","tg-bot","api"]
