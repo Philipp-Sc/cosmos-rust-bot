@@ -246,7 +246,10 @@ pub async fn get_task_list(
                 update = true;
             }
         } else if task_list[i].state == TaskState::Failed {
-            update = true;
+            //  failed tasks need a timeout // 1min
+            if (now - task_list[i].timestamp) > 60 {
+                update = true;
+            }
         } else if task_list[i].state == TaskState::Resolved {
             let period: Vec<i64> = req
                 .iter()
