@@ -347,7 +347,7 @@ fn add_filter(filter_list: Vec<Vec<(String, String)>>, text: String, list: Vec<&
     }
     remove_prefixes_and_suffixes(&mut found);
 
-    for &word in found {
+    for word in found.iter() {
         // Make a copy of the filter list.
         let mut filter_list_copy = filter_list.clone();
 
