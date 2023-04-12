@@ -246,7 +246,6 @@ pub fn handle_gov_prpsl(user_hash: u64, msg: &str, msg_for_query: &str, db: &sle
         filter_list.push(filter);
 
         filter_list= add_filter(filter_list,msg.to_string(),LIST_BLOCKCHAINS.iter().map(|s| s.as_str()).collect(),"proposal_blockchain",("",""));
-        // TODO: add check if terra and terra2 included make sure to remove terra if not intended.
         filter_list= add_filter(filter_list,msg.to_string(),LIST_PROPOSAL_STATUS.to_vec(),"proposal_status",("Status",""));
         filter_list= add_filter(filter_list,msg.to_string(),LIST_PROPOSAL_TYPE.to_vec(),"proposal_type",("","Proposal"));
 
@@ -304,6 +303,20 @@ pub fn handle_gov_prpsl(user_hash: u64, msg: &str, msg_for_query: &str, db: &sle
 
 
 // This function takes in a list of filters, a string of text, a list of strings, a name, and a format string as parameters.
+// THIS FUNCTION SUCKS
+// I WANT TEST CASES AND A FIX TODO
+
+fn remove_prefixes_and_suffixes(strings: &mut Vec<String>) {
+    let mut result = Vec::new();
+    for (i, s1) in strings.iter().enumerate() {
+        if !strings.iter().enumerate().any(|(j, s2)| i != j && (s2.starts_with(s1) || s2.ends_with(s1))) {
+            result.push(s1.clone());
+        }
+    }
+    strings.clear();
+    strings.append(&mut result);
+}
+
 fn add_filter(filter_list: Vec<Vec<(String, String)>>, text: String, list: Vec<&str>, name: &str, format_str: (&str,&str)) -> Vec<Vec<(String, String)>> {
     
     let add_filter_item = |filter_list_copy: &mut Vec<Vec<(String, String)>>, name: &str, item: &str, format_str: (&str, &str)| {
@@ -324,29 +337,33 @@ fn add_filter(filter_list: Vec<Vec<(String, String)>>, text: String, list: Vec<&
     // Create a new empty list to store the updated filters.
     let mut new_filter_list: Vec<Vec<(String, String)>> = Vec::new();
 
-    // Iterate through the given list of strings.
+    let mut found: Vec<String> = Vec::new();
 
-    for word in text.split_whitespace() {
-        if list.contains(&word) {
-            // Add the word to the filter list
-
-            // Make a copy of the filter list.
-            let mut filter_list_copy = filter_list.clone();
-
-            // If the filter list is empty,
-            if filter_list_copy.is_empty() {
-                // Create a new filter and add it to the new filter list.
-                let mut filter: Vec<(String, String)> = Vec::new();
-                new_filter_list.push(filter);
-                add_filter_item(&mut filter_list_copy, name, word, format_str);
-            } else {
-                // Iterate through the copied filter list and add the current string to each filter.
-                add_filter_item(&mut filter_list_copy, name, word, format_str);
-            }
-
-            // Append the copied and updated filter list to the new filter list.
-            new_filter_list.append(&mut filter_list_copy);
+    // Iterate through the given list of strings, see if anything matches.
+    for each in list {
+        if text.contains(each) {
+            found.push(each.to_string());
         }
+    }
+    remove_prefixes_and_suffixes(&mut found);
+
+    for &word in found {
+        // Make a copy of the filter list.
+        let mut filter_list_copy = filter_list.clone();
+
+        // If the filter list is empty,
+        if filter_list_copy.is_empty() {
+            // Create a new filter and add it to the new filter list.
+            let mut filter: Vec<(String, String)> = Vec::new();
+            new_filter_list.push(filter);
+            add_filter_item(&mut filter_list_copy, name, word, format_str);
+        } else {
+            // Iterate through the copied filter list and add the current string to each filter.
+            add_filter_item(&mut filter_list_copy, name, word, format_str);
+        }
+
+        // Append the copied and updated filter list to the new filter list.
+        new_filter_list.append(&mut filter_list_copy);
     }
 
     // If the new filter list is not empty, return it.
