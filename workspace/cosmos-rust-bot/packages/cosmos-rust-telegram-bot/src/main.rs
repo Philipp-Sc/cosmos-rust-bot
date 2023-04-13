@@ -6,7 +6,7 @@ use std::error::Error;
 use chrono::Utc;
 use cosmos_rust_interface::utils::entry::db::load_sled_db;
 use cosmos_rust_interface::utils::entry::db::notification::socket::spawn_socket_notification_server;
-use cosmos_rust_interface::utils::entry::db::notification::notify_sled_db;
+use cosmos_rust_interface::utils::entry::db::notification::{import_user_meta_data, CRB_USER_META_DATA_STORE_JSON, notify_sled_db};
 use cosmos_rust_interface::utils::entry::*;
 use cosmos_rust_interface::utils::entry::{CosmosRustServerValue, Notify};
 use std::sync::Arc;
@@ -25,6 +25,9 @@ async fn main() {
     let mut join_set: JoinSet<()> = JoinSet::new();
 
     let tree = Arc::new(load_sled_db(TG_SLED_DB));
+
+    import_user_meta_data(&tree,CRB_USER_META_DATA_STORE_JSON);
+
     spawn_socket_notification_server(NOTIFICATION_SOCKET,tree.clone().as_ref());
 
     pretty_env_logger::init();
