@@ -32,7 +32,7 @@ pub fn handle_start(user_hash: u64, msg: &str, db: &sled::Db) -> anyhow::Result<
                     vec![("🔔 Get Updates".to_string(),"/get_updates".to_string())],
                   /*  vec![("🔔 List Subscriptions".to_string(),"/subscriptions".to_string()),("❌ Unsubscribe All".to_string(),"/unsubscribe_all".to_string())], */
                   /*  vec![("🔍 Search".to_string(),"/search".to_string())], */
-                    vec![("❔ Info".to_string(),"/about".to_string())]]],
+                    vec![("❔ About".to_string(),"/about".to_string())]]],
                 user_hash,
             }),
         );
@@ -49,17 +49,14 @@ pub fn handle_about(user_hash: u64, msg: &str, db: &sled::Db) -> anyhow::Result<
             CosmosRustServerValue::Notify(Notify {
                 timestamp: Utc::now().timestamp(),
                 msg: vec![
-r#"
-Welcome to @cosmos_governance_briefings_bot! I am an independent developer with expertise in blockchain technology and governance, and I am dedicated to improving participation in the Cosmos ecosystem. My bot provides alerts and analysis on governance proposals, making it easier for users to navigate the process and stay informed about the proposals that are being considered.
+r#"@cosmos_governance_briefings_bot is your go-to resource for governance notifications in the Cosmos ecosystem. We offer:
 
-One of the unique features of my bot is the integrated fraud detection feature, which helps users identify potential scams or malicious proposals. This is particularly important in the cryptocurrency space, where scams and fraud can be a significant issue. I also use open source technology and AI to generate brief explanations of key aspects of governance proposals, helping users better understand complex technical language and make informed voting decisions. This is particularly useful for users who may be intimidated by the technical language or unfamiliar with the governance process, as it provides a more accessible and user-friendly way to participate.
+  -  A clear and concise UI
+  -  Easy access to governance polls
+  -  State-of-the-art fraud prevention
+  -  Briefings built with ChatGPT
 
-In addition to providing notifications and analysis, the bot also allows users to easily access and review proposals, staying up-to-date on the latest governance developments in the Cosmos ecosystem. This can be particularly helpful for users who may not have the time or resources to keep track of all the proposals on their own.
-
-I believe that my governance notification bot can be a valuable tool for improving governance participation in the Cosmos ecosystem. By providing clear and concise information about proposals, I can help users make more informed decisions about how to contribute to the governance process. I am committed to maintaining the bot and ensuring its ongoing reliability and effectiveness.
-
-Thank you for choosing @cosmos_governance_briefings_bot as your go-to resource for governance notifications and analysis in the Cosmos ecosystem! I welcome any feedback or suggestions for improvement.
-"#.to_string(),
+Our goal is to be a valuable tool for improving governance participation and inspiring positive changes in the Cosmos ecosystem."#.to_string(),
                 ],
                 buttons: vec![vec![vec![("GitHub".to_string(),"https://github.com/Philipp-Sc/cosmos-rust-bot".to_string())]]],
                 user_hash,
